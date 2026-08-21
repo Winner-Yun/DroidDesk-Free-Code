@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# uv
+uv.lock.bak
+
+# Build output
+dist/
+build/
+*.build/
+*.dist/
+*.onefile-build/
+
+# Local application data (mirrors %LOCALAPPDATA%\DroidDesk in dev)
+.droiddesk-data/
+*.db
+*.db-journal
+
+# Project-local DroidDesk state (suppressions travel with the repo, keep those)
+!.droiddesk/suppressions.toml
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Secrets / local config — never commit
+.env
+.env.*
+!.env.example

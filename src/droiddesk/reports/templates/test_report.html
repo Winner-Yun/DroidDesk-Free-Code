@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>DroidDesk Test Report — {{ run.apk.package_name }}</title>
+</head>
+<body>
+  <header>
+    <h1>Test Report</h1>
+    <p>{{ run.apk.package_name }} {{ run.apk.version_name }} ({{ run.apk.version_code }})</p>
+    <p>Device: {{ run.device_serial }} · Profile: {{ run.profile_name }} · {{ run.started_at }}</p>
+    <p class="verdict verdict-{{ run.verdict|lower|replace(' ', '-') }}">{{ run.verdict }}</p>
+  </header>
+
+  <section>
+    <h2>Steps</h2>
+    <table>
+      <thead>
+        <tr><th>Step</th><th>Result</th><th>Duration (ms)</th><th>Detail</th></tr>
+      </thead>
+      <tbody>
+        {% for step in run.steps %}
+        <tr>
+          <td>{{ step.name }}</td>
+          <td>{{ "PASS" if step.passed else "FAIL" }}</td>
+          <td>{{ step.duration_ms }}</td>
+          <td>{{ step.detail }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% if run.log_excerpt %}
+  <section>
+    <h2>Log excerpt</h2>
+    <pre>{{ run.log_excerpt }}</pre>
+  </section>
+  {% endif %}
+
+  {% if run.screenshot_path %}
+  <section>
+    <h2>Screenshot</h2>
+    <img src="{{ run.screenshot_path }}" alt="Screenshot captured during test run">
+  </section>
+  {% endif %}
+
+  <footer>
+    <p>DroidDesk performs automated checks for commonly misplaced configuration and
+    credential files. It detects accidental exposure, not deliberate concealment.
+    A clean result indicates that no issues were found by the checks performed; it
+    is not a guarantee that an application is secure, and it does not substitute
+    for security review. All findings should be assessed by a person before
+    acting on them.</p>
+  </footer>
+</body>
+</html>

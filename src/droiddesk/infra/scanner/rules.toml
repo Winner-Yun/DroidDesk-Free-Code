@@ -1,0 +1,29 @@
+# Stage-two, DroidDesk-owned pattern rules — supplements the bundled gitleaks
+# ruleset (Stage one, ~200 maintained rules for common providers, run via
+# `gitleaks detect --report-format=json`). See Section 6.5.
+#
+# Each rule: id, regex (compiled with the `regex` module — atomic groups /
+# possessive quantifiers required to prevent catastrophic backtracking per
+# Section 8.2), severity, and a literal prefix used to seed the Aho-Corasick
+# pre-filter so most files never reach full regex evaluation.
+
+[[rules]]
+id = "generic-private-key-pem"
+literal_prefixes = ["-----BEGIN PRIVATE KEY", "-----BEGIN RSA PRIVATE KEY"]
+pattern = '-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]+?-----END (?:RSA )?PRIVATE KEY-----'
+severity = "critical"
+description = "PEM private key block"
+
+[[rules]]
+id = "aws-access-key-id"
+literal_prefixes = ["AKIA"]
+pattern = '\bAKIA[0-9A-Z]{16}\b'
+severity = "critical"
+description = "AWS access key ID"
+
+[[rules]]
+id = "high-entropy-credential-string"
+literal_prefixes = []
+pattern = ""  # handled by infra/scanner/entropy.py, not a literal regex
+severity = "review"
+description = "High-entropy string assigned to a credential-shaped variable name"

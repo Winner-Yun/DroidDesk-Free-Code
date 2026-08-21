@@ -1,0 +1,17 @@
+pyside6>=6.7
+androguard>=4.1
+pyaxmlparser>=0.3
+asn1crypto>=1.5
+cryptography>=42.0
+xxhash>=3.4
+watchdog>=4.0
+send2trash>=1.8
+platformdirs>=4.2
+pydantic>=2.7
+python-dotenv>=1.0
+regex>=2024.5
+jinja2>=3.1
+weasyprint>=62.0
+loguru>=0.7
+sqlalchemy>=2.0
+pyahocorasick>=2.1

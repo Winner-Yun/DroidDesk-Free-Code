@@ -1,0 +1,9 @@
+-r requirements.txt
+
+pytest>=8.2
+pytest-qt>=4.4
+pytest-cov>=5.0
+mypy>=1.10
+ruff>=0.4
+pre-commit>=3.7
+nuitka>=2.2

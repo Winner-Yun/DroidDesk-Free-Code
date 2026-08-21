@@ -23,6 +23,7 @@ _THREADTIME_RE = regex.compile(
 )
 
 _COLUMNS = ("timestamp", "pid", "tid", "priority", "tag", "message")
+_COLUMN_HEADERS = ("Time", "PID", "TID", "Level", "Tag", "Message")
 
 
 @dataclass(slots=True)
@@ -92,7 +93,7 @@ class LogcatModel(QAbstractTableModel):
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> object:
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
-            return _COLUMNS[section].capitalize()
+            return _COLUMN_HEADERS[section]
         return None
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:

@@ -2,7 +2,7 @@
 
 Local Android development companion for Windows. Consolidates device control, APK
 inspection, automated test runs, secret scanning, and a pre-release gate into a single
-desktop application. Runs entirely on the developer's machine — no account, no network
+desktop application. Runs entirely on the developer's machine no account, no network
 transmission, state kept in a local SQLite database.
 
 See `DroidDesk-Project-Development.pdf` for the full specification and development plan.
@@ -69,11 +69,11 @@ Layering rule: nothing under `core/` or `infra/` imports from `ui/`, and nothing
 
 ## Status
 
-Scaffolding only — see Section 9 (Development Roadmap) for the six-phase build order,
+Scaffolding only see Section 9 (Development Roadmap) for the six-phase build order,
 starting with Phase 1: Foundation and Device Control.
 
 ## What this is not
 
 Not a security product or a guarantee of safety. It detects common, accidental
-exposure of credentials and misconfiguration — not deliberate obfuscation. See
+exposure of credentials and misconfiguration not deliberate obfuscation. See
 Section 1.4 and Section 12.1 of the spec for the full positioning statement.

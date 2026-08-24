@@ -13,13 +13,14 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QPushButton,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.static_data import ANALYZER_APK
 from droiddesk.ui.widgets.card import PageHeader
@@ -27,14 +28,17 @@ from droiddesk.ui.widgets.status_pill import TagPill
 
 
 class AnalyzerPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("APK analyzer", "Everything derivable from the file without installing it.")
+        header = PageHeader(
+            "APK analyzer", "Everything derivable from the file without installing it."
+        )
         header.add_action(QPushButton("⇄  Compare with another APK"))
         open_button = QPushButton("⛁  Open APK")
         open_button.setProperty("role", "primary")
@@ -199,7 +203,9 @@ class AnalyzerPage(QWidget):
     def _label(self, text: str, muted: bool = False) -> QLabel:
         label = QLabel(text)
         if muted:
-            label.setStyleSheet("color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px;")
+            label.setStyleSheet(
+                "color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px;"
+            )
         return label
 
     def _divider(self) -> QWidget:

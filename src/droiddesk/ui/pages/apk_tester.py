@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.static_data import ANALYZER_APK
 from droiddesk.ui.widgets.card import Card, PageHeader
@@ -26,14 +27,18 @@ from droiddesk.ui.widgets.status_pill import StatusIcon
 
 
 class ApkTesterPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("Test runner", "Install, launch, observe, capture, clean up — the same sequence every time, against the device you choose.")
+        header = PageHeader(
+            "Test runner",
+            "Install, launch, observe, capture, clean up — the same sequence every time, against the device you choose.",
+        )
         header.actions.addWidget(QLabel("Profile"))
         profile_combo = QComboBox()
         profile_combo.addItem(static_data.TEST_PROFILE_NAME)
@@ -123,7 +128,9 @@ class ApkTesterPage(QWidget):
 
             command_label = QLabel(step.command)
             command_label.setProperty("role", "mono")
-            command_label.setStyleSheet("color: #5c5f66; font-family: 'Cascadia Mono'; font-size: 11px;")
+            command_label.setStyleSheet(
+                "color: #5c5f66; font-family: 'Cascadia Mono'; font-size: 11px;"
+            )
             text_col.addWidget(command_label)
             row.addLayout(text_col, 1)
 
@@ -139,7 +146,9 @@ class ApkTesterPage(QWidget):
         card = Card("Verdict")
         layout = card.body_layout()
 
-        verdict_color = {"PASS": "#27ae60", "FAIL": "#e0574a"}.get(static_data.TEST_RUN_VERDICT, "#f1c40f")
+        verdict_color = {"PASS": "#27ae60", "FAIL": "#e0574a"}.get(
+            static_data.TEST_RUN_VERDICT, "#f1c40f"
+        )
         verdict = QLabel(static_data.TEST_RUN_VERDICT)
         verdict.setStyleSheet(f"color: {verdict_color}; font-size: 22px; font-weight: 800;")
         layout.addWidget(verdict)
@@ -150,7 +159,9 @@ class ApkTesterPage(QWidget):
         layout.addWidget(detail)
 
         captured_label = QLabel("CAPTURED")
-        captured_label.setStyleSheet("color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-top: 8px;")
+        captured_label.setStyleSheet(
+            "color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-top: 8px;"
+        )
         layout.addWidget(captured_label)
 
         capture_box = QFrame()

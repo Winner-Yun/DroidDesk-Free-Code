@@ -8,22 +8,35 @@ mockups.
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.status_pill import StatusIcon, TagPill
 
 
 class CommandsPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("Build commands", "Guards run before the command does. A failing guard either warns and lets you acknowledge it, or blocks outright.")
+        header = PageHeader(
+            "Build commands",
+            "Guards run before the command does. A failing guard either warns and lets you acknowledge it, or blocks outright.",
+        )
         command_input = QLineEdit(static_data.BUILD_COMMAND_NAME)
         command_input.setFixedWidth(220)
         header.add_action(command_input)

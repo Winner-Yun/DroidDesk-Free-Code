@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.static_data import DeviceRow
 from droiddesk.ui.widgets.card import Card, PageHeader
@@ -28,14 +29,18 @@ _COLUMNS = ("", "Model", "Serial", "Android", "API", "ABI", "Link")
 
 
 class DevicesPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(16)
 
-        header = PageHeader("Devices", "Polled every two seconds while this page is visible, every five when it is not.")
+        header = PageHeader(
+            "Devices",
+            "Polled every two seconds while this page is visible, every five when it is not.",
+        )
         self._wifi_input = QLineEdit("192.168.1.24:5555")
         self._wifi_input.setFixedWidth(180)
         header.add_action(self._wifi_input)
@@ -83,7 +88,9 @@ class DevicesPage(QWidget):
             table.setItem(row, 1, model_item)
             table.setItem(row, 2, self._mono_item(device.serial))
             table.setItem(row, 3, QTableWidgetItem(device.android_version or "—"))
-            table.setItem(row, 4, QTableWidgetItem(str(device.api_level) if device.api_level else "—"))
+            table.setItem(
+                row, 4, QTableWidgetItem(str(device.api_level) if device.api_level else "—")
+            )
             table.setItem(row, 5, QTableWidgetItem(device.abi or "—"))
             table.setItem(row, 6, QTableWidgetItem(entry.link))
 
@@ -142,7 +149,9 @@ class DevicesPage(QWidget):
 
     def _section_label(self, text: str) -> QLabel:
         label = QLabel(text)
-        label.setStyleSheet("color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-top: 6px;")
+        label.setStyleSheet(
+            "color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-top: 6px;"
+        )
         return label
 
     def _property_row(self, label: str, value: str) -> QHBoxLayout:

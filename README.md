@@ -46,6 +46,14 @@ python -m droiddesk
 
 (prefix each with `uv run` if you used `uv sync` rather than `pip install`)
 
+If `python -m droiddesk` fails with `No module named droiddesk`, the editable
+install's path record is stale (e.g. after moving/renaming the project folder).
+Reinstall it:
+
+```bash
+pip install -e . --no-deps
+```
+
 DroidDesk delegates every Android operation to the official SDK command-line tools
 (`adb`, `aapt2`, `apksigner`, `apkanalyzer`, `bundletool`) plus `gitleaks` for secret
 scanning. On first run it looks for an Android SDK via `ANDROID_HOME` /

@@ -7,13 +7,15 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import Card, PageHeader
 
 
 class SettingsPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)

@@ -7,10 +7,22 @@ See Section 10.2 of the spec.
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 from platformdirs import user_config_path, user_data_path
 from pydantic import BaseModel
+
+_PATH_FIELDS = (
+    "adb_path",
+    "aapt2_path",
+    "apksigner_path",
+    "apkanalyzer_path",
+    "bundletool_path",
+    "gitleaks_path",
+    "scrcpy_path",
+    "git_path",
+)
 
 
 class Settings(BaseModel):
@@ -35,13 +47,23 @@ class Settings(BaseModel):
         return self.data_dir / "droiddesk.db"
 
     @classmethod
-    def load(cls) -> "Settings":
-        # TODO(Phase 1): read config.toml if present, falling back to defaults.
+    def load(cls) -> Settings:
         settings = cls()
         settings.config_dir.mkdir(parents=True, exist_ok=True)
         settings.data_dir.mkdir(parents=True, exist_ok=True)
+        if settings.config_file.is_file():
+            with settings.config_file.open("rb") as fh:
+                data = tomllib.load(fh)
+            for field in _PATH_FIELDS:
+                if field in data:
+                    setattr(settings, field, Path(data[field]))
         return settings
 
     def save(self) -> None:
-        # TODO(Phase 1): serialize to config_file as TOML.
-        raise NotImplementedError
+        lines = []
+        for field in _PATH_FIELDS:
+            value: Path | None = getattr(self, field)
+            if value is not None:
+                escaped = str(value).replace("\\", "\\\\")
+                lines.append(f'{field} = "{escaped}"')
+        self.config_file.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")

@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.theme import STATUS_COLORS
 from droiddesk.ui.widgets.card import Card, PageHeader
@@ -68,14 +69,18 @@ class _ScoreDial(QWidget):
 
 
 class GatePage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("Release gate", "Every check at once, one verdict. A clean result means no issues were found by the checks performed — not that the build is secure.")
+        header = PageHeader(
+            "Release gate",
+            "Every check at once, one verdict. A clean result means no issues were found by the checks performed — not that the build is secure.",
+        )
         header.add_action(QPushButton("↓  Export gate report"))
         run_button = QPushButton("Run gate")
         run_button.setProperty("role", "primary")
@@ -93,7 +98,9 @@ class GatePage(QWidget):
         layout = card.body_layout()
         layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
-        verdict_color = STATUS_COLORS["fail"] if static_data.GATE_VERDICT == "NO-GO" else STATUS_COLORS["pass"]
+        verdict_color = (
+            STATUS_COLORS["fail"] if static_data.GATE_VERDICT == "NO-GO" else STATUS_COLORS["pass"]
+        )
 
         dial = _ScoreDial(static_data.GATE_SCORE, static_data.GATE_VERDICT, verdict_color)
         layout.addWidget(dial, 0, Qt.AlignmentFlag.AlignCenter)

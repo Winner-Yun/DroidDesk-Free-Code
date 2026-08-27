@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.status_pill import StatusPill
@@ -26,14 +27,18 @@ _VERDICT_STATUS = {"NO-GO": "fail", "GO": "pass", "PASS": "pass", "FAIL": "fail"
 
 
 class ReportsPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("Reports", "One template set. HTML is the source of truth; PDF and Markdown are rendered from it, and JSON comes straight off the domain model.")
+        header = PageHeader(
+            "Reports",
+            "One template set. HTML is the source of truth; PDF and Markdown are rendered from it, and JSON comes straight off the domain model.",
+        )
         header.add_action(QPushButton("⛁  Open output folder"))
         outer.addWidget(header)
 

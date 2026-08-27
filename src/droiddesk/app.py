@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from droiddesk.config import Settings
 from droiddesk.context import AppContext
+from droiddesk.core.errors import ToolNotFoundError
 from droiddesk.infra.adb import AdbClient
 from droiddesk.infra.db import Repository
 from droiddesk.infra.tools import ToolLocator
@@ -14,8 +17,12 @@ from droiddesk.ui.main_window import MainWindow
 def build_application(settings: Settings) -> MainWindow:
     tool_locator = ToolLocator(settings)
     repository = Repository(settings.database_path)
-    adb_path = tool_locator.resolve("adb")
+    try:
+        adb_path = tool_locator.resolve("adb")
+    except ToolNotFoundError:
+        adb_path = Path("adb.exe")
     device_service = DeviceService(AdbClient(adb_path))
+    device_service.start_polling()
     ctx = AppContext(
         settings=settings,
         tool_locator=tool_locator,

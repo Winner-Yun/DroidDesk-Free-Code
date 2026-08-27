@@ -19,8 +19,30 @@ class AdbClient:
         self._runner = runner or ProcessRunner()
 
     def list_devices(self) -> list[Device]:
-        # TODO(Phase 1): run `adb devices -l`, parse serial + state, enrich via getprop.
-        raise NotImplementedError
+        result = self._runner.run(self._adb_path, ["devices", "-l"])
+        devices: list[Device] = []
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if not line or line.startswith("List of devices"):
+                continue
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            serial, state = parts[0], parts[1]
+            if state not in ("device", "unauthorized", "offline"):
+                continue
+            tokens = {k: v for k, v in (t.split(":", 1) for t in parts[2:] if ":" in t)}
+            device = Device(serial=serial, state=state, model=tokens.get("model"))
+            if state == "device":
+                device.model = self.getprop(serial, "ro.product.model") or tokens.get("model")
+                device.android_version = self.getprop(serial, "ro.build.version.release") or None
+                sdk = self.getprop(serial, "ro.build.version.sdk")
+                device.api_level = int(sdk) if sdk.isdigit() else None
+                device.abi = self.getprop(serial, "ro.product.cpu.abi") or None
+                density = self.getprop(serial, "ro.sf.lcd_density")
+                device.density = int(density) if density.isdigit() else None
+            devices.append(device)
+        return devices
 
     def getprop(self, serial: str, prop: str) -> str:
         result = self._runner.run(self._adb_path, ["-s", serial, "shell", "getprop", prop])
@@ -38,7 +60,9 @@ class AdbClient:
         result = self._runner.run(self._adb_path, ["-s", serial, "reconnect"])
         return result.exit_code == 0
 
-    def install(self, serial: str, apk_path: Path, replace: bool = True, test_ok: bool = True) -> bool:
+    def install(
+        self, serial: str, apk_path: Path, replace: bool = True, test_ok: bool = True
+    ) -> bool:
         args = ["-s", serial, "install"]
         if replace:
             args.append("-r")
@@ -78,7 +102,9 @@ class AdbClient:
         self._runner.run(self._adb_path, ["-s", serial, "shell", "am", "force-stop", package])
 
     def dumpsys_package(self, serial: str, package: str) -> str:
-        result = self._runner.run(self._adb_path, ["-s", serial, "shell", "dumpsys", "package", package])
+        result = self._runner.run(
+            self._adb_path, ["-s", serial, "shell", "dumpsys", "package", package]
+        )
         return result.stdout
 
     def logcat_clear(self, serial: str) -> None:

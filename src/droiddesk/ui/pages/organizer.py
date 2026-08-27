@@ -20,19 +20,24 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import Card, PageHeader
 
 
 class OrganizerPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("File organizer", "Nothing moves until you have seen the plan. Every batch writes an undo journal first, and deletions go to the Recycle Bin.")
+        header = PageHeader(
+            "File organizer",
+            "Nothing moves until you have seen the plan. Every batch writes an undo journal first, and deletions go to the Recycle Bin.",
+        )
         path_input = QLineEdit(static_data.ORGANIZER_PATH)
         path_input.setFixedWidth(220)
         header.add_action(path_input)

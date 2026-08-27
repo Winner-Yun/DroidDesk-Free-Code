@@ -9,9 +9,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
 
-from droiddesk.config import Settings
-from droiddesk.infra.db import Repository
-from droiddesk.infra.tools import ToolLocator
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.pages.analyzer import AnalyzerPage
 from droiddesk.ui.pages.apk_tester import ApkTesterPage
@@ -44,16 +42,13 @@ _PAGES: tuple[tuple[str, type[QWidget]], ...] = (
 
 
 class MainWindow(QMainWindow):
-    def __init__(
-        self,
-        settings: Settings,
-        tool_locator: ToolLocator,
-        repository: Repository,
-    ) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
-        self._settings = settings
-        self._tool_locator = tool_locator
-        self._repository = repository
+        self._ctx = ctx
+        self._settings = ctx.settings
+        self._tool_locator = ctx.tool_locator
+        self._repository = ctx.repository
+        self._device_service = ctx.device_service
 
         self.setWindowTitle("DroidDesk")
         self.resize(1440, 900)
@@ -105,7 +100,7 @@ class MainWindow(QMainWindow):
 
     def _build_pages(self) -> None:
         for key, page_cls in _PAGES:
-            self._page_index[key] = self._stack.addWidget(page_cls())
+            self._page_index[key] = self._stack.addWidget(page_cls(self._ctx))
 
     def _build_status_bar(self) -> None:
         bar = self.statusBar()

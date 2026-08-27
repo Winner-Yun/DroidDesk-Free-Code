@@ -7,7 +7,6 @@ out before Phase 2 wires in a live `AdbStream`.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -20,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.models.logcat_model import LogcatModel
 from droiddesk.ui.widgets.card import PageHeader
@@ -28,8 +28,9 @@ _PRIORITY_COLORS = {"E": "#e05a4d", "W": "#f1c40f", "I": "#5b9bd5", "D": "#8b8e9
 
 
 class LogcatPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         self._model = LogcatModel()
 
@@ -37,7 +38,10 @@ class LogcatPage(QWidget):
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("Logcat", "Streamed from the selected device and parsed into columns. Pausing holds the view without dropping the stream.")
+        header = PageHeader(
+            "Logcat",
+            "Streamed from the selected device and parsed into columns. Pausing holds the view without dropping the stream.",
+        )
         self._pause_button = QPushButton("⏸  Pause")
         self._pause_button.setCheckable(True)
         self._pause_button.toggled.connect(self._on_pause_toggled)

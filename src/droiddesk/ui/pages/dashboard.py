@@ -8,6 +8,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import Card, PageHeader, StatCard
 from droiddesk.ui.widgets.status_pill import StatusPill
@@ -22,14 +23,17 @@ def _rgba(hex_color: str, alpha: float) -> str:
 
 
 class DashboardPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(16)
 
-        header = PageHeader("Dashboard", "Current project state, and the last thing that happened in it.")
+        header = PageHeader(
+            "Dashboard", "Current project state, and the last thing that happened in it."
+        )
         header.add_action(QPushButton("⛁  Switch project"))
         run_gate_button = QPushButton("Run release gate")
         run_gate_button.setProperty("role", "primary")
@@ -56,7 +60,9 @@ class DashboardPage(QWidget):
 
         for item in static_data.NEEDS_ATTENTION:
             row = QWidget()
-            row.setStyleSheet(f"background: {_rgba(_SEVERITY_COLORS[item.severity], 0.08)}; border-radius: 6px;")
+            row.setStyleSheet(
+                f"background: {_rgba(_SEVERITY_COLORS[item.severity], 0.08)}; border-radius: 6px;"
+            )
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(10, 8, 10, 8)
             row_layout.setSpacing(12)

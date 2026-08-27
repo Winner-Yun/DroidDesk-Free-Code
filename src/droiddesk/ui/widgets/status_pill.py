@@ -44,7 +44,12 @@ class StatusDot(QLabel):
 
     def __init__(self, status: str) -> None:
         super().__init__()
-        colors = {"ready": "#c7c9cc", "active": STATUS_COLORS["pass"], "unauthorized": STATUS_COLORS["warn"]}
+        colors = {
+            "ready": "#c7c9cc",
+            "active": STATUS_COLORS["pass"],
+            "unauthorized": STATUS_COLORS["warn"],
+            "offline": STATUS_COLORS["fail"],
+        }
         color = colors.get(status, "#5c5f66")
         self.setFixedSize(9, 9)
         self.setStyleSheet(f"background: {color}; border-radius: 4px;")

@@ -20,7 +20,7 @@ class EnvironmentBar(QWidget):
         self.setFixedHeight(52)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(20, 0, 16, 0)
+        layout.setContentsMargins(20, 0, 0, 0)
         layout.setSpacing(8)
 
         self._icon = QLabel("⛨")  # black shield

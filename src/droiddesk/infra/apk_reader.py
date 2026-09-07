@@ -24,8 +24,28 @@ class ApkReader:
         if file_hash in self._cache:
             return self._cache[file_hash]
 
-        # TODO(Phase 2): from pyaxmlparser import APK; parse manifest-only fields.
-        raise NotImplementedError
+        try:
+            from pyaxmlparser import APK
+            
+            apk = APK(str(apk_path))
+            
+            info = ApkInfo(
+                file_path=apk_path,
+                file_hash=file_hash,
+                package_name=apk.package,
+                version_name=apk.version_name,
+                version_code=int(apk.version_code) if apk.version_code else None,
+                target_sdk=int(apk.get_target_sdk_version()) if apk.get_target_sdk_version() else None,
+                min_sdk=int(apk.get_min_sdk_version()) if apk.get_min_sdk_version() else None,
+                size_bytes=apk_path.stat().st_size,
+                compile_sdk=None,
+            )
+            
+            self._cache[file_hash] = info
+            return info
+            
+        except Exception as e:
+            raise ApkParseError(f"Failed to parse APK {apk_path.name}: {e}") from e
 
     def inspect_full(self, apk_path: Path) -> ApkInfo:
         """androguard-backed: manifest, permissions, components, certificates."""

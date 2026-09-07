@@ -70,6 +70,7 @@ class DevicesPage(QWidget):
 
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         ctx.device_service.devices_changed.connect(self._repopulate)
+        self._repopulate(ctx.device_service.devices())
         self._refresh_btn.clicked.connect(ctx.device_service.refresh)
 
     def showEvent(self, event) -> None:

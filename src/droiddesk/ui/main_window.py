@@ -5,9 +5,11 @@ contains no business logic and reacts only to service signals, per the
 Presentation layer constraint in Section 4.1.
 """
 
+
 from __future__ import annotations
 
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
 
 from droiddesk.context import AppContext
 from droiddesk.ui import static_data
@@ -24,6 +26,8 @@ from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
 from droiddesk.ui.theme import STYLESHEET
 from droiddesk.ui.widgets.environment_bar import EnvironmentBar
+from droiddesk.ui.widgets.device_bar import DeviceBar
+from droiddesk.ui.widgets.loading_spinner import LoadingPage
 from droiddesk.ui.widgets.nav_sidebar import BrandBlock, NavSidebar
 
 _PAGES: tuple[tuple[str, type[QWidget]], ...] = (
@@ -63,9 +67,19 @@ class MainWindow(QMainWindow):
         top_row.setContentsMargins(0, 0, 0, 0)
         top_row.setSpacing(0)
         top_row.addWidget(BrandBlock())
+
+
+        #env menu
         self._environment_bar = EnvironmentBar()
         self._environment_bar.switch_requested.connect(self._on_switch_environment)
         top_row.addWidget(self._environment_bar, 1)
+
+        #device menu
+        self._device_bar = DeviceBar(self._device_service)
+        
+        top_row.addSpacing(20)
+        top_row.addWidget(self._device_bar)
+        top_row.addSpacing(20)
         root_layout.addLayout(top_row)
 
         body_row = QWidget(objectName="bodyRow")
@@ -82,10 +96,11 @@ class MainWindow(QMainWindow):
         self._sidebar.set_current("dashboard")
         self._stack.setCurrentIndex(self._page_index["dashboard"])
 
+        self._loading_page = LoadingPage(parent=self)
+
         body_layout.addWidget(self._sidebar)
         body_layout.addWidget(self._stack, 1)
         root_layout.addWidget(body_row, 1)
-
         self.setCentralWidget(root)
         self._build_status_bar()
 
@@ -115,8 +130,26 @@ class MainWindow(QMainWindow):
         # service activity (scan running, test running, ...).
 
     def _on_page_selected(self, key: str) -> None:
-        self._stack.setCurrentIndex(self._page_index[key])
+        # Show the loading screen to create a visual transition
+        self.show_loading(f"Loading {key}...")
+        
+        def finish_switch() -> None:
+            self._stack.setCurrentIndex(self._page_index[key])
+            self.hide_loading()
+            
+        # Delay the actual switch by a fraction of a second so the animation paints
+        QTimer.singleShot(150, finish_switch)
 
     def _on_switch_environment(self) -> None:
         # TODO(Phase 5): open the environment-switch dialog via EnvService.
         pass
+
+    def show_loading(self, message: str = "Loading...") -> None:
+        """Display the loading popup."""
+        self._loading_page.set_message(message)
+        self._loading_page.show()
+        QApplication.processEvents()
+
+    def hide_loading(self) -> None:
+        """Hide the loading popup."""
+        self._loading_page.hide()

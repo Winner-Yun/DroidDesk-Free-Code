@@ -73,6 +73,12 @@ class LogcatModel(QAbstractTableModel):
     def set_paused(self, paused: bool) -> None:
         self._paused = paused
 
+    def clear(self) -> None:
+        self.beginResetModel()
+        self._rows.clear()
+        self._pending.clear()
+        self.endResetModel()
+
     def _flush(self) -> None:
         if not self._pending:
             return

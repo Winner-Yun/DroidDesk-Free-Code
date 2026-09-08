@@ -28,8 +28,13 @@ def build_application(settings: Settings) -> MainWindow:
     device_service = DeviceService(adb_client)
     device_service.start_polling()
     
+    try:
+        apkanalyzer_path = tool_locator.resolve("apkanalyzer")
+    except ToolNotFoundError:
+        apkanalyzer_path = Path("apkanalyzer.bat")
+        
     apk_reader = ApkReader()
-    apk_service = ApkService(apk_reader, adb_client)
+    apk_service = ApkService(apk_reader, adb_client, apkanalyzer_path)
     
     ctx = AppContext(
         settings=settings,

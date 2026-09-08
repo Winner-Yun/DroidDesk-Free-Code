@@ -28,6 +28,9 @@ class ApkService(QObject):
     def inspect(self, apk_path: Path) -> ApkInfo:
         return self._reader.inspect_fast(apk_path)
 
+    def inspect_full(self, apk_path: Path) -> ApkInfo:
+        return self._reader.inspect_full(apk_path)
+
     def compare(self, apk_a: Path, apk_b: Path) -> dict[str, object]:
         # TODO(Phase 2): apkanalyzer apk compare + manifest diff.
         raise NotImplementedError

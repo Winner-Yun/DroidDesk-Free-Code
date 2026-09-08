@@ -49,8 +49,57 @@ class ApkReader:
 
     def inspect_full(self, apk_path: Path) -> ApkInfo:
         """androguard-backed: manifest, permissions, components, certificates."""
-        # TODO(Phase 2): from androguard.core.apk import APK; full analysis.
-        raise ApkParseError(f"Full analysis not yet implemented for {apk_path}")
+        import dataclasses
+        
+        base_info = self.inspect_fast(apk_path)
+        
+        try:
+            from androguard.core.apk import APK
+            
+            apk = APK(str(apk_path))
+            
+            signature_schemes = []
+            if apk.get_certificates_v1():
+                signature_schemes.append(1)
+            if apk.get_certificates_v2():
+                signature_schemes.append(2)
+            if apk.get_certificates_v3():
+                signature_schemes.append(3)
+            if apk.get_certificates_v31():
+                signature_schemes.append(31)
+                
+            fingerprints = []
+            for cert in apk.get_certificates():
+                raw_sha = cert.sha256
+                if isinstance(raw_sha, bytes):
+                    sha_str = raw_sha.hex()
+                else:
+                    sha_str = str(raw_sha)
+                
+                sha_str = sha_str.upper()
+                # Remove any existing colons just in case, then format
+                sha_str = sha_str.replace(":", "")
+                formatted = ":".join(sha_str[i:i+2] for i in range(0, len(sha_str), 2))
+                fingerprints.append(formatted)
+                
+            fingerprint_str = ", ".join(fingerprints) if fingerprints else None
+            
+            enriched_info = dataclasses.replace(
+                base_info,
+                permissions=apk.get_permissions(),
+                activities=apk.get_activities(),
+                services=apk.get_services(),
+                receivers=apk.get_receivers(),
+                providers=apk.get_providers(),
+                certificate_fingerprint_sha256=fingerprint_str,
+                signature_schemes=signature_schemes,
+            )
+            
+            self._cache[base_info.file_hash] = enriched_info
+            return enriched_info
+            
+        except Exception as e:
+            raise ApkParseError(f"Failed to perform full analysis on APK {apk_path.name}: {e}") from e
 
     def extract_string_resources(self, apk_path: Path) -> list[str]:
         """Strings from resources.arsc — where API keys most often live. Used by

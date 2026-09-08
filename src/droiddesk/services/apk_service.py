@@ -20,17 +20,26 @@ class ApkService(QObject):
     step_finished = Signal(str, bool)  # step name, passed
     test_complete = Signal(object)  # TestRun
 
-    def __init__(self, apk_reader: ApkReader, adb_client: AdbClient) -> None:
+    def __init__(self, apk_reader: ApkReader, adb_client: AdbClient, apkanalyzer_path: Path) -> None:
         super().__init__()
         self._reader = apk_reader
         self._adb = adb_client
+        self._apkanalyzer_path = apkanalyzer_path
 
     def inspect(self, apk_path: Path) -> ApkInfo:
         return self._reader.inspect_fast(apk_path)
 
+    def inspect_full(self, apk_path: Path) -> ApkInfo:
+        return self._reader.inspect_full(apk_path)
+
     def compare(self, apk_a: Path, apk_b: Path) -> dict[str, object]:
-        # TODO(Phase 2): apkanalyzer apk compare + manifest diff.
-        raise NotImplementedError
+        from droiddesk.infra.process import ProcessRunner
+        runner = ProcessRunner()
+        result = runner.run(
+            self._apkanalyzer_path,
+            ["apk", "compare", str(apk_a), str(apk_b)]
+        )
+        return {"output": result.stdout, "exit_code": result.exit_code}
 
     def run_test(self, apk_path: Path, device_serial: str, profile: TestProfile) -> TestRun:
         # TODO(Phase 3): drive the state machine described in Section 4.3 —

@@ -10,6 +10,8 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from droiddesk.core.models import ApkInfo
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER NOT NULL
@@ -121,6 +123,42 @@ class Repository:
     def close(self) -> None:
         self._connection.close()
 
-    # TODO(Phase 2+): save_apk, save_test_run, save_scan, save_finding,
+    # TODO(Phase 2+): save_test_run, save_scan, save_finding,
     # list_findings, save_build_record — one method per write/read the services
     # layer needs, backed by SQLAlchemy Core per Section 2.1.
+    
+    def save_apk(self, apk: ApkInfo) -> None:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        
+        query = """
+            INSERT INTO apk (
+                file_path, file_hash, package_name, version_name,
+                version_code, target_sdk, min_sdk, size_bytes, analyzed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(file_hash) DO UPDATE SET
+                file_path=excluded.file_path,
+                package_name=excluded.package_name,
+                version_name=excluded.version_name,
+                version_code=excluded.version_code,
+                target_sdk=excluded.target_sdk,
+                min_sdk=excluded.min_sdk,
+                size_bytes=excluded.size_bytes,
+                analyzed_at=excluded.analyzed_at
+        """
+        
+        self._connection.execute(
+            query,
+            (
+                str(apk.file_path),
+                apk.file_hash,
+                apk.package_name,
+                apk.version_name,
+                apk.version_code,
+                apk.target_sdk,
+                apk.min_sdk,
+                apk.size_bytes,
+                now,
+            )
+        )
+        self._connection.commit()

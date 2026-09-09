@@ -38,8 +38,8 @@ class PlannedMove:
 
 class OrganizerService(QObject):
     progress = Signal(int, int)
-    plan_ready = Signal(list)  # list[PlannedMove]
-    finished = Signal(str)  # batch id
+    plan_ready = Signal(list)
+    finished = Signal(str)
 
     def __init__(self, journal_dir: Path) -> None:
         super().__init__()

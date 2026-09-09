@@ -117,5 +117,13 @@ class AdbClient:
         return AdbStream(self._adb_path, args)
 
     def screenshot(self, serial: str) -> bytes:
-        result = self._runner.run(self._adb_path, ["-s", serial, "exec-out", "screencap", "-p"])
-        return result.stdout.encode("latin-1")  # TODO(Phase 3): capture raw bytes, not decoded text
+        return self._runner.run_bytes(
+            self._adb_path, ["-s", serial, "exec-out", "screencap", "-p"]
+        )
+
+    def logcat_dump(self, serial: str, pid: int | None = None) -> list[str]:
+        args = ["-s", serial, "logcat", "-d", "-v", "threadtime"]
+        if pid is not None:
+            args.append(f"--pid={pid}")
+        result = self._runner.run(self._adb_path, args)
+        return [line for line in result.stdout.splitlines() if line.strip()]

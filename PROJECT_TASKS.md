@@ -104,19 +104,19 @@ UI freezing.
 Goal: click "Run Test" and get an install → launch → observe → uninstall
 cycle with a pass/fail verdict.
 
-- [ ] **`services/test_service.py` — `TestStateMachine.run_step()`**
+- [x] **`services/test_service.py` — `TestStateMachine.run_step()`**
   One branch per step name (`validate`, `install`, `launch`, `observe`,
   `screenshot`, `permissions`, `uninstall`) — see the command table in spec
   §6.3 / Appendix A for the exact `adb` invocations. Return a
   `TestStepResult` per step.
 
-- [ ] **`services/apk_service.py` — `ApkService.run_test()`**
+- [x] **`services/apk_service.py` — `ApkService.run_test()`**
   Drive `TestStateMachine` through the steps enabled on the given
   `TestProfile`, emitting `step_started`/`step_finished` as you go, and use
   `CrashDetector.evaluate()` (already written) on the logcat captured during
   Observe. Assemble and return a `TestRun`, then emit `test_complete`.
 
-- [ ] **`infra/adb.py` — fix `AdbClient.screenshot()`**
+- [x] **`infra/adb.py` — fix `AdbClient.screenshot()`**
   It currently decodes PNG bytes as text (there's a `# TODO` marking this).
   Capture raw stdout bytes instead of going through the text-decoding
   `ProcessResult` path — you'll likely need a raw-bytes variant on

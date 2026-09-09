@@ -62,6 +62,29 @@ class ProcessRunner:
             stderr=completed.stderr.decode("utf-8", errors="replace"),
         )
 
+    def run_bytes(
+        self,
+        program: Path,
+        args: list[str],
+        timeout: float = 30.0,
+        cwd: Path | None = None,
+    ) -> bytes:
+        try:
+            completed = subprocess.run(
+                [str(program), *args],
+                capture_output=True,
+                timeout=timeout,
+                cwd=cwd,
+                creationflags=_CREATE_NO_WINDOW,
+                shell=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise ProcessTimeoutError(
+                f"{program.name} timed out after {timeout}s: {' '.join(args)}"
+            ) from exc
+
+        return completed.stdout
+
 
 class AdbStream(QObject):
     """Long-lived streaming process (`adb logcat`, ...). QProcess integrates with
@@ -90,7 +113,7 @@ class AdbStream(QObject):
             self._proc.kill()
 
     def _on_output(self) -> None:
-        raw = bytes(self._proc.readAllStandardOutput())
+        raw = bytes(self._proc.readAllStandardOutput().data())
         self._buffer += raw.decode("utf-8", errors="replace")
         # emit only complete lines; retain any partial trailing line
         *complete, self._buffer = self._buffer.split("\n")

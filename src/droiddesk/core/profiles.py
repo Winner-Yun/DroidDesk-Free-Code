@@ -12,6 +12,8 @@ from pydantic import BaseModel
 class TestProfile(BaseModel):
     """Which steps of the APK Tester state machine (Section 6.3) run."""
 
+    __test__ = False
+
     name: str
     validate_manifest: bool = True
     install: bool = True

@@ -25,9 +25,39 @@ class ReportService:
         self._jinja = JinjaEnvironment(loader=FileSystemLoader(_TEMPLATES_DIR), autoescape=True)
 
     def render_test_report(self, run: TestRun, fmt: ReportFormat) -> str | bytes:
-        # TODO(Phase 3): render reports/templates/test_report.html with `run`;
-        # convert to PDF via WeasyPrint when fmt == "pdf".
-        raise NotImplementedError
+        template = self._jinja.get_template("test_report.html")
+        html = template.render(run=run)
+
+        match fmt:
+            case "html":
+                return html
+            case "pdf":
+                from droiddesk.reports.renderer import html_to_pdf
+
+                return html_to_pdf(html)
+            case "json":
+                import dataclasses
+                import json
+
+                return json.dumps(dataclasses.asdict(run), default=str, indent=2)
+            case "markdown":
+                lines = [
+                    f"# Test Report — {run.apk.package_name}",
+                    f"**Verdict:** {run.verdict} | **Device:** {run.device_serial} | "
+                    f"**Profile:** {run.profile_name}",
+                    "",
+                    "## Steps",
+                    "| Step | Result | Duration (ms) | Detail |",
+                    "| --- | --- | --- | --- |",
+                ]
+                for step in run.steps:
+                    status = "PASS" if step.passed else "FAIL"
+                    lines.append(
+                        f"| {step.name} | {status} | {step.duration_ms} | {step.detail} |"
+                    )
+                return "\n".join(lines)
+            case _:
+                raise ValueError(f"Unknown report format: {fmt}")
 
     def render_gate_report(self, result: GateResult, fmt: ReportFormat) -> str | bytes:
         # TODO(Phase 5): render reports/templates/gate.html with `result`.

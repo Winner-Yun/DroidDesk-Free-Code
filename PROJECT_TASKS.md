@@ -122,13 +122,13 @@ cycle with a pass/fail verdict.
   `ProcessResult` path — you'll likely need a raw-bytes variant on
   `ProcessRunner` for this one call.
 
-- [ ] **`reports/renderer.py` — `html_to_pdf()`**
+- [x] **`reports/renderer.py` — `html_to_pdf()`**
   Wire up WeasyPrint. **Test this early** — its GTK dependency is flagged in
   the spec (§10.1) as the one packaging risk most likely to bite late. If it
   won't install cleanly on Windows, fall back to ReportLab now rather than at
   release.
 
-- [ ] **`ui/pages/apk_tester.py` — wire it up**
+- [x] **`ui/pages/apk_tester.py` — wire it up**
   Profile picker, Run button, live per-step status list, connected to
   `ApkService`'s three signals.
 

@@ -160,7 +160,7 @@ class TestStateMachine:
                 return self._step_permissions(ctx, name)
             case "network" | "extract_network_hosts":
                 return self._step_network(ctx, name)
-            case "uninstall":
+            case "uninstall" | "clean_up" | "cleanup":
                 return self._step_uninstall(ctx, name)
             case _:
                 raise ValueError(f"Unknown test step: {name}")

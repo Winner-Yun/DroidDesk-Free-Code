@@ -8,11 +8,12 @@ from droiddesk.config import Settings
 from droiddesk.context import AppContext
 from droiddesk.core.errors import ToolNotFoundError
 from droiddesk.infra.adb import AdbClient
+from droiddesk.infra.apk_reader import ApkReader
 from droiddesk.infra.db import Repository
 from droiddesk.infra.tools import ToolLocator
-from droiddesk.services.device_service import DeviceService
-from droiddesk.infra.apk_reader import ApkReader
 from droiddesk.services.apk_service import ApkService
+from droiddesk.services.device_service import DeviceService
+from droiddesk.services.test_service import CrashDetector, TestStateMachine
 from droiddesk.ui.main_window import MainWindow
 
 
@@ -34,7 +35,19 @@ def build_application(settings: Settings) -> MainWindow:
         apkanalyzer_path = Path("apkanalyzer.bat")
         
     apk_reader = ApkReader()
-    apk_service = ApkService(apk_reader, adb_client, apkanalyzer_path)
+    crash_detector = CrashDetector()
+    state_machine = TestStateMachine(
+        adb_client=adb_client,
+        apk_reader=apk_reader,
+        crash_detector=crash_detector,
+    )
+    apk_service = ApkService(
+        apk_reader,
+        adb_client,
+        apkanalyzer_path,
+        state_machine=state_machine,
+        crash_detector=crash_detector,
+    )
     
     ctx = AppContext(
         settings=settings,

@@ -46,6 +46,8 @@ class ApkInfo:
 
 @dataclass(slots=True)
 class TestStepResult:
+    __test__ = False
+
     name: str
     passed: bool
     duration_ms: int
@@ -54,6 +56,8 @@ class TestStepResult:
 
 @dataclass(slots=True)
 class TestRun:
+    __test__ = False
+
     apk: ApkInfo
     device_serial: str
     profile_name: str

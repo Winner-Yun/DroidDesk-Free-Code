@@ -34,7 +34,7 @@ def build_application(settings: Settings) -> MainWindow:
     except ToolNotFoundError:
         apkanalyzer_path = Path("apkanalyzer.bat")
         
-    apk_reader = ApkReader()
+    apk_reader = ApkReader(tool_locator=tool_locator)
     crash_detector = CrashDetector()
     state_machine = TestStateMachine(
         adb_client=adb_client,
@@ -47,6 +47,8 @@ def build_application(settings: Settings) -> MainWindow:
         apkanalyzer_path,
         state_machine=state_machine,
         crash_detector=crash_detector,
+        repository=repository,
+        storage_dir=settings.data_dir / "apks",
     )
     
     ctx = AppContext(

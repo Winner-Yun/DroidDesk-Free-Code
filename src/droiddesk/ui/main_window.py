@@ -81,8 +81,11 @@ class MainWindow(QMainWindow):
         top_row.addWidget(BrandBlock())
 
 
-        # Environment bar with APK selector and Upload action
-        self._environment_bar = EnvironmentBar()
+        # Environment bar with APK selector, upload action, and removal
+        self._environment_bar = EnvironmentBar(
+            apk_service=self._ctx.apk_service,
+            settings=self._settings,
+        )
         self._environment_bar.apk_selected.connect(self._on_active_apk_changed)
         self._environment_bar.apks_uploaded.connect(self._on_apks_uploaded)
         top_row.addWidget(self._environment_bar, 1)
@@ -118,13 +121,23 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
         self._build_status_bar()
 
- 
+        # Synchronize initially selected APK with pages
+        initial_apk = self._environment_bar.selected_apk()
+        if initial_apk is not None:
+            self._on_active_apk_changed(initial_apk)
+
         # TODO(Phase 5): drive the environment bar from
         # EnvService.active_environment_changed instead of static_data.
 
     def _build_pages(self) -> None:
         for key, page_cls in _PAGES:
             self._page_index[key] = self._stack.addWidget(page_cls(self._ctx))
+
+        devices_idx = self._page_index.get("devices")
+        if devices_idx is not None:
+            devices_widget = self._stack.widget(devices_idx)
+            if isinstance(devices_widget, DevicesPage):
+                devices_widget.open_logcat_requested.connect(self._on_open_logcat_requested)
 
     def _build_status_bar(self) -> None:
         bar = self.statusBar()
@@ -149,6 +162,15 @@ class MainWindow(QMainWindow):
         # Delay the actual switch by a fraction of a second so the animation paints
         QTimer.singleShot(150, finish_switch)
 
+    def _on_open_logcat_requested(self, serial: str) -> None:
+        self._sidebar.set_current("logcat")
+        self._on_page_selected("logcat")
+        logcat_idx = self._page_index.get("logcat")
+        if logcat_idx is not None:
+            logcat_widget = self._stack.widget(logcat_idx)
+            if isinstance(logcat_widget, LogcatPage):
+                logcat_widget.select_device(serial)
+
     def _on_switch_environment(self) -> None:
         # TODO(Phase 5): open the environment-switch dialog via EnvService.
         pass
@@ -164,9 +186,10 @@ class MainWindow(QMainWindow):
         self._loading_page.hide()
 
     def _on_active_apk_changed(self, apk_path: Path | None) -> None:
-        if not apk_path:
-            return
-        self.statusBar().showMessage(f"Active APK: {apk_path.name}", 5000)
+        if apk_path is None:
+            self.statusBar().showMessage("No active APK", 3000)
+        else:
+            self.statusBar().showMessage(f"Active APK: {apk_path.name}", 5000)
 
         # Notify AnalyzerPage
         analyzer_idx = self._page_index.get("analyzer")
@@ -185,7 +208,7 @@ class MainWindow(QMainWindow):
     def _on_apks_uploaded(self, paths: list[Path]) -> None:
         self.statusBar().showMessage(f"Uploaded {len(paths)} APK file(s)", 5000)
         device = self._device_bar.selected_device()
-        if device and paths:
+        if paths:
             from droiddesk.ui.widgets.device_bar import ApkUploadDialog
 
             dialog = ApkUploadDialog(

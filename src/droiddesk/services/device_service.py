@@ -5,6 +5,8 @@ offline state and Test Device Profile marking. Emits devices_changed; owns no wi
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from droiddesk.core.errors import DroidDeskError
@@ -57,6 +59,11 @@ class DeviceService(QObject):
 
     def pair_wireless(self, host_port: str, pairing_code: str) -> bool:
         return self._adb.pair(host_port, pairing_code)
+
+    def install_apk(
+        self, serial: str, apk_path: Path, replace: bool = True, test_ok: bool = True
+    ) -> bool:
+        return self._adb.install(serial, apk_path, replace=replace, test_ok=test_ok)
 
     def _poll(self) -> None:
         try:

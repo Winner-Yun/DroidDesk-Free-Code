@@ -34,6 +34,7 @@ class Settings(BaseModel):
     gitleaks_path: Path | None = None
     scrcpy_path: Path | None = None
     git_path: Path | None = None
+    active_apk_hash: str | None = None
 
     config_dir: Path = user_config_path("DroidDesk", appauthor=False)
     data_dir: Path = user_data_path("DroidDesk", appauthor=False)
@@ -57,13 +58,20 @@ class Settings(BaseModel):
             for field in _PATH_FIELDS:
                 if field in data:
                     setattr(settings, field, Path(data[field]))
+            if "active_apk_hash" in data:
+                settings.active_apk_hash = str(data["active_apk_hash"])
         return settings
 
     def save(self) -> None:
+        self.config_dir.mkdir(parents=True, exist_ok=True)
         lines = []
         for field in _PATH_FIELDS:
             value: Path | None = getattr(self, field)
             if value is not None:
                 escaped = str(value).replace("\\", "\\\\")
                 lines.append(f'{field} = "{escaped}"')
+        if self.active_apk_hash is not None:
+            escaped_hash = self.active_apk_hash.replace('"', '\\"')
+            lines.append(f'active_apk_hash = "{escaped_hash}"')
         self.config_file.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+

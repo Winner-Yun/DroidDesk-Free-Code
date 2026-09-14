@@ -46,9 +46,9 @@ class SecurityPage(QWidget):
 
         header = PageHeader(
             "Secret scanner",
-            "Detects accidental exposure, not deliberate concealment. A clean result means nothing was found by the checks performed.",
+            "Detects accidental exposure, not deliberate concealment. "
+            "A clean result means nothing was found by the checks performed.",
         )
-        header.add_action(QPushButton("⊘  Scan an APK"))
         scan_button = QPushButton("Scan project")
         scan_button.setProperty("role", "primary")
         header.add_action(scan_button)
@@ -198,7 +198,8 @@ class SecurityPage(QWidget):
     def _section_label(self, text: str) -> QLabel:
         label = QLabel(text)
         label.setStyleSheet(
-            "color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-top: 8px;"
+            "color: #5c5f66; font-size: 10px; font-weight: 700; "
+            "letter-spacing: 1px; margin-top: 8px;"
         )
         return label
 

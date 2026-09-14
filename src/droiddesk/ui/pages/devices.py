@@ -5,6 +5,8 @@ debugging entry, and the Test Device Profile toggle.
 
 from __future__ import annotations
 
+from typing import override
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -73,10 +75,12 @@ class DevicesPage(QWidget):
         self._repopulate(ctx.device_service.devices())
         self._refresh_btn.clicked.connect(ctx.device_service.refresh)
 
+    @override
     def showEvent(self, event) -> None:
         super().showEvent(event)
         self._ctx.device_service.start_polling(page_visible=True)
 
+    @override
     def hideEvent(self, event) -> None:
         super().hideEvent(event)
         self._ctx.device_service.set_page_visible(False)
@@ -197,14 +201,14 @@ class DevicesPage(QWidget):
         layout.addWidget(mark_btn)
         layout.addWidget(QPushButton("≡  Open logcat"))
         layout.addWidget(QPushButton("↓  Take screenshot"))
-        layout.addWidget(QPushButton("▶  Install an APK"))
 
         return card
 
     def _section_label(self, text: str) -> QLabel:
         label = QLabel(text)
         label.setStyleSheet(
-            "color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-top: 6px;"
+            "color: #5c5f66; font-size: 10px; font-weight: 700; "
+            "letter-spacing: 1px; margin-top: 6px;"
         )
         return label
 

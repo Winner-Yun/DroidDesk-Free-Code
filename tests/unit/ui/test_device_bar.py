@@ -90,6 +90,33 @@ def test_apk_upload_dialog_table_population(qapp: QApplication, tmp_path: Path) 
     assert dialog._install_btn.isEnabled() is False
 
 
+def test_apk_upload_dialog_install_no_device_alerts(qapp: QApplication, tmp_path: Path) -> None:
+    from unittest.mock import patch
+
+    from PySide6.QtWidgets import QMessageBox
+
+    service = _make_mock_device_service()
+    service.devices.return_value = []
+
+    apk1 = tmp_path / "app1.apk"
+    apk1.write_bytes(b"content1" * 100)
+
+    dialog = ApkUploadDialog(
+        device_service=service,
+        initial_device=None,
+        apk_paths=[apk1],
+    )
+
+    assert dialog._dev_selector.selected_device() is None
+
+    with patch.object(QMessageBox, "warning") as mock_warn:
+        dialog._on_install_clicked()
+        mock_warn.assert_called_once()
+        args, _ = mock_warn.call_args
+        assert "No Device Connected" in args[1]
+        assert "Error: No device connected" in dialog._status_label.text()
+
+
 def test_apk_install_worker(qapp: QApplication, tmp_path: Path) -> None:
     service = _make_mock_device_service()
     apk1 = tmp_path / "test1.apk"
@@ -119,3 +146,57 @@ def test_apk_install_worker(qapp: QApplication, tmp_path: Path) -> None:
     assert finished[1] == (apk2, True)
     assert summary == [(2, 2)]
     assert service.install_apk.call_count == 2
+
+
+def test_environment_bar_db_and_settings_persistence(qapp: QApplication, tmp_path: Path) -> None:
+    from unittest.mock import patch
+
+    from PySide6.QtWidgets import QMessageBox
+
+    from droiddesk.config import Settings
+    from droiddesk.core.models import ApkInfo
+
+    apk1 = tmp_path / "app1.apk"
+    apk2 = tmp_path / "app2.apk"
+    apk1.write_bytes(b"apk1")
+    apk2.write_bytes(b"apk2")
+
+    info1 = ApkInfo(file_path=apk1, file_hash="hash1", package_name="com.app1")
+    info2 = ApkInfo(file_path=apk2, file_hash="hash2", package_name="com.app2")
+
+    mock_apk_service = MagicMock()
+    mock_apk_service.list_apks.return_value = [info1, info2]
+    mock_apk_service.remove_apk.return_value = True
+
+    settings = Settings(config_dir=tmp_path / "cfg", data_dir=tmp_path / "data")
+    settings.active_apk_hash = "hash2"
+
+    bar = EnvironmentBar(apk_service=mock_apk_service, settings=settings)
+
+    # Both items should be loaded from the service
+    assert bar._apk_selector.count() == 2
+    # Active item should match settings.active_apk_hash ("hash2")
+    assert bar.selected_apk() == apk2
+    assert bar.selected_apk_hash() == "hash2"
+    assert bar._remove_button.isEnabled() is True
+
+    # Test removing active APK (hash2)
+    with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+        bar._on_remove_clicked()
+
+    mock_apk_service.remove_apk.assert_called_once_with("hash2")
+    assert bar._apk_selector.count() == 1
+    assert bar.selected_apk() == apk1
+    assert bar.selected_apk_hash() == "hash1"
+    assert settings.active_apk_hash == "hash1"
+
+    # Remove the remaining APK (hash1)
+    with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+        bar._on_remove_clicked()
+
+    assert bar._apk_selector.count() == 1
+    assert bar._apk_selector.itemText(0) == "No APK selected"
+    assert bar.selected_apk() is None
+    assert bar._remove_button.isEnabled() is False
+    assert settings.active_apk_hash is None
+

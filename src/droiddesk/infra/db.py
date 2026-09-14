@@ -128,9 +128,10 @@ class Repository:
     # layer needs, backed by SQLAlchemy Core per Section 2.1.
     
     def save_apk(self, apk: ApkInfo) -> None:
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc).isoformat()
-        
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC).isoformat()
+
         query = """
             INSERT INTO apk (
                 file_path, file_hash, package_name, version_name,
@@ -146,7 +147,7 @@ class Repository:
                 size_bytes=excluded.size_bytes,
                 analyzed_at=excluded.analyzed_at
         """
-        
+
         self._connection.execute(
             query,
             (
@@ -159,6 +160,89 @@ class Repository:
                 apk.min_sdk,
                 apk.size_bytes,
                 now,
-            )
+            ),
         )
         self._connection.commit()
+
+    def list_apks(self) -> list[ApkInfo]:
+        """List all stored APK records, ordered with most recently analyzed first."""
+        from datetime import datetime
+
+        cursor = self._connection.execute(
+            """
+            SELECT file_path, file_hash, package_name, version_name,
+                   version_code, target_sdk, min_sdk, size_bytes, analyzed_at
+            FROM apk
+            ORDER BY analyzed_at DESC, id DESC
+            """
+        )
+        rows = cursor.fetchall()
+        results: list[ApkInfo] = []
+        for row in rows:
+            analyzed_dt = None
+            if row[8]:
+                try:
+                    analyzed_dt = datetime.fromisoformat(row[8])
+                except Exception:
+                    analyzed_dt = None
+            results.append(
+                ApkInfo(
+                    file_path=Path(row[0]),
+                    file_hash=row[1],
+                    package_name=row[2],
+                    version_name=row[3],
+                    version_code=row[4],
+                    target_sdk=row[5],
+                    min_sdk=row[6],
+                    size_bytes=row[7] or 0,
+                    analyzed_at=analyzed_dt,
+                )
+            )
+        return results
+
+    def get_apk_by_hash(self, file_hash: str) -> ApkInfo | None:
+        """Fetch a single APK record by its file hash."""
+        from datetime import datetime
+
+        cursor = self._connection.execute(
+            """
+            SELECT file_path, file_hash, package_name, version_name,
+                   version_code, target_sdk, min_sdk, size_bytes, analyzed_at
+            FROM apk
+            WHERE file_hash = ?
+            """,
+            (file_hash,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        analyzed_dt = None
+        if row[8]:
+            try:
+                analyzed_dt = datetime.fromisoformat(row[8])
+            except Exception:
+                analyzed_dt = None
+        return ApkInfo(
+            file_path=Path(row[0]),
+            file_hash=row[1],
+            package_name=row[2],
+            version_name=row[3],
+            version_code=row[4],
+            target_sdk=row[5],
+            min_sdk=row[6],
+            size_bytes=row[7] or 0,
+            analyzed_at=analyzed_dt,
+        )
+
+    def delete_apk(self, file_hash: str) -> bool:
+        """Delete an APK record by hash, safely removing any referencing test runs."""
+        cursor = self._connection.execute("SELECT id FROM apk WHERE file_hash = ?", (file_hash,))
+        row = cursor.fetchone()
+        if not row:
+            return False
+        apk_id = row[0]
+        self._connection.execute("DELETE FROM test_run WHERE apk_id = ?", (apk_id,))
+        self._connection.execute("DELETE FROM apk WHERE id = ?", (apk_id,))
+        self._connection.commit()
+        return True
+

@@ -7,15 +7,20 @@ out before Phase 2 wires in a live `AdbStream`.
 
 from __future__ import annotations
 
+import csv
 import re
+from pathlib import Path
+from typing import override
 
-from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, Qt
+from PySide6.QtCore import QModelIndex, QObject, QPersistentModelIndex, QSortFilterProxyModel
 from PySide6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QTableView,
     QVBoxLayout,
@@ -30,17 +35,17 @@ from droiddesk.ui.widgets.card import PageHeader
 
 _PRIORITY_COLORS = {"E": "#e05a4d", "W": "#f1c40f", "I": "#5b9bd5", "D": "#8b8e94", "V": "#5c5f66"}
 
+
 class LogcatFilterProxyModel(QSortFilterProxyModel):
-    def __init__(self, parent=None):
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._level = "V"
         self._tag = ""
         self._pid = ""
-        self._regex = None
-        
+        self._regex: re.Pattern[str] | None = None
         self._levels = {"V": 0, "D": 1, "I": 2, "W": 3, "E": 4, "F": 5}
 
-    def set_filters(self, level: str, tag: str, pid: str, regex_str: str):
+    def set_filters(self, level: str, tag: str, pid: str, regex_str: str) -> None:
         self._level = level
         self._tag = tag.strip().lower()
         self._pid = pid.strip()
@@ -51,32 +56,35 @@ class LogcatFilterProxyModel(QSortFilterProxyModel):
                 self._regex = None
         else:
             self._regex = None
-        self.invalidateFilter()
+        self.invalidate()
 
-    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+    @override
+    def filterAcceptsRow(
+        self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex
+    ) -> bool:
         model = self.sourceModel()
         if not model:
             return True
-            
+
         priority = model.index(source_row, 3, source_parent).data()
         if self._levels.get(priority, 0) < self._levels.get(self._level, 0):
             return False
-            
+
         if self._tag:
             tag = model.index(source_row, 4, source_parent).data()
             if self._tag not in str(tag).lower():
                 return False
-                
+
         if self._pid:
             pid = model.index(source_row, 1, source_parent).data()
             if str(pid) != self._pid:
                 return False
-                
+
         if self._regex:
             message = model.index(source_row, 5, source_parent).data()
             if not self._regex.search(str(message)):
                 return False
-                
+
         return True
 
 
@@ -85,11 +93,11 @@ class LogcatPage(QWidget):
         super().__init__()
         self._ctx = ctx
         self.setProperty("role", "page")
-        
+
         self._model = LogcatModel()
         self._proxy = LogcatFilterProxyModel(self)
         self._proxy.setSourceModel(self._model)
-        
+
         self._stream: AdbStream | None = None
 
         outer = QVBoxLayout(self)
@@ -98,32 +106,35 @@ class LogcatPage(QWidget):
 
         header = PageHeader(
             "Logcat",
-            "Streamed from the selected device and parsed into columns. Pausing holds the view without dropping the stream.",
+            "Streamed from the selected device and parsed into columns. "
+            "Pausing holds the view without dropping the stream.",
         )
-        
+
         self._device_combo = QComboBox()
         self._device_combo.setFixedWidth(200)
         self._update_device_combo()
         self._ctx.device_service.devices_changed.connect(self._update_device_combo)
         header.add_action(self._device_combo)
-        
-        self._pause_button = QPushButton("⏸  Pause")
+
+        self._pause_button = QPushButton("Pause")
         self._pause_button.setCheckable(True)
         self._pause_button.toggled.connect(self._on_pause_toggled)
         header.add_action(self._pause_button)
-        
+
         clear_button = QPushButton("✕  Clear")
         clear_button.clicked.connect(self._model.clear)
         header.add_action(clear_button)
-        
-        header.add_action(QPushButton("↓  Export view"))
-        
+
+        self._export_button = QPushButton("↓  Export view")
+        self._export_button.clicked.connect(self._on_export_clicked)
+        header.add_action(self._export_button)
+
         self._stream_button = QPushButton("Start stream")
         self._stream_button.setProperty("role", "primary")
         self._stream_button.setCheckable(True)
         self._stream_button.toggled.connect(self._on_stream_toggled)
         header.add_action(self._stream_button)
-        
+
         outer.addWidget(header)
         outer.addLayout(self._build_filter_row())
 
@@ -198,15 +209,21 @@ class LogcatPage(QWidget):
         return row
 
     def _update_count(self) -> None:
-        self._count_label.setText(f"{self._model.rowCount()} lines")
+        total = self._model.rowCount()
+        visible = self._proxy.rowCount()
+        if visible == total:
+            self._count_label.setText(f"{total} lines")
+        else:
+            self._count_label.setText(f"{visible} / {total} lines")
 
     def _apply_filters(self) -> None:
         self._proxy.set_filters(
             self._level_combo.currentText(),
             self._tag_input.text(),
             self._pid_input.text(),
-            self._regex_input.text()
+            self._regex_input.text(),
         )
+        self._update_count()
 
     def _on_pause_toggled(self, paused: bool) -> None:
         self._model.set_paused(paused)
@@ -218,9 +235,9 @@ class LogcatPage(QWidget):
             if not serial:
                 self._stream_button.setChecked(False)
                 return
-            
+
             self._stream_button.setText("Stop stream")
-            
+
             self._stream = self._ctx.device_service._adb.logcat_stream(serial)
             self._stream.line_received.connect(self._model.queue)
             self._stream.finished.connect(self._on_stream_finished)
@@ -235,3 +252,94 @@ class LogcatPage(QWidget):
         self._stream_button.setChecked(False)
         self._stream_button.setText("Start stream")
         self._stream = None
+
+    def export_view(self, destination: Path) -> int:
+        """Export currently visible (filtered) log lines to a file.
+
+        Supports .csv for structured export and .txt / .log for raw threadtime format.
+        Returns the number of exported lines.
+        """
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        count = self._proxy.rowCount()
+
+        if destination.suffix.lower() == ".csv":
+            with destination.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(["Time", "PID", "TID", "Level", "Tag", "Message"])
+                for i in range(count):
+                    source_idx = self._proxy.mapToSource(self._proxy.index(i, 0))
+                    if not source_idx.isValid():
+                        continue
+                    line = self._model._rows[source_idx.row()]
+                    writer.writerow([
+                        line.timestamp,
+                        line.pid,
+                        line.tid,
+                        line.priority,
+                        line.tag,
+                        line.message,
+                    ])
+        else:
+            with destination.open("w", encoding="utf-8") as f:
+                for i in range(count):
+                    source_idx = self._proxy.mapToSource(self._proxy.index(i, 0))
+                    if not source_idx.isValid():
+                        continue
+                    line = self._model._rows[source_idx.row()]
+                    line_str = (
+                        line.raw.rstrip()
+                        if line.raw
+                        else (
+                            f"{line.timestamp} {line.pid:>5} {line.tid:>5} "
+                            f"{line.priority} {line.tag}: {line.message}"
+                        )
+                    )
+                    f.write(line_str + "\n")
+
+        return count
+
+    def _on_export_clicked(self) -> None:
+        if self._proxy.rowCount() == 0:
+            QMessageBox.information(
+                self,
+                "Export Logcat",
+                "There are no log lines to export in the current view.",
+            )
+            return
+
+        default_name = "logcat_export.txt"
+        file_filter = "Text Files (*.txt);;Log Files (*.log);;CSV Files (*.csv);;All Files (*.*)"
+        path_str, selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Export Logcat View",
+            default_name,
+            file_filter,
+        )
+        if not path_str:
+            return
+
+        dest = Path(path_str)
+        if not dest.suffix:
+            if "csv" in selected_filter.lower():
+                dest = dest.with_suffix(".csv")
+            else:
+                dest = dest.with_suffix(".txt")
+
+        try:
+            exported_count = self.export_view(dest)
+            QMessageBox.information(
+                self,
+                "Export Successful",
+                f"Successfully exported {exported_count} lines to:\n{dest.name}",
+            )
+        except OSError as e:
+            QMessageBox.critical(
+                self,
+                "Export Failed",
+                f"Could not export logcat view:\n{e}",
+            )
+
+    def select_device(self, serial: str) -> None:
+        idx = self._device_combo.findData(serial)
+        if idx >= 0:
+            self._device_combo.setCurrentIndex(idx)

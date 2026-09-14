@@ -14,12 +14,10 @@ from PySide6.QtGui import (
     QDesktopServices,
     QDragEnterEvent,
     QDropEvent,
-    QMouseEvent,
     QPixmap,
 )
 from PySide6.QtWidgets import (
     QComboBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -39,7 +37,7 @@ from droiddesk.ui.widgets.device_selector import DeviceSelector
 
 
 class DropZone(QFrame):
-    """File drop zone accepting .apk and .aab files, with click-to-browse fallback."""
+    """File drop zone accepting .apk and .aab files."""
 
     file_dropped = Signal(Path)
 
@@ -48,10 +46,9 @@ class DropZone(QFrame):
         self.setAcceptDrops(True)
         self.setProperty("role", "card")
         self.setFixedHeight(90)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         dz_layout = QVBoxLayout(self)
-        self._hint = QLabel("Drop an .apk or .aab here, or click to browse")
+        self._hint = QLabel("Active APK selected from app bar (or drop .apk here)")
         self._hint.setProperty("role", "muted")
         self._hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         dz_layout.addWidget(self._hint)
@@ -74,15 +71,6 @@ class DropZone(QFrame):
                 event.acceptProposedAction()
                 return
         event.ignore()
-
-    @override
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            chosen, _ = QFileDialog.getOpenFileName(
-                self, "Select APK", "", "Android Packages (*.apk *.aab)"
-            )
-            if chosen:
-                self.file_dropped.emit(Path(chosen))
 
 
 class StepRowWidget(QWidget):
@@ -396,6 +384,9 @@ class ApkTesterPage(QWidget):
 
         layout.addStretch(1)
         return card
+
+    def set_apk(self, path: Path) -> None:
+        self._on_apk_selected(path)
 
     def _on_apk_selected(self, path: Path) -> None:
         self._apk_path = path

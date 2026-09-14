@@ -41,6 +41,7 @@ class ProcessRunner:
         args: list[str],
         timeout: float = 30.0,
         cwd: Path | None = None,
+        env: dict[str, str] | None = None,
     ) -> ProcessResult:
         try:
             completed = subprocess.run(
@@ -48,6 +49,7 @@ class ProcessRunner:
                 capture_output=True,
                 timeout=timeout,
                 cwd=cwd,
+                env=env,
                 creationflags=_CREATE_NO_WINDOW,
                 shell=False,
             )
@@ -68,6 +70,7 @@ class ProcessRunner:
         args: list[str],
         timeout: float = 30.0,
         cwd: Path | None = None,
+        env: dict[str, str] | None = None,
     ) -> bytes:
         try:
             completed = subprocess.run(
@@ -75,6 +78,7 @@ class ProcessRunner:
                 capture_output=True,
                 timeout=timeout,
                 cwd=cwd,
+                env=env,
                 creationflags=_CREATE_NO_WINDOW,
                 shell=False,
             )

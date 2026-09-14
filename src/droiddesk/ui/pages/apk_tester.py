@@ -1,4 +1,4 @@
-"""APK Tester page — Section 6.3. Artifact-under-test drop zone, the run
+"""APK Tester page — Section 6.3. Artifact-under-test panel, the run
 sequence checklist, and the verdict panel. Wired to ApkService.step_started,
 step_finished, and test_complete.
 """
@@ -7,13 +7,10 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import override
 
-from PySide6.QtCore import Qt, QThread, QUrl, Signal
+from PySide6.QtCore import Qt, QThread, QUrl
 from PySide6.QtGui import (
     QDesktopServices,
-    QDragEnterEvent,
-    QDropEvent,
     QPixmap,
 )
 from PySide6.QtWidgets import (
@@ -34,43 +31,6 @@ from droiddesk.core.severity import Verdict
 from droiddesk.services.apk_service import ApkService
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.device_selector import DeviceSelector
-
-
-class DropZone(QFrame):
-    """File drop zone accepting .apk and .aab files."""
-
-    file_dropped = Signal(Path)
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setAcceptDrops(True)
-        self.setProperty("role", "card")
-        self.setFixedHeight(90)
-
-        dz_layout = QVBoxLayout(self)
-        self._hint = QLabel("Active APK selected from app bar (or drop .apk here)")
-        self._hint.setProperty("role", "muted")
-        self._hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        dz_layout.addWidget(self._hint)
-
-    @override
-    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.toLocalFile().lower().endswith((".apk", ".aab")):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
-
-    @override
-    def dropEvent(self, event: QDropEvent) -> None:
-        for url in event.mimeData().urls():
-            file_path = Path(url.toLocalFile())
-            if file_path.suffix.lower() in (".apk", ".aab") and file_path.is_file():
-                self.file_dropped.emit(file_path)
-                event.acceptProposedAction()
-                return
-        event.ignore()
 
 
 class StepRowWidget(QWidget):
@@ -245,15 +205,11 @@ class ApkTesterPage(QWidget):
         card = Card("Artifact under test")
         layout = card.body_layout()
 
-        self._drop_zone = DropZone()
-        self._drop_zone.file_dropped.connect(self._on_apk_selected)
-        layout.addWidget(self._drop_zone)
-
         self._apk_name_label = QLabel("No APK selected")
-        self._apk_name_label.setStyleSheet("font-weight: 600;")
+        self._apk_name_label.setStyleSheet("font-size: 15px; font-weight: 700;")
         layout.addWidget(self._apk_name_label)
 
-        self._apk_package_label = QLabel("—")
+        self._apk_package_label = QLabel("Select an APK from the app bar")
         self._apk_package_label.setProperty("role", "mono")
         layout.addWidget(self._apk_package_label)
 
@@ -271,7 +227,7 @@ class ApkTesterPage(QWidget):
         layout.addLayout(self._tags_layout)
 
         self._artifact_note = QLabel(
-            "Drop an APK above to populate identity and manifest details."
+            "Select an APK from the app bar to begin."
         )
         self._artifact_note.setWordWrap(True)
         self._artifact_note.setProperty("role", "muted")
@@ -385,10 +341,22 @@ class ApkTesterPage(QWidget):
         layout.addStretch(1)
         return card
 
-    def set_apk(self, path: Path) -> None:
+    def set_apk(self, path: Path | None) -> None:
         self._on_apk_selected(path)
 
-    def _on_apk_selected(self, path: Path) -> None:
+    def _on_apk_selected(self, path: Path | None) -> None:
+        if path is None:
+            self._apk_path = None
+            self._apk_info = None
+            self._apk_name_label.setText("No APK selected")
+            self._apk_package_label.setText("Select an APK to begin")
+            self._tag_version.setText("–")
+            self._tag_min.setText("–")
+            self._tag_target.setText("–")
+            self._artifact_note.setText("Select an APK from the app bar to begin.")
+            self._artifact_note.setStyleSheet("color: #8b8e94;")
+            return
+
         self._apk_path = path
         try:
             info = self._ctx.apk_service.inspect(path)
@@ -408,9 +376,10 @@ class ApkTesterPage(QWidget):
             self._artifact_note.setText(f"Failed to inspect APK: {exc}")
             self._artifact_note.setStyleSheet("color: #e0574a;")
 
+
     def _on_run_test(self) -> None:
         if not self._apk_path or not self._apk_path.is_file():
-            self._artifact_note.setText("Please select or drop an APK first.")
+            self._artifact_note.setText("Please select an APK from the app bar first.")
             self._artifact_note.setStyleSheet("color: #e0574a;")
             return
 

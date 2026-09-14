@@ -51,6 +51,9 @@ def test_apk_tester_page_initial_state(qapp: QApplication, tmp_path: Path) -> No
     assert "uninstall" in page._step_widgets
 
     assert page._apk_name_label.text() == "No APK selected"
+    assert page._apk_package_label.text() == "Select an APK from the app bar"
+    assert "app bar" in page._artifact_note.text()
+    assert not hasattr(page, "_drop_zone")
     assert page._verdict_label.text() == "PENDING"
     assert page._run_button.isEnabled() is True
     assert page._open_report.isEnabled() is False
@@ -70,7 +73,7 @@ def test_apk_tester_page_on_apk_selected(qapp: QApplication, tmp_path: Path) -> 
         min_sdk=24,
         target_sdk=34,
     )
-    ctx.apk_service.inspect.return_value = apk_info
+    ctx.apk_service.inspect = MagicMock(return_value=apk_info)  # type: ignore[method-assign]
 
     page = ApkTesterPage(ctx)
     page._on_apk_selected(apk_file)

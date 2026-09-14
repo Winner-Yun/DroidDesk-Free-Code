@@ -41,6 +41,11 @@ class ApkInfo:
     providers: list[str] = field(default_factory=list)
     signature_schemes: list[int] = field(default_factory=list)
     certificate_fingerprint_sha256: str | None = None
+    certificate_fingerprint_sha1: str | None = None
+    certificate_fingerprint_md5: str | None = None
+    certificate_dn: str | None = None
+    signature_verified: bool = False
+    signature_source: str | None = None
     analyzed_at: datetime | None = None
 
 

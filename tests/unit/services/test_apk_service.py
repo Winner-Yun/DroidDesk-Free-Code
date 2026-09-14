@@ -236,3 +236,82 @@ def test_apk_service_inspect_delegates(tmp_path: Path) -> None:
 
     service.inspect_full(apk_file)
     mock_reader.inspect_full.assert_called_once_with(apk_file)
+
+
+def test_apk_service_import_and_local_resilience(tmp_path: Path) -> None:
+    from droiddesk.infra.db import Repository
+
+    db_path = tmp_path / "test.db"
+    repo = Repository(db_path)
+    storage_dir = tmp_path / "storage_apks"
+
+    mock_reader = MagicMock()
+    mock_adb = MagicMock()
+
+    # Create original external APK
+    external_dir = tmp_path / "downloads"
+    external_dir.mkdir()
+    original_apk = external_dir / "my_app.apk"
+    original_apk.write_bytes(b"apk_binary_data_12345")
+
+    from droiddesk.infra.hashing import hash_file
+
+    expected_hash = hash_file(original_apk)
+
+    def fake_inspect(p: Path) -> ApkInfo:
+        return ApkInfo(
+            file_path=p,
+            file_hash=expected_hash,
+            package_name="com.test.myapp",
+            version_name="1.0",
+            version_code=100,
+        )
+
+    mock_reader.inspect_fast.side_effect = fake_inspect
+
+    service = ApkService(
+        apk_reader=mock_reader,
+        adb_client=mock_adb,
+        apkanalyzer_path=Path("apkanalyzer"),
+        repository=repo,
+        storage_dir=storage_dir,
+    )
+
+    # 1. Import APK
+    info = service.import_apk(original_apk)
+    assert info.file_hash == expected_hash
+    assert info.package_name == "com.test.myapp"
+    # Local cached copy must exist in storage_dir
+    assert info.file_path.is_file()
+    assert info.file_path.parent == storage_dir
+    assert info.file_path.read_bytes() == b"apk_binary_data_12345"
+
+    # Verify saved in repository
+    listed = service.list_apks()
+    assert len(listed) == 1
+    assert listed[0].file_hash == expected_hash
+    assert listed[0].file_path == info.file_path
+
+    # 2. Resilience test: delete the original source file
+    original_apk.unlink()
+    assert not original_apk.exists()
+
+    # Service can still find and retrieve APK from local storage!
+    retrieved = service.get_apk(expected_hash)
+    assert retrieved is not None
+    assert retrieved.file_path.is_file()
+    assert retrieved.file_path.read_bytes() == b"apk_binary_data_12345"
+
+    listed_again = service.list_apks()
+    assert len(listed_again) == 1
+    assert listed_again[0].file_path.is_file()
+
+    # 3. Removal test
+    removed = service.remove_apk(expected_hash)
+    assert removed is True
+    assert not info.file_path.exists()
+    assert service.get_apk(expected_hash) is None
+    assert len(service.list_apks()) == 0
+
+    repo.close()
+

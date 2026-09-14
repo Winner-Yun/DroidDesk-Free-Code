@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QMessageBox,
     QProgressBar,
     QPushButton,
     QTableWidget,
@@ -265,13 +266,24 @@ class ApkUploadDialog(QDialog):
             return
 
         device = self._dev_selector.selected_device()
-        if not device:
-            self._status_label.setText("Error: No target device selected!")
+        if not device or device.state != "device":
+            msg = (
+                "No Android device is currently connected or authorized.\n\n"
+                "Please connect an Android device via USB or Wi-Fi with USB debugging enabled."
+            )
+            QMessageBox.warning(self, "No Device Connected", msg)
+            self._status_label.setText("Error: No device connected or authorized.")
             self._status_label.setStyleSheet("color: #e0574a;")
             return
 
         if not self._apk_paths:
+            QMessageBox.warning(
+                self,
+                "No APK Files",
+                "No APK files are available to install. Please add APK files first.",
+            )
             self._status_label.setText("Error: No APK files to install.")
+            self._status_label.setStyleSheet("color: #e0574a;")
             return
 
         # Prepare UI for installation

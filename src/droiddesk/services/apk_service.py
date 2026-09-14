@@ -5,6 +5,8 @@ progress and completion surface via Qt signals.
 
 from __future__ import annotations
 
+import contextlib
+import shutil
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +18,8 @@ from droiddesk.core.profiles import TestProfile
 from droiddesk.core.severity import Verdict
 from droiddesk.infra.adb import AdbClient
 from droiddesk.infra.apk_reader import ApkReader
+from droiddesk.infra.db import Repository
+from droiddesk.infra.hashing import hash_file
 from droiddesk.services.test_service import CrashDetector, TestStateMachine
 
 
@@ -31,6 +35,8 @@ class ApkService(QObject):
         apkanalyzer_path: Path,
         state_machine: TestStateMachine | None = None,
         crash_detector: CrashDetector | None = None,
+        repository: Repository | None = None,
+        storage_dir: Path | None = None,
     ) -> None:
         super().__init__()
         self._reader = apk_reader
@@ -42,6 +48,124 @@ class ApkService(QObject):
             apk_reader=self._reader,
             crash_detector=self._crash_detector,
         )
+        self._repository = repository
+        self._storage_dir = storage_dir
+        if self._storage_dir:
+            self._storage_dir.mkdir(parents=True, exist_ok=True)
+
+    def import_apk(self, source_path: Path) -> ApkInfo:
+        """Import an APK into project storage and persist its metadata to the database.
+
+        The APK file is copied into the local storage directory so it remains available
+        even if the source file is deleted or moved.
+        """
+        if not source_path.is_file():
+            raise FileNotFoundError(f"APK file not found: {source_path}")
+
+        file_hash = hash_file(source_path)
+
+        if self._storage_dir:
+            self._storage_dir.mkdir(parents=True, exist_ok=True)
+            target_name = f"{file_hash[:12]}_{source_path.name}"
+            target_path = self._storage_dir / target_name
+            same_file = source_path.resolve() == target_path.resolve()
+            if not same_file and (
+                not target_path.is_file()
+                or target_path.stat().st_size != source_path.stat().st_size
+            ):
+                shutil.copy2(source_path, target_path)
+            working_path = target_path
+        else:
+            working_path = source_path
+
+        info = self._reader.inspect_fast(working_path)
+        info.file_path = working_path
+        info.file_hash = file_hash
+
+        if self._repository:
+            self._repository.save_apk(info)
+
+        return info
+
+    def list_apks(self) -> list[ApkInfo]:
+        """List all project APKs from the database, resolving paths against local storage."""
+        if not self._repository:
+            return []
+
+        apks = self._repository.list_apks()
+
+        for apk in apks:
+            updated = False
+            # Check if current path exists
+            if not apk.file_path.is_file() and self._storage_dir:
+                candidate = self._storage_dir / f"{apk.file_hash[:12]}_{apk.file_path.name}"
+                if candidate.is_file():
+                    apk.file_path = candidate
+                    updated = True
+                else:
+                    matches = list(self._storage_dir.glob(f"{apk.file_hash[:12]}_*"))
+                    if matches and matches[0].is_file():
+                        apk.file_path = matches[0]
+                        updated = True
+            elif apk.file_path.is_file() and self._storage_dir:
+                resolved_storage = self._storage_dir.resolve()
+                try:
+                    is_in_storage = apk.file_path.resolve().is_relative_to(resolved_storage)
+                except Exception:
+                    is_in_storage = False
+
+                if not is_in_storage:
+                    target_name = f"{apk.file_hash[:12]}_{apk.file_path.name}"
+                    target_path = self._storage_dir / target_name
+                    if not target_path.is_file():
+                        with contextlib.suppress(Exception):
+                            shutil.copy2(apk.file_path, target_path)
+                            apk.file_path = target_path
+                            updated = True
+
+            if updated and self._repository:
+                self._repository.save_apk(apk)
+
+        return apks
+
+    def get_apk(self, file_hash: str) -> ApkInfo | None:
+        """Retrieve an APK by its hash from the database."""
+        if not self._repository:
+            return None
+        apk = self._repository.get_apk_by_hash(file_hash)
+        if apk and not apk.file_path.is_file() and self._storage_dir:
+            candidate = self._storage_dir / f"{apk.file_hash[:12]}_{apk.file_path.name}"
+            if candidate.is_file():
+                apk.file_path = candidate
+                self._repository.save_apk(apk)
+            else:
+                matches = list(self._storage_dir.glob(f"{apk.file_hash[:12]}_*"))
+                if matches and matches[0].is_file():
+                    apk.file_path = matches[0]
+                    self._repository.save_apk(apk)
+        return apk
+
+    def remove_apk(self, file_hash: str) -> bool:
+        """Remove an APK from the database and delete its cached copy from local storage."""
+        if not self._repository:
+            return False
+
+        apk = self._repository.get_apk_by_hash(file_hash)
+        deleted = self._repository.delete_apk(file_hash)
+
+        # Remove local cached copy in storage_dir if present
+        if self._storage_dir and self._storage_dir.is_dir():
+            for cached_file in self._storage_dir.glob(f"{file_hash[:12]}_*"):
+                with contextlib.suppress(Exception):
+                    cached_file.unlink(missing_ok=True)
+
+        if apk and self._storage_dir:
+            with contextlib.suppress(Exception):
+                resolved_storage = self._storage_dir.resolve()
+                if apk.file_path.resolve().is_relative_to(resolved_storage):
+                    apk.file_path.unlink(missing_ok=True)
+
+        return deleted
 
     def inspect(self, apk_path: Path) -> ApkInfo:
         return self._reader.inspect_fast(apk_path)
@@ -57,6 +181,7 @@ class ApkService(QObject):
             ["apk", "compare", str(apk_a), str(apk_b)],
         )
         return {"output": result.stdout, "exit_code": result.exit_code}
+
 
     def run_test(
         self,

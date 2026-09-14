@@ -12,12 +12,9 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QGridLayout,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QListWidget,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -46,10 +43,6 @@ class AnalyzerPage(QWidget):
             "APK analyzer", "Everything derivable from the file without installing it."
         )
         header.add_action(QPushButton("⇄  Compare with another APK"))
-        open_button = QPushButton("⛁  Open APK")
-        open_button.setProperty("role", "primary")
-        open_button.clicked.connect(self._on_open_apk)
-        header.add_action(open_button)
         outer.addWidget(header)
 
         self._identity_container = QWidget()
@@ -71,18 +64,19 @@ class AnalyzerPage(QWidget):
         outer.addWidget(self._tabs, 1)
         self._refresh_ui()
 
-    def _on_open_apk(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Open APK", "", "APK Files (*.apk)")
-        if not path:
-            return
-            
+    def load_apk(self, path: Path) -> None:
         try:
-            self._apk_info = self._ctx.apk_service.inspect(Path(path))
+            self._apk_info = self._ctx.apk_service.inspect(path)
             self._full_analysis_loaded = False
             self._refresh_ui()
             self._on_tab_changed(self._tabs.currentIndex())
         except Exception as e:
             print(f"Error opening APK: {e}")
+
+    def _on_open_apk(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Open APK", "", "APK Files (*.apk)")
+        if path:
+            self.load_apk(Path(path))
 
     def _on_tab_changed(self, index: int) -> None:
         if not self._apk_info or self._full_analysis_loaded:

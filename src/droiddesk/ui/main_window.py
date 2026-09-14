@@ -8,8 +8,19 @@ Presentation layer constraint in Section 4.1.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from pathlib import Path
+
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from droiddesk.context import AppContext
 from droiddesk.ui import static_data
@@ -25,12 +36,12 @@ from droiddesk.ui.pages.reports import ReportsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
 from droiddesk.ui.theme import STYLESHEET
-from droiddesk.ui.widgets.environment_bar import EnvironmentBar
 from droiddesk.ui.widgets.device_bar import DeviceBar
+from droiddesk.ui.widgets.environment_bar import EnvironmentBar
 from droiddesk.ui.widgets.loading_spinner import LoadingPage
 from droiddesk.ui.widgets.nav_sidebar import BrandBlock, NavSidebar
 
-_PAGES: tuple[tuple[str, type[QWidget]], ...] = (
+_PAGES: tuple[tuple[str, Callable[[AppContext], QWidget]], ...] = (
     ("dashboard", DashboardPage),
     ("devices", DevicesPage),
     ("logcat", LogcatPage),
@@ -58,7 +69,8 @@ class MainWindow(QMainWindow):
         self.resize(1440, 900)
         self.setStyleSheet(STYLESHEET)
 
-        root = QWidget(objectName="appRoot")
+        root = QWidget()
+        root.setObjectName("appRoot")
         root_layout = QVBoxLayout(root)
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
@@ -69,12 +81,13 @@ class MainWindow(QMainWindow):
         top_row.addWidget(BrandBlock())
 
 
-        #env menu
+        # Environment bar with APK selector and Upload action
         self._environment_bar = EnvironmentBar()
-        self._environment_bar.switch_requested.connect(self._on_switch_environment)
+        self._environment_bar.apk_selected.connect(self._on_active_apk_changed)
+        self._environment_bar.apks_uploaded.connect(self._on_apks_uploaded)
         top_row.addWidget(self._environment_bar, 1)
 
-        #device menu
+        # Device selector
         self._device_bar = DeviceBar(self._device_service)
         
         top_row.addSpacing(20)
@@ -82,7 +95,8 @@ class MainWindow(QMainWindow):
         top_row.addSpacing(20)
         root_layout.addLayout(top_row)
 
-        body_row = QWidget(objectName="bodyRow")
+        body_row = QWidget()
+        body_row.setObjectName("bodyRow")
         body_layout = QHBoxLayout(body_row)
         body_layout.setContentsMargins(0, 0, 0, 0)
         body_layout.setSpacing(0)
@@ -104,12 +118,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
         self._build_status_bar()
 
-        self._environment_bar.set_environment(
-            static_data.ACTIVE_ENVIRONMENT_KEY,
-            static_data.ACTIVE_ENVIRONMENT_LABEL,
-            static_data.ACTIVE_ENVIRONMENT_HOST,
-            static_data.ACTIVE_ENVIRONMENT_NOTE,
-        )
+ 
         # TODO(Phase 5): drive the environment bar from
         # EnvService.active_environment_changed instead of static_data.
 
@@ -153,3 +162,36 @@ class MainWindow(QMainWindow):
     def hide_loading(self) -> None:
         """Hide the loading popup."""
         self._loading_page.hide()
+
+    def _on_active_apk_changed(self, apk_path: Path | None) -> None:
+        if not apk_path:
+            return
+        self.statusBar().showMessage(f"Active APK: {apk_path.name}", 5000)
+
+        # Notify AnalyzerPage
+        analyzer_idx = self._page_index.get("analyzer")
+        if analyzer_idx is not None:
+            analyzer = self._stack.widget(analyzer_idx)
+            if analyzer is not None and hasattr(analyzer, "load_apk"):
+                analyzer.load_apk(apk_path)
+
+        # Notify ApkTesterPage
+        tester_idx = self._page_index.get("tester")
+        if tester_idx is not None:
+            tester = self._stack.widget(tester_idx)
+            if tester is not None and hasattr(tester, "_on_apk_selected"):
+                tester._on_apk_selected(apk_path)
+
+    def _on_apks_uploaded(self, paths: list[Path]) -> None:
+        self.statusBar().showMessage(f"Uploaded {len(paths)} APK file(s)", 5000)
+        device = self._device_bar.selected_device()
+        if device and paths:
+            from droiddesk.ui.widgets.device_bar import ApkUploadDialog
+
+            dialog = ApkUploadDialog(
+                device_service=self._device_service,
+                initial_device=device,
+                apk_paths=paths,
+                parent=self,
+            )
+            dialog.exec()

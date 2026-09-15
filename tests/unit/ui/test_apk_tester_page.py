@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from PySide6.QtWidgets import QApplication
 
@@ -143,3 +143,44 @@ def test_apk_tester_page_on_test_complete(qapp: QApplication, tmp_path: Path) ->
     assert page._open_report.isEnabled() is True
     assert page._step_widgets["validate"].duration_label.text() == "45 ms"
     assert page._log_excerpt_view.toPlainText() == "Sample logs"
+
+
+def test_apk_tester_page_run_test_no_device_shows_alert_and_disabled(
+    qapp: QApplication, tmp_path: Path
+) -> None:
+    ctx = _make_mock_context(tmp_path)
+    ctx.device_service._devices = []
+    page = ApkTesterPage(ctx)
+
+    # Without emulator, run button is disabled
+    assert not page._run_button.isEnabled()
+
+    apk_file = tmp_path / "test.apk"
+    apk_file.write_bytes(b"dummy")
+    page._apk_path = apk_file
+
+    with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warning:
+        page._on_run_test()
+        assert mock_warning.called
+        assert "No Emulator Connected" in mock_warning.call_args[0][1]
+        assert "no emulator connected" in page._verdict_detail.text().lower()
+
+    # When emulator connects, run button enables
+    page._on_devices_changed([Device(serial="EMU_1", state="device")])
+    assert page._run_button.isEnabled()
+
+
+def test_apk_tester_page_run_test_no_apk_shows_alert(
+    qapp: QApplication, tmp_path: Path
+) -> None:
+    ctx = _make_mock_context(tmp_path)
+    page = ApkTesterPage(ctx)
+
+    # Emulator is connected, but no APK is loaded
+    assert page._run_button.isEnabled()
+
+    with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warning:
+        page._run_button.click()
+        assert mock_warning.called
+        assert "No APK Selected" in mock_warning.call_args[0][1]
+        assert "select an apk" in page._artifact_note.text().lower()

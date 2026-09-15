@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QGridLayout,
@@ -23,10 +24,13 @@ from droiddesk.context import AppContext
 from droiddesk.core.models import ApkInfo
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import PageHeader
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import TagPill
 
 
 class AnalyzerPage(QWidget):
+    upload_requested = Signal()
+
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
         self._ctx = ctx
@@ -60,6 +64,18 @@ class AnalyzerPage(QWidget):
         self._tabs.addTab(self._comp_panel, "Components")
         
         outer.addWidget(self._tabs, 1)
+
+        self._empty_state = EmptyStateWidget(
+            title="No APK Selected for Analysis",
+            message=(
+                "Select an APK from the app bar or upload an Android package "
+                "(.apk / .aab) to inspect its signatures, permissions, and components."
+            ),
+            button_text="Upload APK",
+        )
+        self._empty_state.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_state, 1)
+
         self._refresh_ui()
 
     def load_apk(self, path: Path | None) -> None:
@@ -102,13 +118,14 @@ class AnalyzerPage(QWidget):
                     w.deleteLater()
                 
         if self._apk_info:
+            self._empty_state.hide()
+            self._identity_container.show()
+            self._tabs.show()
             self._identity_layout.addWidget(self._build_identity_bar())
         else:
-            placeholder = QLabel(
-                "No APK selected. Choose or upload an APK from the app bar to inspect."
-            )
-            placeholder.setStyleSheet("color: #8b8e94; font-size: 13px; padding: 12px 0;")
-            self._identity_layout.addWidget(placeholder)
+            self._identity_container.hide()
+            self._tabs.hide()
+            self._empty_state.show()
 
         if self._apk_info and self._full_analysis_loaded:
             current_idx = self._tabs.currentIndex()

@@ -20,10 +20,6 @@ from droiddesk.core.severity import Severity
 
 # -- Active environment (top bar + status colouring everywhere) ------------
 
-ACTIVE_ENVIRONMENT_KEY = "production"
-ACTIVE_ENVIRONMENT_LABEL = "Production"
-ACTIVE_ENVIRONMENT_HOST = "api.example.com"
-ACTIVE_ENVIRONMENT_NOTE = "release builds allowed"
 
 # (tool name, is available on PATH)
 TOOL_STATUS: list[tuple[str, bool]] = [

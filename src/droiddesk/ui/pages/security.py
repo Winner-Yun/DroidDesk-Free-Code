@@ -6,7 +6,9 @@ point. Populated from `static_data.SECURITY_FINDINGS`; Phase 4 swaps in
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from pathlib import Path
+
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -20,10 +22,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.context import AppContext
 from droiddesk.core.severity import Severity
 from droiddesk.ui import static_data
 from droiddesk.ui.static_data import FindingDisplay
 from droiddesk.ui.widgets.card import Card, PageHeader
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.severity_badge import SeverityBadge
 
 _SEVERITY_TEXT_COLOR = {
@@ -35,19 +39,38 @@ _SEVERITY_TEXT_COLOR = {
 
 
 class SecurityPage(QWidget):
-    def __init__(self) -> None:
+    upload_requested = Signal()
+
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
+        self._apk_path: Path | None = None
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("Secret scanner", "Detects accidental exposure, not deliberate concealment. A clean result means nothing was found by the checks performed.")
-        header.add_action(QPushButton("⊘  Scan an APK"))
+        header = PageHeader(
+            "Secret scanner",
+            "Detects accidental exposure, not deliberate concealment. "
+            "A clean result means nothing was found by the checks performed.",
+        )
         scan_button = QPushButton("Scan project")
         scan_button.setProperty("role", "primary")
         header.add_action(scan_button)
         outer.addWidget(header)
+
+        self._empty_banner = EmptyStateWidget(
+            title="No Active APK Selected",
+            message=(
+                "Secret scanning runs against repository source files. To inspect "
+                "credential exposures inside an APK archive, select or upload an APK."
+            ),
+            button_text="Upload APK",
+            compact=True,
+        )
+        self._empty_banner.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_banner)
 
         summary_row = QHBoxLayout()
         summary_row.setSpacing(10)
@@ -58,21 +81,30 @@ class SecurityPage(QWidget):
         summary_row.addWidget(suppressed)
         outer.addLayout(summary_row)
 
-        content_row = QHBoxLayout()
-        content_row.setSpacing(14)
+        self._content_row = QHBoxLayout()
+        self._content_row.setSpacing(14)
 
         self._table = self._build_table()
-        content_row.addWidget(self._table, 2)
+        self._content_row.addWidget(self._table, 2)
 
         self._detail = self._build_detail(static_data.SECURITY_SELECTED)
         self._detail.setFixedWidth(340)
-        content_row.addWidget(self._detail)
+        self._content_row.addWidget(self._detail)
 
-        outer.addLayout(content_row, 1)
+        outer.addLayout(self._content_row, 1)
 
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         default_row = static_data.SECURITY_FINDINGS.index(static_data.SECURITY_SELECTED)
         self._table.selectRow(default_row)
+
+        self.set_apk(None)
+
+    def set_apk(self, path: Path | None) -> None:
+        self._apk_path = path
+        if path is None:
+            self._empty_banner.show()
+        else:
+            self._empty_banner.hide()
 
     def _summary_chip(self, label: str, severity: Severity, count: int) -> QWidget:
         chip = QFrame()
@@ -104,11 +136,19 @@ class SecurityPage(QWidget):
         for row, item in enumerate(static_data.SECURITY_FINDINGS):
             finding = item.finding
             title_item = QTableWidgetItem(item.title)
-            title_item.setForeground(Qt.GlobalColor.white if finding.severity != Severity.INFORMATIONAL else Qt.GlobalColor.gray)
+            title_item.setForeground(
+                Qt.GlobalColor.white
+                if finding.severity != Severity.INFORMATIONAL
+                else Qt.GlobalColor.gray
+            )
             title_item.setData(Qt.ItemDataRole.UserRole, item)
             table.setItem(row, 0, title_item)
 
-            location = f"{finding.file_path.as_posix()}:{finding.line_number}" if finding.line_number else finding.file_path.as_posix()
+            location = (
+                f"{finding.file_path.as_posix()}:{finding.line_number}"
+                if finding.line_number
+                else finding.file_path.as_posix()
+            )
             location_item = QTableWidgetItem(location)
             location_item.setForeground(Qt.GlobalColor.cyan)
             table.setItem(row, 1, location_item)
@@ -136,7 +176,11 @@ class SecurityPage(QWidget):
         layout.addWidget(title)
 
         layout.addWidget(self._section_label("LOCATION"))
-        location = f"{finding.file_path.as_posix()}:{finding.line_number}" if finding.line_number else finding.file_path.as_posix()
+        location = (
+            f"{finding.file_path.as_posix()}:{finding.line_number}"
+            if finding.line_number
+            else finding.file_path.as_posix()
+        )
         location_label = QLabel(location)
         location_label.setProperty("role", "mono")
         location_label.setWordWrap(True)
@@ -144,7 +188,9 @@ class SecurityPage(QWidget):
 
         layout.addWidget(self._section_label("MATCHED CONTENT"))
         content_box = QFrame()
-        content_box.setStyleSheet("background: #1a1b1e; border: 1px solid #2c2d33; border-radius: 6px;")
+        content_box.setStyleSheet(
+            "background: #1a1b1e; border: 1px solid #2c2d33; border-radius: 6px;"
+        )
         content_layout = QVBoxLayout(content_box)
         matched = QLabel(finding.redacted)
         matched.setProperty("role", "mono")
@@ -152,7 +198,9 @@ class SecurityPage(QWidget):
         content_layout.addWidget(matched)
         layout.addWidget(content_box)
 
-        note = QLabel("Stored redacted. DroidDesk never writes a discovered credential to its database.")
+        note = QLabel(
+            "Stored redacted. DroidDesk never writes a discovered credential to its database."
+        )
         note.setWordWrap(True)
         note.setProperty("role", "dim")
         layout.addWidget(note)
@@ -176,7 +224,10 @@ class SecurityPage(QWidget):
 
     def _section_label(self, text: str) -> QLabel:
         label = QLabel(text)
-        label.setStyleSheet("color: #5c5f66; font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-top: 8px;")
+        label.setStyleSheet(
+            "color: #5c5f66; font-size: 10px; font-weight: 700; "
+            "letter-spacing: 1px; margin-top: 8px;"
+        )
         return label
 
     def _on_selection_changed(self) -> None:
@@ -184,13 +235,13 @@ class SecurityPage(QWidget):
         if not rows:
             return
         item = self._table.item(rows[0].row(), 0)
+        if item is None:
+            return
         finding_display = item.data(Qt.ItemDataRole.UserRole)
         new_detail = self._build_detail(finding_display)
-        content_row = self.layout().itemAt(2).layout()
-        old = content_row.itemAt(1).widget()
-        content_row.replaceWidget(old, new_detail)
-        old.setParent(None)
-        old.deleteLater()
+        self._content_row.replaceWidget(self._detail, new_detail)
+        self._detail.setParent(None)
+        self._detail.deleteLater()
         new_detail.setFixedWidth(340)
         self._detail = new_detail
 

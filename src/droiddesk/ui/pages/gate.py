@@ -7,13 +7,17 @@ swaps in `GateService.evaluate()` without changing this layout.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPainter, QPen
+from pathlib import Path
+
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.theme import STATUS_COLORS
 from droiddesk.ui.widgets.card import Card, PageHeader
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import StatusIcon, TagPill
 
 
@@ -40,14 +44,15 @@ class _ScoreDial(QWidget):
 
         verdict_label = QLabel(verdict)
         verdict_label.setStyleSheet(
-            f"color: {color}; font-size: 13px; font-weight: 800; letter-spacing: 1px; background: transparent;"
+            f"color: {color}; font-size: 13px; font-weight: 800; "
+            "letter-spacing: 1px; background: transparent;"
         )
         verdict_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout.addWidget(score_label)
         layout.addWidget(verdict_label)
 
-    def paintEvent(self, event) -> None:  # noqa: N802 - Qt override
+    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802 - Qt override
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect().adjusted(10, 10, -10, -10)
@@ -68,32 +73,70 @@ class _ScoreDial(QWidget):
 
 
 class GatePage(QWidget):
-    def __init__(self) -> None:
+    upload_requested = Signal()
+
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
+        self._apk_path: Path | None = None
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("Release gate", "Every check at once, one verdict. A clean result means no issues were found by the checks performed — not that the build is secure.")
+        header = PageHeader(
+            "Release gate",
+            "Every check at once, one verdict. A clean result means no issues "
+            "were found by the checks performed — not that the build is secure.",
+        )
         header.add_action(QPushButton("↓  Export gate report"))
         run_button = QPushButton("Run gate")
         run_button.setProperty("role", "primary")
         header.add_action(run_button)
         outer.addWidget(header)
 
+        self._content_container = QWidget()
+        content_layout = QVBoxLayout(self._content_container)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+
         columns = QHBoxLayout()
         columns.setSpacing(14)
         columns.addWidget(self._build_verdict_panel(), 1)
         columns.addWidget(self._build_checks_panel(), 2)
-        outer.addLayout(columns, 1)
+        content_layout.addLayout(columns)
+        outer.addWidget(self._content_container, 1)
+
+        self._empty_state = EmptyStateWidget(
+            title="No APK Selected for Release Gate",
+            message=(
+                "The release gate evaluates signatures, privacy, permissions, and "
+                "bundle size. Select an APK from the app bar or upload one to evaluate."
+            ),
+            button_text="Upload APK",
+        )
+        self._empty_state.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_state, 1)
+
+        self.set_apk(None)
+
+    def set_apk(self, path: Path | None) -> None:
+        self._apk_path = path
+        if path is None:
+            self._content_container.hide()
+            self._empty_state.show()
+        else:
+            self._empty_state.hide()
+            self._content_container.show()
 
     def _build_verdict_panel(self) -> QWidget:
         card = Card()
         layout = card.body_layout()
         layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
-        verdict_color = STATUS_COLORS["fail"] if static_data.GATE_VERDICT == "NO-GO" else STATUS_COLORS["pass"]
+        verdict_color = (
+            STATUS_COLORS["fail"] if static_data.GATE_VERDICT == "NO-GO" else STATUS_COLORS["pass"]
+        )
 
         dial = _ScoreDial(static_data.GATE_SCORE, static_data.GATE_VERDICT, verdict_color)
         layout.addWidget(dial, 0, Qt.AlignmentFlag.AlignCenter)

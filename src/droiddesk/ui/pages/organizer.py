@@ -6,7 +6,9 @@ Populated from `static_data.ORGANIZER_PLANNED_MOVES`; Phase 6 swaps in
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from pathlib import Path
+
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
@@ -20,19 +22,29 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import Card, PageHeader
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 
 
 class OrganizerPage(QWidget):
-    def __init__(self) -> None:
+    upload_requested = Signal()
+
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
+        self._apk_path: Path | None = None
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("File organizer", "Nothing moves until you have seen the plan. Every batch writes an undo journal first, and deletions go to the Recycle Bin.")
+        header = PageHeader(
+            "File organizer",
+            "Nothing moves until you have seen the plan. Every batch writes an undo "
+            "journal first, and deletions go to the Recycle Bin.",
+        )
         path_input = QLineEdit(static_data.ORGANIZER_PATH)
         path_input.setFixedWidth(220)
         header.add_action(path_input)
@@ -41,6 +53,18 @@ class OrganizerPage(QWidget):
         apply_button.setProperty("role", "primary")
         header.add_action(apply_button)
         outer.addWidget(header)
+
+        self._empty_banner = EmptyStateWidget(
+            title="No Active APK Selected",
+            message=(
+                "Organize, deduplicate, and sort Android packages. Upload an APK "
+                "or add APK directories to analyze your files."
+            ),
+            button_text="Upload APK",
+            compact=True,
+        )
+        self._empty_banner.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_banner)
 
         outer.addLayout(self._build_progress_row())
 
@@ -56,6 +80,15 @@ class OrganizerPage(QWidget):
         content_row.addLayout(side_col, 1)
 
         outer.addLayout(content_row, 1)
+
+        self.set_apk(None)
+
+    def set_apk(self, path: Path | None) -> None:
+        self._apk_path = path
+        if path is None:
+            self._empty_banner.show()
+        else:
+            self._empty_banner.hide()
 
     def _build_progress_row(self) -> QHBoxLayout:
         row = QHBoxLayout()

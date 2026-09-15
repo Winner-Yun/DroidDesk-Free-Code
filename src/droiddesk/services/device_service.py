@@ -5,8 +5,11 @@ offline state and Test Device Profile marking. Emits devices_changed; owns no wi
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from droiddesk.core.errors import DroidDeskError
 from droiddesk.core.models import Device
 from droiddesk.infra.adb import AdbClient
 
@@ -28,27 +31,49 @@ class DeviceService(QObject):
         self._timer.setInterval(
             _POLL_INTERVAL_VISIBLE_MS if page_visible else _POLL_INTERVAL_HIDDEN_MS
         )
+        self._poll()
         self._timer.start()
 
     def stop_polling(self) -> None:
         self._timer.stop()
 
     def set_page_visible(self, visible: bool) -> None:
-        self._timer.setInterval(
-            _POLL_INTERVAL_VISIBLE_MS if visible else _POLL_INTERVAL_HIDDEN_MS
-        )
+        self._timer.setInterval(_POLL_INTERVAL_VISIBLE_MS if visible else _POLL_INTERVAL_HIDDEN_MS)
 
     def devices(self) -> list[Device]:
         return list(self._devices)
 
     def mark_test_profile(self, serial: str, enabled: bool) -> None:
-        # TODO(Phase 1): persist the allowed-environment policy for this device.
-        raise NotImplementedError
+        for device in self._devices:
+            if device.serial == serial:
+                device.is_test_profile = enabled
+                self.devices_changed.emit(list(self._devices))
+                return
+
+    def refresh(self) -> None:
+        self._poll()
+
+    def reconnect(self, serial: str) -> None:
+        self._adb.reconnect(serial)
+        self._poll()
 
     def pair_wireless(self, host_port: str, pairing_code: str) -> bool:
         return self._adb.pair(host_port, pairing_code)
 
+    def install_apk(
+        self, serial: str, apk_path: Path, replace: bool = True, test_ok: bool = True
+    ) -> bool:
+        return self._adb.install(serial, apk_path, replace=replace, test_ok=test_ok)
+
     def _poll(self) -> None:
-        # TODO(Phase 1): self._devices = self._adb.list_devices(); diff and emit
-        # devices_changed only when the list actually changes.
-        raise NotImplementedError
+        try:
+            fresh = self._adb.list_devices()
+        except (DroidDeskError, OSError):
+            fresh = []
+        # restore in-memory test-profile flags that ADB does not know about
+        test_profile_by_serial = {d.serial: d.is_test_profile for d in self._devices}
+        for device in fresh:
+            device.is_test_profile = test_profile_by_serial.get(device.serial, False)
+        if fresh != self._devices:
+            self._devices = fresh
+            self.devices_changed.emit(list(self._devices))

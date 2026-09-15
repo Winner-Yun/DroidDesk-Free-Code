@@ -8,22 +8,43 @@ mockups.
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+from pathlib import Path
 
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from droiddesk.context import AppContext
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import Card, PageHeader
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import StatusIcon, TagPill
 
 
 class CommandsPage(QWidget):
-    def __init__(self) -> None:
+    upload_requested = Signal()
+
+    def __init__(self, ctx: AppContext) -> None:
         super().__init__()
+        self._ctx = ctx
+        self._apk_path: Path | None = None
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
         outer.setSpacing(14)
 
-        header = PageHeader("Build commands", "Guards run before the command does. A failing guard either warns and lets you acknowledge it, or blocks outright.")
+        header = PageHeader(
+            "Build commands",
+            "Guards run before the command does. A failing guard either warns and "
+            "lets you acknowledge it, or blocks outright.",
+        )
         command_input = QLineEdit(static_data.BUILD_COMMAND_NAME)
         command_input.setFixedWidth(220)
         header.add_action(command_input)
@@ -32,11 +53,32 @@ class CommandsPage(QWidget):
         header.add_action(run_button)
         outer.addWidget(header)
 
+        self._empty_banner = EmptyStateWidget(
+            title="No Active APK Selected",
+            message=(
+                "Build commands generate new APK artifacts. You can run build guards "
+                "now, or upload an existing APK to inspect immediately."
+            ),
+            button_text="Upload APK",
+            compact=True,
+        )
+        self._empty_banner.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_banner)
+
         columns = QHBoxLayout()
         columns.setSpacing(14)
         columns.addWidget(self._build_guards_panel(), 1)
         columns.addWidget(self._build_output_panel(), 1)
         outer.addLayout(columns, 1)
+
+        self.set_apk(None)
+
+    def set_apk(self, path: Path | None) -> None:
+        self._apk_path = path
+        if path is None:
+            self._empty_banner.show()
+        else:
+            self._empty_banner.hide()
 
     def _build_guards_panel(self) -> QWidget:
         card = Card("Guards")

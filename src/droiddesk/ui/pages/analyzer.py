@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QPushButton,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -24,10 +24,13 @@ from droiddesk.context import AppContext
 from droiddesk.core.models import ApkInfo
 from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import PageHeader
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import TagPill
 
 
 class AnalyzerPage(QWidget):
+    upload_requested = Signal()
+
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
         self._ctx = ctx
@@ -42,7 +45,6 @@ class AnalyzerPage(QWidget):
         header = PageHeader(
             "APK analyzer", "Everything derivable from the file without installing it."
         )
-        header.add_action(QPushButton("⇄  Compare with another APK"))
         outer.addWidget(header)
 
         self._identity_container = QWidget()
@@ -62,9 +64,26 @@ class AnalyzerPage(QWidget):
         self._tabs.addTab(self._comp_panel, "Components")
         
         outer.addWidget(self._tabs, 1)
+
+        self._empty_state = EmptyStateWidget(
+            title="No APK Selected for Analysis",
+            message=(
+                "Select an APK from the app bar or upload an Android package "
+                "(.apk / .aab) to inspect its signatures, permissions, and components."
+            ),
+            button_text="Upload APK",
+        )
+        self._empty_state.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_state, 1)
+
         self._refresh_ui()
 
-    def load_apk(self, path: Path) -> None:
+    def load_apk(self, path: Path | None) -> None:
+        if path is None:
+            self._apk_info = None
+            self._full_analysis_loaded = False
+            self._refresh_ui()
+            return
         try:
             self._apk_info = self._ctx.apk_service.inspect(path)
             self._full_analysis_loaded = False
@@ -93,26 +112,36 @@ class AnalyzerPage(QWidget):
     def _refresh_ui(self) -> None:
         while self._identity_layout.count():
             item = self._identity_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+            if item:
+                w = item.widget()
+                if w is not None:
+                    w.deleteLater()
                 
         if self._apk_info:
+            self._empty_state.hide()
+            self._identity_container.show()
+            self._tabs.show()
             self._identity_layout.addWidget(self._build_identity_bar())
-            
-            if self._full_analysis_loaded:
-                current_idx = self._tabs.currentIndex()
-                self._tabs.removeTab(2)
-                self._tabs.removeTab(1)
-                self._tabs.removeTab(0)
-                
-                self._sig_panel = self._build_signature_panel()
-                self._perm_panel = self._build_permissions_panel()
-                self._comp_panel = self._build_components_panel()
-                
-                self._tabs.insertTab(0, self._sig_panel, "Signature")
-                self._tabs.insertTab(1, self._perm_panel, "Permissions")
-                self._tabs.insertTab(2, self._comp_panel, "Components")
-                self._tabs.setCurrentIndex(current_idx)
+        else:
+            self._identity_container.hide()
+            self._tabs.hide()
+            self._empty_state.show()
+
+        if self._apk_info and self._full_analysis_loaded:
+            current_idx = self._tabs.currentIndex()
+            self._tabs.removeTab(2)
+            self._tabs.removeTab(1)
+            self._tabs.removeTab(0)
+
+            self._sig_panel = self._build_signature_panel()
+            self._perm_panel = self._build_permissions_panel()
+            self._comp_panel = self._build_components_panel()
+
+            self._tabs.insertTab(0, self._sig_panel, "Signature")
+            self._tabs.insertTab(1, self._perm_panel, "Permissions")
+            self._tabs.insertTab(2, self._comp_panel, "Components")
+            self._tabs.setCurrentIndex(current_idx)
+
 
     def _build_identity_bar(self) -> QWidget:
         bar = QWidget()
@@ -148,13 +177,13 @@ class AnalyzerPage(QWidget):
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(4, 16, 4, 4)
         layout.setSpacing(16)
-        
+
         if not self._apk_info:
             return panel
 
         layout.addWidget(self._label("SCHEMES PRESENT", muted=True))
         schemes_row = QHBoxLayout()
-        for n in (1, 2, 3, 31):
+        for n in (1, 2, 3, 31, 4):
             present = n in self._apk_info.signature_schemes
             label_text = f"v{n}" if n != 31 else "v3.1"
             pill = QLabel(label_text)
@@ -164,28 +193,86 @@ class AnalyzerPage(QWidget):
                 f"padding: 2px 10px; font-weight: 700; font-size: 11px;"
             )
             schemes_row.addWidget(pill)
+
+        # Add verification status pill
+        is_verified = self._apk_info.signature_verified
+        status_pill = QLabel("✓ Verified" if is_verified else "⚠ Unverified")
+        status_color = "#27ae60" if is_verified else "#f1c40f"
+        status_pill.setStyleSheet(
+            f"border: 1px solid {status_color}; color: {status_color}; border-radius: 3px; "
+            f"padding: 2px 10px; font-weight: 700; font-size: 11px; margin-left: 12px;"
+        )
+        schemes_row.addWidget(status_pill)
         schemes_row.addStretch(1)
         layout.addLayout(schemes_row)
 
+        cert_dn = self._apk_info.certificate_dn or ""
+        is_debug = "android debug" in cert_dn.lower()
+        if is_debug:
+            banner = QWidget()
+            banner.setStyleSheet(
+                "background: rgba(241, 196, 15, 0.1); "
+                "border: 1px solid rgba(241, 196, 15, 0.4); "
+                "border-radius: 6px; padding: 10px;"
+            )
+            banner_layout = QVBoxLayout(banner)
+            banner_layout.setContentsMargins(10, 8, 10, 8)
+            banner_layout.setSpacing(4)
+            b_title = QLabel("Android Debug Keystore Signature")
+            b_title.setStyleSheet("color: #f1c40f; font-weight: 700; font-size: 12px;")
+            b_desc = QLabel(
+                "This APK was signed with the default SDK debug key (debug.keystore). "
+                "All debug APKs built on this machine share this exact same signature."
+            )
+            b_desc.setWordWrap(True)
+            b_desc.setStyleSheet("color: #cfd3dc; font-size: 12px;")
+            banner_layout.addWidget(b_title)
+            banner_layout.addWidget(b_desc)
+            layout.addWidget(banner)
+
         layout.addWidget(self._divider())
-        layout.addWidget(self._label("CERTIFICATE", muted=True))
+        layout.addWidget(self._label("CERTIFICATE DETAILS", muted=True))
         grid = QGridLayout()
         grid.setHorizontalSpacing(24)
-        grid.setVerticalSpacing(6)
-        
-        key_label = QLabel("SHA-256")
-        key_label.setProperty("role", "muted")
-        key_label.setFixedWidth(90)
-        
-        val_text = self._apk_info.certificate_fingerprint_sha256 or "None"
-        value_label = QLabel(val_text)
-        value_label.setProperty("role", "mono")
-        
-        grid.addWidget(key_label, 0, 0)
-        grid.addWidget(value_label, 0, 1)
+        grid.setVerticalSpacing(8)
+
+        row_idx = 0
+        if cert_dn:
+            key_label = QLabel("Subject / DN")
+            key_label.setProperty("role", "muted")
+            key_label.setFixedWidth(90)
+            value_label = QLabel(cert_dn)
+            value_label.setProperty("role", "mono")
+            value_label.setWordWrap(True)
+            grid.addWidget(key_label, row_idx, 0)
+            grid.addWidget(value_label, row_idx, 1)
+            row_idx += 1
+
+        fingerprints = [
+            ("SHA-256", self._apk_info.certificate_fingerprint_sha256),
+            ("SHA-1", self._apk_info.certificate_fingerprint_sha1),
+            ("MD5", self._apk_info.certificate_fingerprint_md5),
+        ]
+        for name, fp in fingerprints:
+            if fp:
+                key_label = QLabel(name)
+                key_label.setProperty("role", "muted")
+                key_label.setFixedWidth(90)
+                value_label = QLabel(fp)
+                value_label.setProperty("role", "mono")
+                grid.addWidget(key_label, row_idx, 0)
+                grid.addWidget(value_label, row_idx, 1)
+                row_idx += 1
+
         layout.addLayout(grid)
 
-        note = QLabel("Read by apksigner verify --print-certs.")
+        source_tool = self._apk_info.signature_source or "apksigner"
+        source_note = (
+            "Read by: apksigner verify --print-certs -v"
+            if source_tool == "apksigner"
+            else "Read by: androguard certificate parser (fallback)"
+        )
+        note = QLabel(source_note)
         note.setProperty("role", "muted")
         layout.addWidget(note)
         layout.addStretch(1)

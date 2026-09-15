@@ -7,12 +7,14 @@ from __future__ import annotations
 
 from typing import override
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QHideEvent, QShowEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -37,6 +39,8 @@ def _link_type(serial: str) -> str:
 
 
 class DevicesPage(QWidget):
+    open_logcat_requested = Signal(str)
+
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
         self._ctx = ctx
@@ -58,30 +62,41 @@ class DevicesPage(QWidget):
         header.add_action(self._refresh_btn)
         outer.addWidget(header)
 
-        content_row = QHBoxLayout()
-        content_row.setSpacing(14)
+        self._content_row = QHBoxLayout()
+        self._content_row.setSpacing(14)
 
         self._table = self._build_table()
-        content_row.addWidget(self._table, 1)
+        self._content_row.addWidget(self._table, 1)
 
         self._detail = self._empty_detail()
         self._detail.setFixedWidth(280)
-        content_row.addWidget(self._detail)
+        self._content_row.addWidget(self._detail)
 
-        outer.addLayout(content_row, 1)
+        outer.addLayout(self._content_row, 1)
 
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         ctx.device_service.devices_changed.connect(self._repopulate)
         self._repopulate(ctx.device_service.devices())
-        self._refresh_btn.clicked.connect(ctx.device_service.refresh)
+        self._refresh_btn.clicked.connect(self._on_refresh_clicked)
+
+    def _on_refresh_clicked(self) -> None:
+        self._ctx.device_service.refresh()
+        if not self._ctx.device_service.devices():
+            QMessageBox.information(
+                self,
+                "No Emulator Connected",
+                "No Android device or emulator is currently connected.\n\n"
+                "Please connect an Android device via USB/Wi-Fi or start an emulator, "
+                "then click Refresh.",
+            )
 
     @override
-    def showEvent(self, event) -> None:
+    def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
         self._ctx.device_service.start_polling(page_visible=True)
 
     @override
-    def hideEvent(self, event) -> None:
+    def hideEvent(self, event: QHideEvent) -> None:
         super().hideEvent(event)
         self._ctx.device_service.set_page_visible(False)
 
@@ -140,7 +155,7 @@ class DevicesPage(QWidget):
     def _empty_detail(self) -> QWidget:
         card = Card()
         layout = card.body_layout()
-        label = QLabel("No device selected")
+        label = QLabel("No emulator connected")
         label.setProperty("role", "muted")
         layout.addWidget(label)
         layout.addStretch(1)
@@ -199,7 +214,11 @@ class DevicesPage(QWidget):
             )
         )
         layout.addWidget(mark_btn)
-        layout.addWidget(QPushButton("≡  Open logcat"))
+        logcat_btn = QPushButton("≡  Open logcat")
+        logcat_btn.clicked.connect(
+            lambda checked=False, s=device.serial: self.open_logcat_requested.emit(s)
+        )
+        layout.addWidget(logcat_btn)
         layout.addWidget(QPushButton("↓  Take screenshot"))
 
         return card
@@ -236,9 +255,7 @@ class DevicesPage(QWidget):
 
     def _swap_detail(self, new_detail: QWidget) -> None:
         new_detail.setFixedWidth(280)
-        content_row = self.layout().itemAt(1).layout()
-        old = content_row.itemAt(1).widget()
-        content_row.replaceWidget(old, new_detail)
-        old.setParent(None)
-        old.deleteLater()
+        self._content_row.replaceWidget(self._detail, new_detail)
+        self._detail.setParent(None)
+        self._detail.deleteLater()
         self._detail = new_detail

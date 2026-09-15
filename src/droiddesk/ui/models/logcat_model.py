@@ -11,9 +11,12 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
+from typing import override
 
 import regex
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QTimer, Qt
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QPersistentModelIndex, Qt, QTimer
+
+_EMPTY_INDEX = QModelIndex()
 
 # `MM-DD HH:MM:SS.mmm  PID  TID PRIORITY TAG: message`
 _THREADTIME_RE = regex.compile(
@@ -91,18 +94,35 @@ class LogcatModel(QAbstractTableModel):
 
     # -- QAbstractTableModel ------------------------------------------------
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    @override
+    def rowCount(
+        self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX
+    ) -> int:
         return 0 if parent.isValid() else len(self._rows)
 
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    @override
+    def columnCount(
+        self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX
+    ) -> int:
         return 0 if parent.isValid() else len(_COLUMNS)
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> object:
+    @override
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> object:
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return _COLUMN_HEADERS[section]
         return None
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
+    @override
+    def data(
+        self,
+        index: QModelIndex | QPersistentModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> object:
         if not index.isValid() or role != Qt.ItemDataRole.DisplayRole:
             return None
         line = self._rows[index.row()]

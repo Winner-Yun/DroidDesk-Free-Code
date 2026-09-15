@@ -19,12 +19,16 @@ class DeviceSelector(QComboBox):
 
     def set_devices(self, devices: list[Device]) -> None:
         self.clear()
+        if not devices:
+            self.addItem("No emulator connected", None)
+            return
         for device in devices:
             label = f"{device.model or device.serial} ({device.serial})"
             self.addItem(label, device)
 
     def selected_device(self) -> Device | None:
-        return self.currentData()
+        data = self.currentData()
+        return data if isinstance(data, Device) else None
 
     def _on_index_changed(self, _index: int) -> None:
         self.device_selected.emit(self.selected_device())

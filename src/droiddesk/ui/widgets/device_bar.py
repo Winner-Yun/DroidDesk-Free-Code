@@ -268,8 +268,9 @@ class ApkUploadDialog(QDialog):
         device = self._dev_selector.selected_device()
         if not device or device.state != "device":
             msg = (
-                "No Android device is currently connected or authorized.\n\n"
-                "Please connect an Android device via USB or Wi-Fi with USB debugging enabled."
+                "No Android device or emulator is currently connected or authorized.\n\n"
+                "Please connect an Android device via USB/Wi-Fi or start an emulator "
+                "with USB debugging enabled."
             )
             QMessageBox.warning(self, "No Device Connected", msg)
             self._status_label.setText("Error: No device connected or authorized.")

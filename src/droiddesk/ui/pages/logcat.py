@@ -1,8 +1,6 @@
 """Logcat page — Section 6.4. LogcatModel-backed table view with a filter
-toolbar (level/tag/PID/regex) and pause control. Seeded from
-`static_data.LOGCAT_LINES` through the real `LogcatModel.queue()` /
-`parse_threadtime` path so the column layout and parsing are already proven
-out before Phase 2 wires in a live `AdbStream`.
+toolbar (level/tag/PID/regex) and pause control. Starts empty and streams live
+logs from the selected device via AdbStream.
 """
 
 from __future__ import annotations
@@ -29,7 +27,6 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.infra.process import AdbStream
-from droiddesk.ui import static_data
 from droiddesk.ui.models.logcat_model import LogcatModel
 from droiddesk.ui.widgets.card import PageHeader
 
@@ -112,27 +109,30 @@ class LogcatPage(QWidget):
 
         self._device_combo = QComboBox()
         self._device_combo.setFixedWidth(200)
-        self._update_device_combo()
-        self._ctx.device_service.devices_changed.connect(self._update_device_combo)
-        header.add_action(self._device_combo)
 
         self._pause_button = QPushButton("Pause")
         self._pause_button.setCheckable(True)
         self._pause_button.toggled.connect(self._on_pause_toggled)
-        header.add_action(self._pause_button)
 
-        clear_button = QPushButton("✕  Clear")
-        clear_button.clicked.connect(self._model.clear)
-        header.add_action(clear_button)
+        self._clear_button = QPushButton("Clear")
+        self._clear_button.clicked.connect(self._on_clear_clicked)
 
-        self._export_button = QPushButton("↓  Export view")
+        self._export_button = QPushButton("Export view")
         self._export_button.clicked.connect(self._on_export_clicked)
-        header.add_action(self._export_button)
 
         self._stream_button = QPushButton("Start stream")
         self._stream_button.setProperty("role", "primary")
         self._stream_button.setCheckable(True)
         self._stream_button.toggled.connect(self._on_stream_toggled)
+
+        self._update_device_combo()
+        self._device_combo.currentIndexChanged.connect(self._update_button_states)
+        self._ctx.device_service.devices_changed.connect(self._update_device_combo)
+
+        header.add_action(self._device_combo)
+        header.add_action(self._pause_button)
+        header.add_action(self._clear_button)
+        header.add_action(self._export_button)
         header.add_action(self._stream_button)
 
         outer.addWidget(header)
@@ -149,28 +149,54 @@ class LogcatPage(QWidget):
         header_view.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
         outer.addWidget(self._table, 1)
 
-        for line in static_data.LOGCAT_LINES:
-            self._model.queue(line)
-        self._model._flush()
+        self._update_button_states()
 
     def _update_device_combo(self) -> None:
         current_data = self._device_combo.currentData()
         self._device_combo.clear()
         devices = self._ctx.device_service.devices()
-        
+
+        is_streaming = self._stream is not None
         if not devices:
-            self._device_combo.addItem("No devices connected")
+            self._device_combo.addItem("No emulator connected")
             self._device_combo.setEnabled(False)
         else:
             for d in devices:
                 self._device_combo.addItem(d.serial, d.serial)
-            self._device_combo.setEnabled(True)
-            
+            self._device_combo.setEnabled(not is_streaming)
+
             # restore selection if possible
             if current_data:
                 idx = self._device_combo.findData(current_data)
                 if idx >= 0:
                     self._device_combo.setCurrentIndex(idx)
+        self._update_button_states()
+
+    def _update_button_states(self) -> None:
+        if not hasattr(self, "_stream_button"):
+            return
+
+        is_streaming = self._stream is not None
+        has_devices = bool(self._device_combo.currentData())
+
+        # Stream button is always enabled to alert if no emulator is connected
+        self._stream_button.setEnabled(True)
+
+        # Device combo is disabled while actively streaming or if no devices
+        self._device_combo.setEnabled(has_devices and not is_streaming)
+
+        # Pause is only enabled if currently streaming; disabled otherwise
+        self._pause_button.setEnabled(is_streaming)
+
+        # Clear button is enabled only if there are lines in the model
+        self._clear_button.setEnabled(self._model.rowCount() > 0)
+
+        # Export button is enabled only if there are visible lines to export
+        self._export_button.setEnabled(self._proxy.rowCount() > 0)
+
+    def _on_clear_clicked(self) -> None:
+        self._model.clear()
+        self._update_count()
 
     def _build_filter_row(self) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -202,7 +228,7 @@ class LogcatPage(QWidget):
         self._count_label = QLabel(f"{self._model.rowCount()} lines")
         self._count_label.setProperty("role", "muted")
         row.addWidget(self._count_label)
-        
+
         self._model.modelReset.connect(self._update_count)
         self._model.rowsInserted.connect(self._update_count)
 
@@ -215,6 +241,7 @@ class LogcatPage(QWidget):
             self._count_label.setText(f"{total} lines")
         else:
             self._count_label.setText(f"{visible} / {total} lines")
+        self._update_button_states()
 
     def _apply_filters(self) -> None:
         self._proxy.set_filters(
@@ -227,13 +254,20 @@ class LogcatPage(QWidget):
 
     def _on_pause_toggled(self, paused: bool) -> None:
         self._model.set_paused(paused)
-        self._pause_button.setText("▶  Resume" if paused else "⏸  Pause")
+        self._pause_button.setText("Resume" if paused else "Pause")
 
     def _on_stream_toggled(self, checked: bool) -> None:
         if checked:
             serial = self._device_combo.currentData()
             if not serial:
                 self._stream_button.setChecked(False)
+                QMessageBox.warning(
+                    self,
+                    "No Emulator Connected",
+                    "No Android device or emulator is currently connected.\n\n"
+                    "Please connect an Android device via USB/Wi-Fi or start an emulator "
+                    "to stream logcat.",
+                )
                 return
 
             self._stream_button.setText("Stop stream")
@@ -244,14 +278,23 @@ class LogcatPage(QWidget):
             self._stream.start()
         else:
             self._stream_button.setText("Start stream")
+            if self._pause_button.isChecked():
+                self._pause_button.setChecked(False)
+            self._pause_button.setText("Pause")
             if self._stream:
                 self._stream.stop()
                 self._stream = None
 
+        self._update_button_states()
+
     def _on_stream_finished(self) -> None:
         self._stream_button.setChecked(False)
         self._stream_button.setText("Start stream")
+        if self._pause_button.isChecked():
+            self._pause_button.setChecked(False)
+        self._pause_button.setText("Pause")
         self._stream = None
+        self._update_button_states()
 
     def export_view(self, destination: Path) -> int:
         """Export currently visible (filtered) log lines to a file.
@@ -343,3 +386,4 @@ class LogcatPage(QWidget):
         idx = self._device_combo.findData(serial)
         if idx >= 0:
             self._device_combo.setCurrentIndex(idx)
+        self._update_button_states()

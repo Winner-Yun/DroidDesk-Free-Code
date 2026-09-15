@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -76,7 +77,18 @@ class DevicesPage(QWidget):
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
         ctx.device_service.devices_changed.connect(self._repopulate)
         self._repopulate(ctx.device_service.devices())
-        self._refresh_btn.clicked.connect(ctx.device_service.refresh)
+        self._refresh_btn.clicked.connect(self._on_refresh_clicked)
+
+    def _on_refresh_clicked(self) -> None:
+        self._ctx.device_service.refresh()
+        if not self._ctx.device_service.devices():
+            QMessageBox.information(
+                self,
+                "No Emulator Connected",
+                "No Android device or emulator is currently connected.\n\n"
+                "Please connect an Android device via USB/Wi-Fi or start an emulator, "
+                "then click Refresh.",
+            )
 
     @override
     def showEvent(self, event: QShowEvent) -> None:
@@ -143,7 +155,7 @@ class DevicesPage(QWidget):
     def _empty_detail(self) -> QWidget:
         card = Card()
         layout = card.body_layout()
-        label = QLabel("No device selected")
+        label = QLabel("No emulator connected")
         label.setProperty("role", "muted")
         layout.addWidget(label)
         layout.addStretch(1)

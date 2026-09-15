@@ -10,7 +10,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from droiddesk.core.models import ApkInfo
+from droiddesk.core.models import ApkInfo, Device
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -87,6 +87,16 @@ CREATE TABLE IF NOT EXISTS build_record (
     override_note  TEXT,
     exit_code      INTEGER,
     started_at     TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS device_history (
+    serial           TEXT PRIMARY KEY,
+    model            TEXT,
+    state            TEXT,
+    android_version  TEXT,
+    api_level        INTEGER,
+    abi              TEXT,
+    last_connected   TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_finding_scan ON finding(scan_id);
@@ -245,4 +255,59 @@ class Repository:
         self._connection.execute("DELETE FROM apk WHERE id = ?", (apk_id,))
         self._connection.commit()
         return True
+
+    def record_device(self, device: Device) -> None:
+        """Persist or update an emulator / device in connection history."""
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+        query = """
+            INSERT INTO device_history (
+                serial, model, state, android_version, api_level, abi, last_connected
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(serial) DO UPDATE SET
+                model=COALESCE(excluded.model, device_history.model),
+                state=excluded.state,
+                android_version=COALESCE(
+                    excluded.android_version, device_history.android_version
+                ),
+                api_level=COALESCE(excluded.api_level, device_history.api_level),
+                abi=COALESCE(excluded.abi, device_history.abi),
+                last_connected=excluded.last_connected
+        """
+        self._connection.execute(
+            query,
+            (
+                device.serial,
+                device.model or device.serial,
+                device.state,
+                device.android_version or "—",
+                device.api_level or 0,
+                device.abi or "—",
+                now,
+            ),
+        )
+        self._connection.commit()
+
+    def list_device_history(self) -> list[dict[str, object]]:
+        """List all historically connected emulators and physical devices."""
+        cursor = self._connection.execute(
+            """
+            SELECT serial, model, state, android_version, api_level, abi, last_connected
+            FROM device_history
+            ORDER BY last_connected DESC
+            """
+        )
+        return [
+            {
+                "serial": str(row[0]),
+                "model": str(row[1] or row[0]),
+                "state": str(row[2] or "device"),
+                "android_version": str(row[3] or "—"),
+                "api_level": int(row[4] or 0),
+                "abi": str(row[5] or "—"),
+                "last_connected": str(row[6]),
+            }
+            for row in cursor.fetchall()
+        ]
 

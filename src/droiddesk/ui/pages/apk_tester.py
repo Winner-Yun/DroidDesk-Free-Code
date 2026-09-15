@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QUrl
+from PySide6.QtCore import Qt, QThread, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QPixmap,
@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QVBoxLayout,
@@ -31,6 +32,7 @@ from droiddesk.core.severity import Verdict
 from droiddesk.services.apk_service import ApkService
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.device_selector import DeviceSelector
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 
 
 class StepRowWidget(QWidget):
@@ -138,6 +140,8 @@ class TestWorker(QThread):
 class ApkTesterPage(QWidget):
     """Page coordinating the complete automated APK test workflow."""
 
+    upload_requested = Signal()
+
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
         self._ctx = ctx
@@ -172,8 +176,16 @@ class ApkTesterPage(QWidget):
 
         # Wire device selector to DeviceService
         self._ctx.device_service.devices_changed.connect(self._on_devices_changed)
-        if self._ctx.device_service._devices:
-            self._device_selector.set_devices(self._ctx.device_service._devices)
+        devs = getattr(self._ctx.device_service, "_devices", None)
+        if devs is None and hasattr(self._ctx.device_service, "devices"):
+            try:
+                res = self._ctx.device_service.devices()
+                if isinstance(res, list):
+                    devs = res
+            except Exception:
+                pass
+        self._device_selector.set_devices(devs or [])
+        self._device_selector.device_selected.connect(self._update_button_states)
 
         self._cancel_button = QPushButton("☐  Cancel")
         self._cancel_button.clicked.connect(self._on_cancel)
@@ -198,20 +210,46 @@ class ApkTesterPage(QWidget):
         self._ctx.apk_service.step_finished.connect(self._on_step_finished)
         self._ctx.apk_service.test_complete.connect(self._on_test_complete)
 
+        self._update_button_states()
+
+    def _update_button_states(self, *_args: object) -> None:
+        if not hasattr(self, "_run_button"):
+            return
+        is_running = self._worker is not None and self._worker.isRunning()
+        has_device = self._device_selector.selected_device() is not None
+        self._run_button.setEnabled(has_device and not is_running)
+        self._cancel_button.setEnabled(is_running)
+
     def _on_devices_changed(self, devices: list[Device]) -> None:
         self._device_selector.set_devices(devices)
+        self._update_button_states()
 
     def _build_artifact_panel(self) -> QWidget:
         card = Card("Artifact under test")
         layout = card.body_layout()
 
+        self._artifact_empty_state = EmptyStateWidget(
+            title="No APK Selected",
+            message="Select an APK from the app bar or upload a new file to run tests.",
+            button_text="Upload APK",
+            compact=True,
+            frameless=True,
+        )
+        self._artifact_empty_state.upload_requested.connect(self.upload_requested.emit)
+        layout.addWidget(self._artifact_empty_state)
+
+        self._artifact_details = QWidget()
+        details_layout = QVBoxLayout(self._artifact_details)
+        details_layout.setContentsMargins(0, 0, 0, 0)
+        details_layout.setSpacing(10)
+
         self._apk_name_label = QLabel("No APK selected")
         self._apk_name_label.setStyleSheet("font-size: 15px; font-weight: 700;")
-        layout.addWidget(self._apk_name_label)
+        details_layout.addWidget(self._apk_name_label)
 
         self._apk_package_label = QLabel("Select an APK from the app bar")
         self._apk_package_label.setProperty("role", "mono")
-        layout.addWidget(self._apk_package_label)
+        details_layout.addWidget(self._apk_package_label)
 
         self._tags_layout = QHBoxLayout()
         self._tag_version = QLabel("—")
@@ -224,15 +262,24 @@ class ApkTesterPage(QWidget):
             )
             self._tags_layout.addWidget(tag)
         self._tags_layout.addStretch(1)
-        layout.addLayout(self._tags_layout)
+        details_layout.addLayout(self._tags_layout)
 
         self._artifact_note = QLabel(
             "Select an APK from the app bar to begin."
         )
         self._artifact_note.setWordWrap(True)
         self._artifact_note.setProperty("role", "muted")
-        layout.addWidget(self._artifact_note)
+        details_layout.addWidget(self._artifact_note)
+        details_layout.addStretch(1)
+
+        layout.addWidget(self._artifact_details)
+
+        # Show empty state by default when no APK is loaded
+        self._artifact_details.hide()
+        self._artifact_empty_state.show()
+
         layout.addStretch(1)
+
         return card
 
     def _build_sequence_panel(self) -> QWidget:
@@ -349,12 +396,14 @@ class ApkTesterPage(QWidget):
             self._apk_path = None
             self._apk_info = None
             self._apk_name_label.setText("No APK selected")
-            self._apk_package_label.setText("Select an APK to begin")
+            self._apk_package_label.setText("Select an APK from the app bar")
             self._tag_version.setText("–")
             self._tag_min.setText("–")
             self._tag_target.setText("–")
             self._artifact_note.setText("Select an APK from the app bar to begin.")
             self._artifact_note.setStyleSheet("color: #8b8e94;")
+            self._artifact_details.hide()
+            self._artifact_empty_state.show()
             return
 
         self._apk_path = path
@@ -370,23 +419,42 @@ class ApkTesterPage(QWidget):
             self._tag_target.setText(f"target {info.target_sdk or '?'}")
             self._artifact_note.setText("Ready to run automated test cycle.")
             self._artifact_note.setStyleSheet("color: #8b8e94;")
+            self._artifact_empty_state.hide()
+            self._artifact_details.show()
         except Exception as exc:
             self._apk_name_label.setText(path.name)
             self._apk_package_label.setText("Parse error")
             self._artifact_note.setText(f"Failed to inspect APK: {exc}")
             self._artifact_note.setStyleSheet("color: #e0574a;")
+            self._artifact_empty_state.hide()
+            self._artifact_details.show()
 
 
     def _on_run_test(self) -> None:
         if not self._apk_path or not self._apk_path.is_file():
             self._artifact_note.setText("Please select an APK from the app bar first.")
             self._artifact_note.setStyleSheet("color: #e0574a;")
+            QMessageBox.warning(
+                self,
+                "No APK Selected",
+                "No APK file selected.\n\n"
+                "Please select an APK from the app bar or upload an APK file before running tests.",
+            )
             return
 
         device = self._device_selector.selected_device()
         if not device:
-            self._verdict_detail.setText("No device selected. Please connect an Android device.")
+            self._update_button_states()
+            self._verdict_detail.setText(
+                "No emulator connected. Please connect an Android device or start an emulator."
+            )
             self._verdict_detail.setStyleSheet("color: #e0574a;")
+            QMessageBox.warning(
+                self,
+                "No Emulator Connected",
+                "No Android device or emulator is currently connected.\n\n"
+                "Please connect an Android device via USB/Wi-Fi or start an emulator to run tests.",
+            )
             return
 
         for widget in self._step_widgets.values():
@@ -401,6 +469,7 @@ class ApkTesterPage(QWidget):
         self._log_excerpt_view.clear()
         self._log_excerpt_view.hide()
         self._run_button.setEnabled(False)
+        self._cancel_button.setEnabled(True)
         self._open_report.setEnabled(False)
 
         output_dir = self._ctx.settings.data_dir / "screenshots"
@@ -419,7 +488,7 @@ class ApkTesterPage(QWidget):
     def _on_cancel(self) -> None:
         if self._worker and self._worker.isRunning():
             self._worker.terminate()
-            self._run_button.setEnabled(True)
+            self._update_button_states()
             self._verdict_label.setText("CANCELLED")
             self._verdict_label.setStyleSheet("color: #e0574a; font-size: 22px; font-weight: 800;")
 
@@ -440,7 +509,7 @@ class ApkTesterPage(QWidget):
             return
 
         self._last_run = run
-        self._run_button.setEnabled(True)
+        self._update_button_states()
         self._open_report.setEnabled(True)
 
         for step in run.steps:

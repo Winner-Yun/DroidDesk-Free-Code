@@ -46,9 +46,7 @@ def is_known_benign_shape(value: str) -> bool:
         return True
     if len(value) in _HEX_HASH_LENGTHS and all(c in "0123456789abcdefABCDEF" for c in value):
         return True
-    if value.startswith(_DATA_URI_PREFIX):
-        return True
-    return False
+    return bool(value.startswith(_DATA_URI_PREFIX))
 
 
 def looks_like_credential(variable_name: str, value: str) -> bool:

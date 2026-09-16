@@ -1,0 +1,9 @@
+# DroidDesk security scan suppressions
+# Automatically maintained. Manual edits are preserved.
+
+[[suppressions]]
+rule_id = "android-maps-api-key"
+file = "C:/Users/ThinkPad E15/AppData/Local/DroidDesk/apks/a83246f08f5d_Work_smart.apk/resources.arsc"
+match_hash = "c03e9f413e763821"
+reason = "r323"
+created_at = "2026-09-16 03:08:46"

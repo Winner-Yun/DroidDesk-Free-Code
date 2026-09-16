@@ -42,3 +42,16 @@ id = "android-maps-api-key"
 literal_prefixes = ["AIzaSy"]
 severity = "review"
 description = "Google Maps/Places API key — designed to ship in the APK; recommend restricting by package name and SHA-1 fingerprint, not removal"
+
+[[rules]]
+id = "firebase-api-key"
+literal_prefixes = ["AIzaSy"]
+severity = "review"
+description = "Firebase Web/Client API key — designed to ship in the APK; recommend restricting by package name and SHA-1 fingerprint in Google Cloud Console"
+
+[[rules]]
+id = "google-api-key"
+literal_prefixes = ["AIzaSy"]
+severity = "review"
+description = "Google Cloud API key — recommend restricting by package name and SHA-1 fingerprint in Google Cloud Console"
+

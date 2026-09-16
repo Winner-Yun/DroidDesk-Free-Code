@@ -29,9 +29,25 @@ class NavEntry:
 NAV_SECTIONS: tuple[tuple[str, tuple[NavEntry, ...]], ...] = (
     ("Overview", (NavEntry("dashboard", "▦", "Dashboard"),)),
     ("Connect", (NavEntry("devices", "▭", "Devices"), NavEntry("logcat", "≡", "Logcat"))),
-    ("Inspect", (NavEntry("analyzer", "◎", "APK analyzer"), NavEntry("tester", "▶", "Test runner"))),
-    ("Protect", (NavEntry("security", "⛨", "Secret scanner", 3), NavEntry("organizer", "▧", "File organizer"))),
-    ("Ship", (NavEntry("commands", "▤", "Build commands"), NavEntry("gate", "⌂", "Release gate"), NavEntry("reports", "▥", "Reports"))),
+    (
+        "Inspect",
+        (NavEntry("analyzer", "◎", "APK analyzer"), NavEntry("tester", "▶", "Test runner")),
+    ),
+    (
+        "Protect",
+        (
+            NavEntry("security", "⛨", "Secret scanner"),
+            NavEntry("organizer", "▧", "File organizer"),
+        ),
+    ),
+    (
+        "Ship",
+        (
+            NavEntry("commands", "▤", "Build commands"),
+            NavEntry("gate", "⌂", "Release gate"),
+            NavEntry("reports", "▥", "Reports"),
+        ),
+    ),
 )
 
 SETTINGS_ENTRY = NavEntry("settings", "⚙", "Settings")
@@ -64,6 +80,27 @@ class _NavButton(QPushButton):
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.key = entry.key
+
+        badge_layout = QHBoxLayout(self)
+        badge_layout.setContentsMargins(0, 0, 10, 0)
+        badge_layout.addStretch(1)
+
+        self._badge = QLabel(self)
+        self._badge.setProperty("role", "navBadge")
+        self._badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._badge.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._badge.hide()
+        badge_layout.addWidget(self._badge, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        if entry.badge is not None and entry.badge > 0:
+            self.set_badge(entry.badge)
+
+    def set_badge(self, count: int | None) -> None:
+        if count is not None and count > 0:
+            self._badge.setText(str(count))
+            self._badge.show()
+        else:
+            self._badge.hide()
 
 
 class NavSidebar(QWidget):
@@ -100,22 +137,12 @@ class NavSidebar(QWidget):
         button = _NavButton(entry)
         self._group.addButton(button)
         self._buttons[entry.key] = button
+        return button
 
-        if entry.badge is None:
-            return button
-
-        row = QWidget()
-        row_layout = QHBoxLayout(row)
-        row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(0)
-        row_layout.addWidget(button, 1)
-        badge = QLabel(str(entry.badge))
-        badge.setProperty("role", "navBadge")
-        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        badge.setFixedWidth(20)
-        row_layout.addWidget(badge, 0, Qt.AlignmentFlag.AlignVCenter)
-        row_layout.addSpacing(10)
-        return row
+    def set_badge(self, key: str, count: int | None) -> None:
+        button = self._buttons.get(key)
+        if button is not None:
+            button.set_badge(count)
 
     def set_current(self, key: str) -> None:
         button = self._buttons.get(key)
@@ -125,3 +152,4 @@ class NavSidebar(QWidget):
     def _on_clicked(self, button: QPushButton) -> None:
         assert isinstance(button, _NavButton)
         self.page_selected.emit(button.key)
+

@@ -13,6 +13,7 @@ from droiddesk.infra.db import Repository
 from droiddesk.infra.tools import ToolLocator
 from droiddesk.services.apk_service import ApkService
 from droiddesk.services.device_service import DeviceService
+from droiddesk.services.scan_service import ScanService
 from droiddesk.services.test_service import CrashDetector, TestStateMachine
 from droiddesk.ui.main_window import MainWindow
 
@@ -51,15 +52,18 @@ def build_application(settings: Settings) -> MainWindow:
         storage_dir=settings.data_dir / "apks",
     )
     
+    scan_service = ScanService(tool_locator=tool_locator, apk_reader=apk_reader)
+
     ctx = AppContext(
         settings=settings,
         tool_locator=tool_locator,
         repository=repository,
         device_service=device_service,
         apk_service=apk_service,
+        scan_service=scan_service,
     )
 
-    # TODO(Phase 2+): construct ScanService, EnvService, BuildService,
+    # TODO(Phase 2+): construct EnvService, BuildService,
     #   GateService, OrganizerService, ReportService as each phase lands.
 
     return MainWindow(ctx)

@@ -139,6 +139,11 @@ class MainWindow(QMainWindow):
                     page.upload_requested.connect(self._environment_bar._on_upload_clicked)
                 if hasattr(page, "navigate_requested"):
                     page.navigate_requested.connect(self._on_navigate_requested)
+                if hasattr(page, "findings_changed"):
+                    page.findings_changed.connect(
+                        lambda c: self._sidebar.set_badge("security", c if c > 0 else None)
+                    )
+
 
         devices_idx = self._page_index.get("devices")
         if devices_idx is not None:

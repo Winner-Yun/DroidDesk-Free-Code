@@ -225,17 +225,51 @@ class ApkReader:
             msg = f"Failed to perform full analysis on APK {apk_path.name}: {e}"
             raise ApkParseError(msg) from e
 
+    def extract_named_string_resources(self, apk_path: Path) -> list[tuple[str, str]]:
+        """Extract (name, value) string resource pairs from resources.arsc."""
+        try:
+            from androguard.core.apk import APK
+
+            apk = APK(str(apk_path))
+            arsc = apk.get_android_resources()
+            if not arsc:
+                return []
+            named_strings: list[tuple[str, str]] = []
+            seen: set[tuple[str, str]] = set()
+            for pkg in arsc.get_packages_names():
+                resolved = arsc.get_resolved_strings()
+                if resolved and pkg in resolved:
+                    for _locale, res_dict in resolved[pkg].items():
+                        for res_id, val in res_dict.items():
+                            if isinstance(val, str) and val:
+                                item = (str(res_id), val)
+                                if item not in seen:
+                                    seen.add(item)
+                                    named_strings.append(item)
+            return named_strings
+        except Exception:
+            return []
+
     def extract_string_resources(self, apk_path: Path) -> list[str]:
         """Strings from resources.arsc — where API keys most often live. Used by
         the Privacy Scanner (Section 6.6) and Network Insight's static host
         extraction (Section 6.11).
         """
-        # TODO(Phase 4): androguard resources.arsc string pool extraction.
-        raise NotImplementedError
+        return list(dict.fromkeys(val for _, val in self.extract_named_string_resources(apk_path)))
 
     def extract_dex_strings(self, apk_path: Path) -> list[str]:
         """Opt-in deep scan: string constants from the DEX. Slower than resource
         extraction — see Section 6.6.
         """
-        # TODO(Phase 4): androguard DEX string constant extraction.
-        raise NotImplementedError
+        try:
+            from androguard.core.apk import APK
+            from androguard.core.dex import DEX  # type: ignore[import-untyped]
+
+            apk = APK(str(apk_path))
+            all_strings: list[str] = []
+            for dex_bytes in apk.get_all_dex():
+                dex = DEX(dex_bytes)
+                all_strings.extend(dex.get_strings())
+            return list(dict.fromkeys(all_strings))
+        except Exception:
+            return []

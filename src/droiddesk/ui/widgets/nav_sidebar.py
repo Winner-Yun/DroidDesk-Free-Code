@@ -27,7 +27,7 @@ class NavEntry:
 
 
 NAV_SECTIONS: tuple[tuple[str, tuple[NavEntry, ...]], ...] = (
-    ("Overview", (NavEntry("dashboard", "▦", "Dashboard"),)),
+    ("Overview", (NavEntry("dashboard", "▦", "Home"),)),
     ("Connect", (NavEntry("devices", "▭", "Devices"), NavEntry("logcat", "≡", "Logcat"))),
     (
         "Inspect",
@@ -145,11 +145,11 @@ class NavSidebar(QWidget):
             button.set_badge(count)
 
     def set_current(self, key: str) -> None:
-        button = self._buttons.get(key)
+        target_key = "dashboard" if key == "home" else key
+        button = self._buttons.get(target_key)
         if button is not None:
             button.setChecked(True)
 
     def _on_clicked(self, button: QPushButton) -> None:
         assert isinstance(button, _NavButton)
         self.page_selected.emit(button.key)
-

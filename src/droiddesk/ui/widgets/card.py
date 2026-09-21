@@ -1,4 +1,3 @@
-
 """Generic bordered panel used to group content on every page (the "Needs
 attention" / "Recent runs" boxes on the Dashboard, the detail panel on
 Devices, etc.), plus the small stat tile used at the top of the Dashboard.

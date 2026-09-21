@@ -45,6 +45,7 @@ ENVIRONMENT_RISK_COLORS = {
     "production": ACCENT_RED,
     "staging": ACCENT_ORANGE,
     "development": ACCENT_GREEN,
+    "dev": ACCENT_GREEN,
 }
 
 # Verdict / status colours shared across Dashboard, Test runner, Release gate.

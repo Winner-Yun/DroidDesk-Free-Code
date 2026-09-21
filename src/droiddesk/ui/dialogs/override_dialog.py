@@ -8,6 +8,7 @@ impossible — making it impossible just drives people around the tool.
 
 from __future__ import annotations
 
+from PySide6.QtCore import QSize
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -17,6 +18,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from droiddesk.ui.theme import get_icon
 
 
 class OverrideDialog(QDialog):
@@ -102,6 +105,8 @@ class OverrideDialog(QDialog):
 
         self._confirm_btn = QPushButton("Confirm Override && Proceed")
         self._confirm_btn.setProperty("role", "primary")
+        self._confirm_btn.setIcon(get_icon("shield-alert", size=13, color="#ffffff"))
+        self._confirm_btn.setIconSize(QSize(13, 13))
         self._confirm_btn.setStyleSheet("""
             QPushButton {
                 background: #e11d48;

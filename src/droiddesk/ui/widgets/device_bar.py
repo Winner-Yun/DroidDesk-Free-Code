@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import override
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import QSize, Qt, QThread, Signal
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QDialog,
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.core.models import Device
 from droiddesk.services.device_service import DeviceService
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.device_selector import DeviceSelector
 
 
@@ -164,18 +165,24 @@ class ApkUploadDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(10)
 
-        self._add_btn = QPushButton("＋  Add Files...")
+        self._add_btn = QPushButton("Add Files...")
+        self._add_btn.setIcon(get_icon("folder-open", size=14, color=TEXT_MUTED))
+        self._add_btn.setIconSize(QSize(14, 14))
         self._add_btn.clicked.connect(self._on_add_files_clicked)
         btn_row.addWidget(self._add_btn)
 
         self._clear_btn = QPushButton("Clear")
+        self._clear_btn.setIcon(get_icon("trash-2", size=14, color=TEXT_MUTED))
+        self._clear_btn.setIconSize(QSize(14, 14))
         self._clear_btn.clicked.connect(self._on_clear_clicked)
         btn_row.addWidget(self._clear_btn)
 
         btn_row.addStretch(1)
 
-        self._install_btn = QPushButton("▶  Install to Device")
+        self._install_btn = QPushButton("Install to Device")
         self._install_btn.setProperty("role", "primary")
+        self._install_btn.setIcon(get_icon("smartphone", size=14, color="#ffffff"))
+        self._install_btn.setIconSize(QSize(14, 14))
         self._install_btn.clicked.connect(self._on_install_clicked)
         btn_row.addWidget(self._install_btn)
 
@@ -261,7 +268,8 @@ class ApkUploadDialog(QDialog):
     def _on_install_clicked(self) -> None:
         if self._worker and self._worker.isRunning():
             self._worker.cancel()
-            self._install_btn.setText("▶  Install to Device")
+            self._install_btn.setText("Install to Device")
+            self._install_btn.setIcon(get_icon("smartphone", size=14, color="#ffffff"))
             self._status_label.setText("Installation cancelled.")
             return
 
@@ -288,7 +296,8 @@ class ApkUploadDialog(QDialog):
             return
 
         # Prepare UI for installation
-        self._install_btn.setText("■  Cancel")
+        self._install_btn.setText("Cancel")
+        self._install_btn.setIcon(get_icon("square", size=14, color="#ffffff"))
         self._add_btn.setEnabled(False)
         self._clear_btn.setEnabled(False)
         self._dev_selector.setEnabled(False)
@@ -345,7 +354,8 @@ class ApkUploadDialog(QDialog):
         self._progress_bar.setValue(current)
 
     def _on_all_finished(self, successes: int, total: int) -> None:
-        self._install_btn.setText("▶  Install to Device")
+        self._install_btn.setText("Install to Device")
+        self._install_btn.setIcon(get_icon("smartphone", size=14, color="#ffffff"))
         self._add_btn.setEnabled(True)
         self._clear_btn.setEnabled(True)
         self._dev_selector.setEnabled(True)

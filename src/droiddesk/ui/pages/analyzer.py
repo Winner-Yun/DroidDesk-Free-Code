@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.core.models import ApkInfo
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import PageHeader
 from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import TagPill
@@ -65,9 +66,15 @@ class AnalyzerPage(QWidget):
         self._perm_panel = QWidget()
         self._comp_panel = QWidget()
 
-        self._tabs.addTab(self._sig_panel, "Signature")
-        self._tabs.addTab(self._perm_panel, "Permissions")
-        self._tabs.addTab(self._comp_panel, "Components")
+        self._tabs.addTab(
+            self._sig_panel, get_icon("award", size=14, color=TEXT_MUTED), "Signature"
+        )
+        self._tabs.addTab(
+            self._perm_panel, get_icon("key-round", size=14, color=TEXT_MUTED), "Permissions"
+        )
+        self._tabs.addTab(
+            self._comp_panel, get_icon("layers", size=14, color=TEXT_MUTED), "Components"
+        )
 
         outer.addWidget(self._tabs, 1)
 
@@ -143,9 +150,15 @@ class AnalyzerPage(QWidget):
             self._perm_panel = self._build_permissions_panel()
             self._comp_panel = self._build_components_panel()
 
-            self._tabs.insertTab(0, self._sig_panel, "Signature")
-            self._tabs.insertTab(1, self._perm_panel, "Permissions")
-            self._tabs.insertTab(2, self._comp_panel, "Components")
+            self._tabs.insertTab(
+                0, self._sig_panel, get_icon("award", size=14, color=TEXT_MUTED), "Signature"
+            )
+            self._tabs.insertTab(
+                1, self._perm_panel, get_icon("key-round", size=14, color=TEXT_MUTED), "Permissions"
+            )
+            self._tabs.insertTab(
+                2, self._comp_panel, get_icon("layers", size=14, color=TEXT_MUTED), "Components"
+            )
             self._tabs.setCurrentIndex(current_idx)
 
     def _build_identity_bar(self) -> QWidget:

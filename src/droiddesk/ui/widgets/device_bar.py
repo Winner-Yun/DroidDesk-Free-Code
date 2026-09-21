@@ -339,9 +339,7 @@ class ApkUploadDialog(QDialog):
             if item:
                 item.setText("✓ Installed" if ok else "✗ Failed")
                 item.setToolTip(message)
-                item.setForeground(
-                    Qt.GlobalColor.green if ok else Qt.GlobalColor.red
-                )
+                item.setForeground(Qt.GlobalColor.green if ok else Qt.GlobalColor.red)
 
     def _on_worker_progress(self, current: int, total: int) -> None:
         self._progress_bar.setValue(current)

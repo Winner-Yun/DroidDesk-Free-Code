@@ -55,7 +55,7 @@ class DashboardPage(QWidget):
         outer.setSpacing(16)
 
         header = PageHeader(
-            "Dashboard", "Current project state, and the last thing that happened in it."
+            "Home", "Current project state, and the last thing that happened in it."
         )
         outer.addWidget(header)
 
@@ -76,8 +76,10 @@ class DashboardPage(QWidget):
         self._apk_card = self._build_active_apk_card()
         outer.addWidget(self._apk_card)
 
-        # Key metrics row with live device monitoring
-        stats_row = QHBoxLayout()
+        # Key metrics row (hidden / removed from layout per user request)
+        self._stats_container = QWidget()
+        stats_row = QHBoxLayout(self._stats_container)
+        stats_row.setContentsMargins(0, 0, 0, 0)
         stats_row.setSpacing(14)
 
         self._stat_devices = StatCard("0", "Devices connected")
@@ -89,7 +91,7 @@ class DashboardPage(QWidget):
         stats_row.addWidget(self._stat_findings)
         stats_row.addWidget(self._stat_gate)
         stats_row.addWidget(self._stat_runs)
-        outer.addLayout(stats_row)
+        self._stats_container.hide()
 
         # Bottom panels: APK Installer and Emulator History
         panels_row = QHBoxLayout()
@@ -197,9 +199,7 @@ class DashboardPage(QWidget):
         apk_select_row.setSpacing(8)
 
         self._installer_apk_combo = QComboBox()
-        self._installer_apk_combo.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToContents
-        )
+        self._installer_apk_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         apk_select_row.addWidget(self._installer_apk_combo, 1)
 
         btn_upload = QPushButton("Upload APK")
@@ -308,9 +308,7 @@ class DashboardPage(QWidget):
             paths.append(self._apk_path)
             labels.append(f"{self._apk_path.name} (Active)")
 
-        if hasattr(self._ctx.repository, "list_apks") and callable(
-            self._ctx.repository.list_apks
-        ):
+        if hasattr(self._ctx.repository, "list_apks") and callable(self._ctx.repository.list_apks):
             try:
                 stored = self._ctx.repository.list_apks()
                 for info in stored:
@@ -579,5 +577,3 @@ class DashboardPage(QWidget):
             )
             return
         self.navigate_requested.emit("tester")
-
-

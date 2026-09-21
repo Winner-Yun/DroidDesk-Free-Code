@@ -175,13 +175,13 @@ class ApkService(QObject):
 
     def compare(self, apk_a: Path, apk_b: Path) -> dict[str, object]:
         from droiddesk.infra.process import ProcessRunner
+
         runner = ProcessRunner()
         result = runner.run(
             self._apkanalyzer_path,
             ["apk", "compare", str(apk_a), str(apk_b)],
         )
         return {"output": result.stdout, "exit_code": result.exit_code}
-
 
     def run_test(
         self,

@@ -52,9 +52,7 @@ class ReportService:
                 ]
                 for step in run.steps:
                     status = "PASS" if step.passed else "FAIL"
-                    lines.append(
-                        f"| {step.name} | {status} | {step.duration_ms} | {step.detail} |"
-                    )
+                    lines.append(f"| {step.name} | {status} | {step.duration_ms} | {step.detail} |")
                 return "\n".join(lines)
             case _:
                 raise ValueError(f"Unknown report format: {fmt}")

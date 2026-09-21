@@ -264,9 +264,7 @@ class ApkTesterPage(QWidget):
         self._tags_layout.addStretch(1)
         details_layout.addLayout(self._tags_layout)
 
-        self._artifact_note = QLabel(
-            "Select an APK from the app bar to begin."
-        )
+        self._artifact_note = QLabel("Select an APK from the app bar to begin.")
         self._artifact_note.setWordWrap(True)
         self._artifact_note.setProperty("role", "muted")
         details_layout.addWidget(self._artifact_note)
@@ -428,7 +426,6 @@ class ApkTesterPage(QWidget):
             self._artifact_note.setStyleSheet("color: #e0574a;")
             self._artifact_empty_state.hide()
             self._artifact_details.show()
-
 
     def _on_run_test(self) -> None:
         if not self._apk_path or not self._apk_path.is_file():

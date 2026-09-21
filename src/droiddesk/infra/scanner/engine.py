@@ -74,9 +74,7 @@ def _load_rules_file(path: Path) -> list[Rule]:
 
         match_name = entry.get("match_name")
         match_ext_val = entry.get("match_ext", [])
-        match_ext = (
-            [match_ext_val] if isinstance(match_ext_val, str) else list(match_ext_val)
-        )
+        match_ext = [match_ext_val] if isinstance(match_ext_val, str) else list(match_ext_val)
 
         rules.append(
             Rule(
@@ -214,15 +212,18 @@ class ScannerEngine:
         matched_rule_ids = {rule_id for _, (_, rule_id) in self._automaton.iter(text)}
 
         # Evaluate AIzaSy Google / Firebase API Key Disambiguation if AIzaSy matched
-        if any(
-            rid in matched_rule_ids
-            for rid in (
-                "android-maps-api-key",
-                "android-firebase-legacy-token",
-                "firebase-api-key",
-                "google-api-key",
+        if (
+            any(
+                rid in matched_rule_ids
+                for rid in (
+                    "android-maps-api-key",
+                    "android-firebase-legacy-token",
+                    "firebase-api-key",
+                    "google-api-key",
+                )
             )
-        ) or "AIzaSy" in text:
+            or "AIzaSy" in text
+        ):
             for match in _AIZASY_PATTERN.finditer(text):
                 val = match.group(0)
                 line_number = text.count("\n", 0, match.start()) + 1
@@ -271,10 +272,7 @@ class ScannerEngine:
                 )
 
                 is_maps = (
-                    any(
-                        w in var_lower
-                        for w in ("map", "geo", "places", "directions", "location")
-                    )
+                    any(w in var_lower for w in ("map", "geo", "places", "directions", "location"))
                     or any(
                         w in context_slice
                         for w in (
@@ -416,9 +414,7 @@ class ScannerEngine:
             if is_cancelled and is_cancelled():
                 break
             dirnames[:] = [
-                d
-                for d in dirnames
-                if d not in self._excluded_dirs and not d.startswith(".")
+                d for d in dirnames if d not in self._excluded_dirs and not d.startswith(".")
             ]
             for filename in filenames:
                 if is_cancelled and is_cancelled():

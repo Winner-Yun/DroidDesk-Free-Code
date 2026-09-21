@@ -63,6 +63,10 @@ class ToolLocator:
             return False
         return True
 
+    def discover_all(self) -> dict[str, bool]:
+        """Check availability of all known tools without raising ToolNotFoundError."""
+        return {tool_name: self.is_available(tool_name) for tool_name in _KNOWN_TOOLS}
+
     def _from_settings(self, tool_name: str) -> Path | None:
         attr = f"{tool_name}_path"
         return getattr(self._settings, attr, None)

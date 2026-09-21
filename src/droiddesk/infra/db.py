@@ -8,9 +8,10 @@ credentials into the database would make DroidDesk the exposure it exists to cat
 from __future__ import annotations
 
 import sqlite3
+import threading
 from pathlib import Path
 
-from droiddesk.core.models import ApkInfo, Device
+from droiddesk.core.models import ApkInfo, BuildRecord, Device, Project
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -115,28 +116,33 @@ class Repository:
     def __init__(self, database_path: Path) -> None:
         self._database_path = database_path
         database_path.parent.mkdir(parents=True, exist_ok=True)
-        self._connection = sqlite3.connect(database_path)
-        self._connection.execute("PRAGMA foreign_keys = ON")
-        self._migrate()
+        self._lock = threading.RLock()
+        self._connection = sqlite3.connect(database_path, check_same_thread=False)
+        with self._lock:
+            self._connection.execute("PRAGMA journal_mode = WAL")
+            self._connection.execute("PRAGMA foreign_keys = ON")
+            self._migrate()
 
     def _migrate(self) -> None:
         # TODO(Phase 2): replace with numbered migration scripts applied in order,
         # tracked via schema_version, once the schema needs to evolve past v1.
-        self._connection.executescript(SCHEMA)
-        row = self._connection.execute("SELECT version FROM schema_version").fetchone()
-        if row is None:
-            self._connection.execute(
-                "INSERT INTO schema_version (version) VALUES (?)", (CURRENT_SCHEMA_VERSION,)
-            )
-        self._connection.commit()
+        with self._lock:
+            self._connection.executescript(SCHEMA)
+            row = self._connection.execute("SELECT version FROM schema_version").fetchone()
+            if row is None:
+                self._connection.execute(
+                    "INSERT INTO schema_version (version) VALUES (?)", (CURRENT_SCHEMA_VERSION,)
+                )
+            self._connection.commit()
 
     def close(self) -> None:
-        self._connection.close()
+        with self._lock:
+            self._connection.close()
 
     # TODO(Phase 2+): save_test_run, save_scan, save_finding,
     # list_findings, save_build_record — one method per write/read the services
     # layer needs, backed by SQLAlchemy Core per Section 2.1.
-    
+
     def save_apk(self, apk: ApkInfo) -> None:
         from datetime import UTC, datetime
 
@@ -158,35 +164,38 @@ class Repository:
                 analyzed_at=excluded.analyzed_at
         """
 
-        self._connection.execute(
-            query,
-            (
-                str(apk.file_path),
-                apk.file_hash,
-                apk.package_name,
-                apk.version_name,
-                apk.version_code,
-                apk.target_sdk,
-                apk.min_sdk,
-                apk.size_bytes,
-                now,
-            ),
-        )
-        self._connection.commit()
+        with self._lock:
+            self._connection.execute(
+                query,
+                (
+                    str(apk.file_path),
+                    apk.file_hash,
+                    apk.package_name,
+                    apk.version_name,
+                    apk.version_code,
+                    apk.target_sdk,
+                    apk.min_sdk,
+                    apk.size_bytes,
+                    now,
+                ),
+            )
+            self._connection.commit()
 
     def list_apks(self) -> list[ApkInfo]:
         """List all stored APK records, ordered with most recently analyzed first."""
         from datetime import datetime
 
-        cursor = self._connection.execute(
-            """
-            SELECT file_path, file_hash, package_name, version_name,
-                   version_code, target_sdk, min_sdk, size_bytes, analyzed_at
-            FROM apk
-            ORDER BY analyzed_at DESC, id DESC
-            """
-        )
-        rows = cursor.fetchall()
+        with self._lock:
+            cursor = self._connection.execute(
+                """
+                SELECT file_path, file_hash, package_name, version_name,
+                       version_code, target_sdk, min_sdk, size_bytes, analyzed_at
+                FROM apk
+                ORDER BY analyzed_at DESC, id DESC
+                """
+            )
+            rows = cursor.fetchall()
+
         results: list[ApkInfo] = []
         for row in rows:
             analyzed_dt = None
@@ -214,16 +223,18 @@ class Repository:
         """Fetch a single APK record by its file hash."""
         from datetime import datetime
 
-        cursor = self._connection.execute(
-            """
-            SELECT file_path, file_hash, package_name, version_name,
-                   version_code, target_sdk, min_sdk, size_bytes, analyzed_at
-            FROM apk
-            WHERE file_hash = ?
-            """,
-            (file_hash,),
-        )
-        row = cursor.fetchone()
+        with self._lock:
+            cursor = self._connection.execute(
+                """
+                SELECT file_path, file_hash, package_name, version_name,
+                       version_code, target_sdk, min_sdk, size_bytes, analyzed_at
+                FROM apk
+                WHERE file_hash = ?
+                """,
+                (file_hash,),
+            )
+            row = cursor.fetchone()
+
         if not row:
             return None
         analyzed_dt = None
@@ -246,15 +257,18 @@ class Repository:
 
     def delete_apk(self, file_hash: str) -> bool:
         """Delete an APK record by hash, safely removing any referencing test runs."""
-        cursor = self._connection.execute("SELECT id FROM apk WHERE file_hash = ?", (file_hash,))
-        row = cursor.fetchone()
-        if not row:
-            return False
-        apk_id = row[0]
-        self._connection.execute("DELETE FROM test_run WHERE apk_id = ?", (apk_id,))
-        self._connection.execute("DELETE FROM apk WHERE id = ?", (apk_id,))
-        self._connection.commit()
-        return True
+        with self._lock:
+            cursor = self._connection.execute(
+                "SELECT id FROM apk WHERE file_hash = ?", (file_hash,)
+            )
+            row = cursor.fetchone()
+            if not row:
+                return False
+            apk_id = row[0]
+            self._connection.execute("DELETE FROM test_run WHERE apk_id = ?", (apk_id,))
+            self._connection.execute("DELETE FROM apk WHERE id = ?", (apk_id,))
+            self._connection.commit()
+            return True
 
     def record_device(self, device: Device) -> None:
         """Persist or update an emulator / device in connection history."""
@@ -275,29 +289,33 @@ class Repository:
                 abi=COALESCE(excluded.abi, device_history.abi),
                 last_connected=excluded.last_connected
         """
-        self._connection.execute(
-            query,
-            (
-                device.serial,
-                device.model or device.serial,
-                device.state,
-                device.android_version or "—",
-                device.api_level or 0,
-                device.abi or "—",
-                now,
-            ),
-        )
-        self._connection.commit()
+        with self._lock:
+            self._connection.execute(
+                query,
+                (
+                    device.serial,
+                    device.model or device.serial,
+                    device.state,
+                    device.android_version or "—",
+                    device.api_level or 0,
+                    device.abi or "—",
+                    now,
+                ),
+            )
+            self._connection.commit()
 
     def list_device_history(self) -> list[dict[str, object]]:
         """List all historically connected emulators and physical devices."""
-        cursor = self._connection.execute(
-            """
-            SELECT serial, model, state, android_version, api_level, abi, last_connected
-            FROM device_history
-            ORDER BY last_connected DESC
-            """
-        )
+        with self._lock:
+            cursor = self._connection.execute(
+                """
+                SELECT serial, model, state, android_version, api_level, abi, last_connected
+                FROM device_history
+                ORDER BY last_connected DESC
+                """
+            )
+            rows = cursor.fetchall()
+
         return [
             {
                 "serial": str(row[0]),
@@ -308,6 +326,80 @@ class Repository:
                 "abi": str(row[5] or "—"),
                 "last_connected": str(row[6]),
             }
-            for row in cursor.fetchall()
+            for row in rows
         ]
 
+    def save_build_record(self, record: BuildRecord) -> int:
+        started_at_str = record.started_at.isoformat()
+        with self._lock:
+            cursor = self._connection.execute(
+                """
+                INSERT INTO build_record (
+                    project_id, command, environment, gate_score,
+                    gate_verdict, overridden, override_note, exit_code, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.project_id,
+                    record.command,
+                    record.environment,
+                    record.gate_score,
+                    record.gate_verdict,
+                    1 if record.overridden else 0,
+                    record.override_note,
+                    record.exit_code,
+                    started_at_str,
+                ),
+            )
+            self._connection.commit()
+            return int(cursor.lastrowid or 0)
+
+    def get_project_by_root(self, root_path: Path) -> Project | None:
+        from datetime import datetime
+
+        with self._lock:
+            cursor = self._connection.execute(
+                """
+                SELECT id, name, root_path, package_name, created_at, last_opened
+                FROM project
+                WHERE root_path = ?
+                """,
+                (str(root_path.resolve()),),
+            )
+            row = cursor.fetchone()
+
+        if row is None:
+            return None
+        created_at = datetime.fromisoformat(row[4]) if row[4] else None
+        last_opened = datetime.fromisoformat(row[5]) if row[5] else None
+        return Project(
+            id=int(row[0]),
+            name=str(row[1]),
+            root_path=Path(row[2]),
+            package_name=str(row[3]) if row[3] else None,
+            created_at=created_at,
+            last_opened=last_opened,
+        )
+
+    def save_project(self, project: Project) -> int:
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC).isoformat()
+        created_at_str = project.created_at.isoformat() if project.created_at else now
+        last_opened_str = project.last_opened.isoformat() if project.last_opened else now
+        root_str = str(project.root_path.resolve())
+
+        with self._lock:
+            cursor = self._connection.execute(
+                """
+                INSERT INTO project (name, root_path, package_name, created_at, last_opened)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(root_path) DO UPDATE SET
+                    name=excluded.name,
+                    package_name=excluded.package_name,
+                    last_opened=excluded.last_opened
+                """,
+                (project.name, root_str, project.package_name, created_at_str, last_opened_str),
+            )
+            self._connection.commit()
+            return int(cursor.lastrowid or (project.id or 0))

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import override
 
-from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtCore import QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QComboBox,
@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.config import Settings
 from droiddesk.services.apk_service import ApkService
-from droiddesk.ui.theme import ENVIRONMENT_RISK_COLORS
+from droiddesk.ui.theme import ENVIRONMENT_RISK_COLORS, get_icon
 
 
 class EnvironmentBar(QWidget):
@@ -67,6 +67,8 @@ class EnvironmentBar(QWidget):
         # Remove APK button
         self._remove_button = QPushButton("Remove")
         self._remove_button.setObjectName("apkRemoveButton")
+        self._remove_button.setIcon(get_icon("trash-2", size=12, color="#e0574a"))
+        self._remove_button.setIconSize(QSize(12, 12))
         self._remove_button.setToolTip("Remove active APK from project")
         self._remove_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._remove_button.setEnabled(False)
@@ -101,6 +103,8 @@ class EnvironmentBar(QWidget):
         # Appbar Upload APK button
         self._upload_button = QPushButton("Upload APK")
         self._upload_button.setProperty("role", "primary")
+        self._upload_button.setIcon(get_icon("upload", size=14, color="#ffffff"))
+        self._upload_button.setIconSize(QSize(14, 14))
         self._upload_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._upload_button.setToolTip("Upload or Add one or multiple APK / AAB files")
         self._upload_button.clicked.connect(self._on_upload_clicked)

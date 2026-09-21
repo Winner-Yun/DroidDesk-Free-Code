@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.ui import static_data
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import StatusPill
@@ -46,7 +47,10 @@ class ReportsPage(QWidget):
             "One template set. HTML is the source of truth; PDF and Markdown are "
             "rendered from it, and JSON comes straight off the domain model.",
         )
-        header.add_action(QPushButton("⛁  Open output folder"))
+        folder_btn = QPushButton("Open output folder")
+        folder_btn.setIcon(get_icon("folder-open", size=13, color=TEXT_MUTED))
+        folder_btn.setIconSize(QSize(13, 13))
+        header.add_action(folder_btn)
         outer.addWidget(header)
 
         self._content_container = QWidget()
@@ -116,6 +120,8 @@ class ReportsPage(QWidget):
         card = Card("Export")
         for label, caption in static_data.REPORT_EXPORTS:
             button = QPushButton(label)
+            button.setIcon(get_icon("file-down", size=13, color=TEXT_MUTED))
+            button.setIconSize(QSize(13, 13))
             card.body_layout().addWidget(button)
             note = QLabel(caption)
             note.setWordWrap(True)

@@ -33,7 +33,7 @@ from droiddesk.ui.pages.organizer import OrganizerPage
 from droiddesk.ui.pages.reports import ReportsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
-from droiddesk.ui.theme import STYLESHEET
+from droiddesk.ui.theme import STYLESHEET, get_app_logo_icon
 from droiddesk.ui.widgets.device_bar import DeviceBar
 from droiddesk.ui.widgets.environment_bar import EnvironmentBar
 from droiddesk.ui.widgets.loading_spinner import LoadingPage
@@ -64,6 +64,7 @@ class MainWindow(QMainWindow):
         self._device_service = ctx.device_service
 
         self.setWindowTitle("DroidDesk")
+        self.setWindowIcon(get_app_logo_icon())
         self.resize(1440, 900)
         self.setStyleSheet(STYLESHEET)
 

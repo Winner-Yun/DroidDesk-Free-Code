@@ -13,6 +13,7 @@ from PySide6.QtCore import (
     QModelIndex,
     QObject,
     QPersistentModelIndex,
+    QSize,
     QSortFilterProxyModel,
     Qt,
     QTimer,
@@ -43,6 +44,7 @@ from droiddesk.infra.scanner.gitleaks_mapping import rule_id_to_key_name
 from droiddesk.infra.scanner.util import detect_environment_info
 from droiddesk.services.scan_service import ScanService
 from droiddesk.ui.models.findings_model import FindingsModel
+from droiddesk.ui.theme import get_icon
 from droiddesk.ui.widgets.card import PageHeader
 from droiddesk.ui.widgets.code_view import CodeView
 from droiddesk.ui.widgets.empty_state import EmptyStateWidget
@@ -156,6 +158,8 @@ class SecurityPage(QWidget):
         )
         self._scan_button = QPushButton("Scan project")
         self._scan_button.setProperty("role", "primary")
+        self._scan_button.setIcon(get_icon("shield-check", size=14, color="#ffffff"))
+        self._scan_button.setIconSize(QSize(14, 14))
         self._scan_button.clicked.connect(self._on_scan_clicked)
         header.add_action(self._scan_button)
         outer.addWidget(header)
@@ -694,6 +698,8 @@ class SecurityPage(QWidget):
         bottom_row = QHBoxLayout()
         bottom_row.addStretch(1)
         reveal_btn = QPushButton("Show in File Explorer")
+        reveal_btn.setIcon(get_icon("folder-open", size=13, color="#ffffff"))
+        reveal_btn.setIconSize(QSize(13, 13))
         reveal_btn.setStyleSheet(
             "QPushButton {"
             "    background: #3b82f6;"
@@ -756,6 +762,8 @@ class SecurityPage(QWidget):
         )
         tok_btn_row = QHBoxLayout()
         cp_tok_btn = QPushButton("Copy token")
+        cp_tok_btn.setIcon(get_icon("copy", size=12, color="#d1d5db"))
+        cp_tok_btn.setIconSize(QSize(12, 12))
         cp_tok_btn.setStyleSheet(btn_style)
         cp_tok_btn.clicked.connect(lambda: self._on_copy_path(content, cp_tok_btn))
         tok_btn_row.addWidget(cp_tok_btn)
@@ -775,6 +783,7 @@ class SecurityPage(QWidget):
     def _on_scan_clicked(self) -> None:
         self._scan_button.setEnabled(False)
         self._scan_button.setText("Scanning...")
+        self._scan_button.setIcon(get_icon("rotate-cw", size=14, color="#ffffff"))
 
         # If an active APK is selected, scan the APK; otherwise scan project root
         if self._apk_path is not None and self._apk_path.is_file():
@@ -795,6 +804,7 @@ class SecurityPage(QWidget):
         self._scan_button.setEnabled(True)
         btn_text = f"Scan APK ({self._apk_path.name})" if self._apk_path else "Scan project"
         self._scan_button.setText(btn_text)
+        self._scan_button.setIcon(get_icon("shield-check", size=14, color="#ffffff"))
 
         from droiddesk.core.models import ScanResult
 

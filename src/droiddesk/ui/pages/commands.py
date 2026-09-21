@@ -13,7 +13,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QSize, QThread, Signal
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -30,6 +31,7 @@ from droiddesk.core.profiles import CommandProfile, GuardResult
 from droiddesk.infra.scanner.gitleaks_mapping import rule_id_to_key_name
 from droiddesk.infra.scanner.util import redact_secret
 from droiddesk.ui.pages.security import _SEVERITY_RECOMMENDATIONS
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 
@@ -45,6 +47,22 @@ class CommandPreset:
 
 
 _GRADLE = "gradlew.bat" if sys.platform.startswith("win") else "./gradlew"
+
+_CATEGORY_ICONS: dict[str, str] = {
+    "security": "shield-check",
+    "build": "wrench",
+    "adb": "smartphone",
+    "apk": "package-search",
+    "custom": "terminal",
+}
+
+_CATEGORY_COLORS: dict[str, str] = {
+    "security": "#38bdf8",
+    "build": "#f59e0b",
+    "adb": "#27ae60",
+    "apk": "#a855f7",
+    "custom": "#9ca3af",
+}
 
 PRESET_COMMANDS: list[CommandPreset] = [
     # 1-12: Security & Key Harvesting Defensive Audits
@@ -718,6 +736,10 @@ class CommandsPage(QWidget):
         self._search_input.setPlaceholderText(
             "Type to filter commands (e.g. map, debug, adb, test, secret)..."
         )
+        self._search_input.addAction(
+            get_icon("search", size=14, color=TEXT_MUTED),
+            QLineEdit.ActionPosition.LeadingPosition,
+        )
         self._search_input.textChanged.connect(self._on_filter_text_changed)
         filter_row.addWidget(self._search_input, 1)
 
@@ -738,23 +760,36 @@ class CommandsPage(QWidget):
         self._preset_combo = QComboBox()
         self._preset_combo.setMinimumWidth(280)
         for p in self._filtered_presets:
-            self._preset_combo.addItem(p.name, p.id)
+            cat_icon = get_icon(
+                _CATEGORY_ICONS.get(p.category, "terminal"),
+                size=14,
+                color=_CATEGORY_COLORS.get(p.category, TEXT_MUTED),
+            )
+            self._preset_combo.addItem(cat_icon, p.name, p.id)
         self._preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         row2.addWidget(self._preset_combo, 2)
 
         self._command_input = QLineEdit()
         self._command_input.setPlaceholderText("Command to execute")
         self._command_input.setMinimumWidth(220)
+        self._command_action: QAction = self._command_input.addAction(
+            get_icon("terminal", size=14, color=TEXT_MUTED),
+            QLineEdit.ActionPosition.LeadingPosition,
+        )
         self._command_input.returnPressed.connect(self._on_run_clicked)
         row2.addWidget(self._command_input, 2)
 
         self._run_button = QPushButton("Run Security Audit")
         self._run_button.setProperty("role", "primary")
+        self._run_button.setIcon(get_icon("play", size=14, color="#ffffff"))
+        self._run_button.setIconSize(QSize(14, 14))
         self._run_button.clicked.connect(self._on_run_clicked)
         row2.addWidget(self._run_button)
 
         self._stop_button = QPushButton("Stop")
         self._stop_button.setProperty("role", "secondary")
+        self._stop_button.setIcon(get_icon("square", size=13, color=TEXT_MUTED))
+        self._stop_button.setIconSize(QSize(13, 13))
         self._stop_button.setEnabled(False)
         self._stop_button.clicked.connect(self._on_stop_clicked)
         row2.addWidget(self._stop_button)
@@ -813,7 +848,12 @@ class CommandsPage(QWidget):
         self._preset_combo.blockSignals(True)
         self._preset_combo.clear()
         for p in self._filtered_presets:
-            self._preset_combo.addItem(p.name, p.id)
+            cat_icon = get_icon(
+                _CATEGORY_ICONS.get(p.category, "terminal"),
+                size=14,
+                color=_CATEGORY_COLORS.get(p.category, TEXT_MUTED),
+            )
+            self._preset_combo.addItem(cat_icon, p.name, p.id)
         self._preset_combo.blockSignals(False)
 
         count = len(self._filtered_presets)
@@ -837,6 +877,14 @@ class CommandsPage(QWidget):
 
             self._command_input.setText(cmd)
             self._desc_label.setText(preset.description)
+
+            cat_icon = get_icon(
+                _CATEGORY_ICONS.get(preset.category, "terminal"),
+                size=14,
+                color=_CATEGORY_COLORS.get(preset.category, TEXT_MUTED),
+            )
+            if hasattr(self, "_command_action"):
+                self._command_action.setIcon(cat_icon)
 
             if preset.category == "security":
                 self._command_input.setReadOnly(True)

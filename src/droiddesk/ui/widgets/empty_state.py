@@ -4,7 +4,7 @@ Provides clear explanation and an action button to upload/add an APK (text and b
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -14,9 +14,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.ui.theme import get_icon
+
 
 class EmptyStateWidget(QFrame):
-    """Clean, modern empty state container with text and upload button (no icons)."""
+    """Clean, modern empty state container with text and upload button."""
 
     upload_requested = Signal()
 
@@ -40,6 +42,8 @@ class EmptyStateWidget(QFrame):
         self._upload_btn = QPushButton(button_text)
         self._upload_btn.setProperty("role", "primary")
         self._upload_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._upload_btn.setIcon(get_icon("upload", size=14, color="#ffffff"))
+        self._upload_btn.setIconSize(QSize(14, 14))
         self._upload_btn.clicked.connect(self.upload_requested.emit)
         self._upload_btn.setVisible(show_button)
 

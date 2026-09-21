@@ -2,18 +2,16 @@
 (Overview / Connect / Inspect / Protect / Ship, with Settings pinned to the
 bottom) replaces the flat `QListWidget` the scaffold started with, matching
 the approved mockups.
-
-No icon assets are bundled yet (`resources/icons/` is empty — see
-`resources/README.md`), so nav rows use plain Unicode glyphs as stand-ins
-rather than pull in an icon-font dependency for a static UI pass.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import QButtonGroup, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+
+from droiddesk.ui.theme import TEXT, TEXT_MUTED, get_app_logo_pixmap, get_icon
 
 SIDEBAR_WIDTH = 200
 
@@ -27,30 +25,39 @@ class NavEntry:
 
 
 NAV_SECTIONS: tuple[tuple[str, tuple[NavEntry, ...]], ...] = (
-    ("Overview", (NavEntry("dashboard", "▦", "Home"),)),
-    ("Connect", (NavEntry("devices", "▭", "Devices"), NavEntry("logcat", "≡", "Logcat"))),
+    ("Overview", (NavEntry("dashboard", "house", "Home"),)),
+    (
+        "Connect",
+        (
+            NavEntry("devices", "smartphone", "Devices"),
+            NavEntry("logcat", "scroll-text", "Logcat"),
+        ),
+    ),
     (
         "Inspect",
-        (NavEntry("analyzer", "◎", "APK analyzer"), NavEntry("tester", "▶", "Test runner")),
+        (
+            NavEntry("analyzer", "package-search", "APK analyzer"),
+            NavEntry("tester", "play", "Test runner"),
+        ),
     ),
     (
         "Protect",
         (
-            NavEntry("security", "⛨", "Secret scanner"),
-            NavEntry("organizer", "▧", "File organizer"),
+            NavEntry("security", "shield-check", "Secret scanner"),
+            NavEntry("organizer", "folder-cog", "File organizer"),
         ),
     ),
     (
         "Ship",
         (
-            NavEntry("commands", "▤", "Build commands"),
-            NavEntry("gate", "⌂", "Release gate"),
-            NavEntry("reports", "▥", "Reports"),
+            NavEntry("commands", "terminal", "Build commands"),
+            NavEntry("gate", "door-open", "Release gate"),
+            NavEntry("reports", "file-text", "Reports"),
         ),
     ),
 )
 
-SETTINGS_ENTRY = NavEntry("settings", "⚙", "Settings")
+SETTINGS_ENTRY = NavEntry("settings", "settings", "Settings")
 
 
 class BrandBlock(QWidget):
@@ -62,23 +69,38 @@ class BrandBlock(QWidget):
         self.setFixedWidth(SIDEBAR_WIDTH)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 0, 16, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(2)
         layout.addStretch(1)
+
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(8)
+
+        logo_lbl = QLabel()
+        logo_lbl.setFixedSize(26, 26)
+        logo_lbl.setPixmap(get_app_logo_pixmap(size=26))
+        title_row.addWidget(logo_lbl)
+
         title = QLabel("DroidDesk")
         title.setObjectName("brandTitle")
+        title_row.addWidget(title)
+        title_row.addStretch(1)
+        layout.addLayout(title_row)
+
         subtitle = QLabel("local · no account · no upload")
         subtitle.setObjectName("brandSubtitle")
-        layout.addWidget(title)
         layout.addWidget(subtitle)
         layout.addStretch(1)
 
 
 class _NavButton(QPushButton):
     def __init__(self, entry: NavEntry) -> None:
-        super().__init__(f"  {entry.icon}   {entry.label}")
+        super().__init__(f"  {entry.label}")
         self.setProperty("role", "navItem")
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setIcon(get_icon(entry.icon, size=16, color=TEXT_MUTED, active_color=TEXT))
+        self.setIconSize(QSize(16, 16))
         self.key = entry.key
 
         badge_layout = QHBoxLayout(self)

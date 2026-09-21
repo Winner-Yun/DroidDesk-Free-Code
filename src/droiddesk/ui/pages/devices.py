@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import override
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QHideEvent, QShowEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.core.models import Device
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.status_pill import StatusDot, TagPill
 
@@ -55,9 +56,14 @@ class DevicesPage(QWidget):
         )
         self._wifi_input = QLineEdit("192.168.1.24:5555")
         self._wifi_input.setFixedWidth(180)
-        self._refresh_btn = QPushButton("↻  Refresh")
+        wifi_btn = QPushButton("Connect over Wi-Fi")
+        wifi_btn.setIcon(get_icon("wifi", size=13, color=TEXT_MUTED))
+        wifi_btn.setIconSize(QSize(13, 13))
+        self._refresh_btn = QPushButton("Refresh")
+        self._refresh_btn.setIcon(get_icon("rotate-cw", size=13, color=TEXT_MUTED))
+        self._refresh_btn.setIconSize(QSize(13, 13))
         header.add_action(self._wifi_input)
-        header.add_action(QPushButton("Connect over Wi-Fi"))
+        header.add_action(wifi_btn)
         header.add_action(self._refresh_btn)
         outer.addWidget(header)
 
@@ -202,7 +208,9 @@ class DevicesPage(QWidget):
         layout.addStretch(1)
 
         if device.state == "offline":
-            reconnect_btn = QPushButton("⟳  Reconnect")
+            reconnect_btn = QPushButton("Reconnect")
+            reconnect_btn.setIcon(get_icon("rotate-cw", size=13, color=TEXT_MUTED))
+            reconnect_btn.setIconSize(QSize(13, 13))
             reconnect_btn.clicked.connect(
                 lambda checked=False, s=device.serial: self._ctx.device_service.reconnect(s)
             )
@@ -210,18 +218,25 @@ class DevicesPage(QWidget):
 
         test_label = "Unmark test device" if device.is_test_profile else "Mark as test device"
         mark_btn = QPushButton(test_label)
+        mark_btn.setIcon(get_icon("bookmark", size=13, color=TEXT_MUTED))
+        mark_btn.setIconSize(QSize(13, 13))
         mark_btn.clicked.connect(
             lambda checked=False, d=device: self._ctx.device_service.mark_test_profile(
                 d.serial, not d.is_test_profile
             )
         )
         layout.addWidget(mark_btn)
-        logcat_btn = QPushButton("≡  Open logcat")
+        logcat_btn = QPushButton("Open logcat")
+        logcat_btn.setIcon(get_icon("scroll-text", size=13, color=TEXT_MUTED))
+        logcat_btn.setIconSize(QSize(13, 13))
         logcat_btn.clicked.connect(
             lambda checked=False, s=device.serial: self.open_logcat_requested.emit(s)
         )
         layout.addWidget(logcat_btn)
-        layout.addWidget(QPushButton("↓  Take screenshot"))
+        screenshot_btn = QPushButton("Take screenshot")
+        screenshot_btn.setIcon(get_icon("camera", size=13, color=TEXT_MUTED))
+        screenshot_btn.setIconSize(QSize(13, 13))
+        layout.addWidget(screenshot_btn)
 
         return card
 

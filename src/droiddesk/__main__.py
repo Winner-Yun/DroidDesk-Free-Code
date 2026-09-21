@@ -8,12 +8,24 @@ from PySide6.QtWidgets import QApplication
 
 from droiddesk.app import build_application
 from droiddesk.config import Settings
+from droiddesk.ui.theme import get_app_logo_icon
 
 
 def main() -> int:
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "droiddesk.droiddesk.app"
+            )
+        except Exception:
+            pass
+
     app = QApplication(sys.argv)
     app.setApplicationName("DroidDesk")
     app.setOrganizationName("DroidDesk")
+    app.setWindowIcon(get_app_logo_icon())
 
     settings = Settings.load()
     window = build_application(settings)

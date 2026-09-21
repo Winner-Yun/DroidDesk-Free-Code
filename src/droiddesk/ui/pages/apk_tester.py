@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QUrl, Signal
+from PySide6.QtCore import QSize, Qt, QThread, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QPixmap,
@@ -30,6 +30,7 @@ from droiddesk.core.models import ApkInfo, Device, TestRun
 from droiddesk.core.profiles import TestProfile
 from droiddesk.core.severity import Verdict
 from droiddesk.services.apk_service import ApkService
+from droiddesk.ui.theme import TEXT_MUTED, get_icon, get_pixmap
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.device_selector import DeviceSelector
 from droiddesk.ui.widgets.empty_state import EmptyStateWidget
@@ -46,9 +47,10 @@ class StepRowWidget(QWidget):
         row.setContentsMargins(0, 4, 0, 4)
         row.setSpacing(10)
 
-        self.icon_label = QLabel("○")
-        self.icon_label.setFixedWidth(18)
-        self.icon_label.setStyleSheet("color: #5c5f66; font-size: 14px; font-weight: 700;")
+        self.icon_label = QLabel()
+        self.icon_label.setFixedSize(18, 18)
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.icon_label.setPixmap(get_pixmap("circle", size=14, color="#5c5f66"))
         row.addWidget(self.icon_label)
 
         text_col = QVBoxLayout()
@@ -79,8 +81,7 @@ class StepRowWidget(QWidget):
         row.addWidget(self.duration_label)
 
     def set_running(self) -> None:
-        self.icon_label.setText("▶")
-        self.icon_label.setStyleSheet("color: #3b82f6; font-size: 14px; font-weight: 700;")
+        self.icon_label.setPixmap(get_pixmap("play", size=14, color="#3b82f6"))
         self.headline_label.setText("Running...")
         self.headline_label.setStyleSheet("color: #3b82f6;")
 
@@ -88,13 +89,11 @@ class StepRowWidget(QWidget):
         self, passed: bool, duration_ms: int | None = None, detail: str | None = None
     ) -> None:
         if passed:
-            self.icon_label.setText("✓")
-            self.icon_label.setStyleSheet("color: #27ae60; font-size: 14px; font-weight: 700;")
+            self.icon_label.setPixmap(get_pixmap("circle-check", size=14, color="#27ae60"))
             self.headline_label.setText(detail or "Success")
             self.headline_label.setStyleSheet("color: #27ae60;")
         else:
-            self.icon_label.setText("✕")
-            self.icon_label.setStyleSheet("color: #e0574a; font-size: 14px; font-weight: 700;")
+            self.icon_label.setPixmap(get_pixmap("circle-x", size=14, color="#e0574a"))
             self.headline_label.setText(detail or "Failed")
             self.headline_label.setStyleSheet("color: #e0574a;")
 
@@ -102,8 +101,7 @@ class StepRowWidget(QWidget):
             self.duration_label.setText(f"{duration_ms} ms")
 
     def reset(self) -> None:
-        self.icon_label.setText("○")
-        self.icon_label.setStyleSheet("color: #5c5f66; font-size: 14px; font-weight: 700;")
+        self.icon_label.setPixmap(get_pixmap("circle", size=14, color="#5c5f66"))
         self.headline_label.setText("Pending")
         self.headline_label.setStyleSheet("color: #5c5f66;")
         self.duration_label.setText("—")
@@ -187,12 +185,16 @@ class ApkTesterPage(QWidget):
         self._device_selector.set_devices(devs or [])
         self._device_selector.device_selected.connect(self._update_button_states)
 
-        self._cancel_button = QPushButton("☐  Cancel")
+        self._cancel_button = QPushButton("Cancel")
+        self._cancel_button.setIcon(get_icon("square", size=13, color=TEXT_MUTED))
+        self._cancel_button.setIconSize(QSize(13, 13))
         self._cancel_button.clicked.connect(self._on_cancel)
         header.add_action(self._cancel_button)
 
         self._run_button = QPushButton("Run test")
         self._run_button.setProperty("role", "primary")
+        self._run_button.setIcon(get_icon("play", size=14, color="#ffffff"))
+        self._run_button.setIconSize(QSize(14, 14))
         self._run_button.clicked.connect(self._on_run_test)
         header.add_action(self._run_button)
 

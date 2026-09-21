@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.core.profiles import Environment
 from droiddesk.services.env_service import EnvService
-from droiddesk.ui.theme import ENVIRONMENT_RISK_COLORS
+from droiddesk.ui.theme import ENVIRONMENT_RISK_COLORS, get_icon
 
 
 class EnvironmentEditDialog(QDialog):
@@ -279,6 +279,8 @@ class EnvironmentSwitchDialog(QDialog):
             }
             """
         )
+        add_btn.setIcon(get_icon("plus", size=13, color="#ffffff"))
+        add_btn.setIconSize(QSize(13, 13))
         add_btn.clicked.connect(self._open_add_dialog)
         header_row.addWidget(add_btn, 0, Qt.AlignmentFlag.AlignTop)
 
@@ -320,6 +322,8 @@ class EnvironmentSwitchDialog(QDialog):
         btn_row.addWidget(cancel_btn)
 
         self._switch_btn = QPushButton("Switch Environment")
+        self._switch_btn.setIcon(get_icon("check", size=13, color="#ffffff"))
+        self._switch_btn.setIconSize(QSize(13, 13))
         self._switch_btn.setStyleSheet(
             """
             QPushButton {
@@ -471,6 +475,8 @@ class EnvironmentSwitchDialog(QDialog):
 
             # Action buttons (Edit & Delete)
             edit_btn = QPushButton("Edit")
+            edit_btn.setIcon(get_icon("pencil", size=12, color="#cbd5e1"))
+            edit_btn.setIconSize(QSize(12, 12))
             edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             edit_btn.setStyleSheet(
                 """
@@ -492,6 +498,8 @@ class EnvironmentSwitchDialog(QDialog):
             row_layout.addWidget(edit_btn)
 
             del_btn = QPushButton("Delete")
+            del_btn.setIcon(get_icon("trash-2", size=12, color="#f87171"))
+            del_btn.setIconSize(QSize(12, 12))
             del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             del_btn.setStyleSheet(
                 """

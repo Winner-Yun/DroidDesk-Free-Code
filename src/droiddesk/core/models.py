@@ -46,6 +46,7 @@ class ApkInfo:
     certificate_dn: str | None = None
     signature_verified: bool = False
     signature_source: str | None = None
+    debuggable: bool | None = None
     analyzed_at: datetime | None = None
 
 
@@ -111,3 +112,27 @@ class GateResult:
     score: int
     verdict: GateVerdict
     override_note: str | None = None
+
+
+@dataclass(slots=True)
+class Project:
+    name: str
+    root_path: Path
+    package_name: str | None = None
+    id: int | None = None
+    created_at: datetime | None = None
+    last_opened: datetime | None = None
+
+
+@dataclass(slots=True)
+class BuildRecord:
+    command: str
+    environment: str
+    started_at: datetime
+    project_id: int | None = None
+    gate_score: int | None = None
+    gate_verdict: str | None = None
+    overridden: bool = False
+    override_note: str | None = None
+    exit_code: int | None = None
+    id: int | None = None

@@ -168,7 +168,7 @@ class ScanService(QObject):
 
                     xml_lines = [
                         '<?xml version="1.0" encoding="utf-8"?>',
-                        '<resources>',
+                        "<resources>",
                     ]
                     seen_names: set[str] = set()
                     for idx, (res_name, val) in enumerate(named_strings, start=1):

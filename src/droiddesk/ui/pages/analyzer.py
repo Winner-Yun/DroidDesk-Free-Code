@@ -22,10 +22,17 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.core.models import ApkInfo
-from droiddesk.ui import static_data
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import PageHeader
 from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import TagPill
+
+_HIGH_RISK_PERMISSIONS = {
+    "android.permission.ACCESS_BACKGROUND_LOCATION",
+    "android.permission.SYSTEM_ALERT_WINDOW",
+    "android.permission.WRITE_SETTINGS",
+    "android.permission.READ_PHONE_STATE",
+}
 
 
 class AnalyzerPage(QWidget):
@@ -36,7 +43,7 @@ class AnalyzerPage(QWidget):
         self._ctx = ctx
         self._apk_info: ApkInfo | None = None
         self._full_analysis_loaded = False
-        
+
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
@@ -54,15 +61,21 @@ class AnalyzerPage(QWidget):
 
         self._tabs = QTabWidget()
         self._tabs.currentChanged.connect(self._on_tab_changed)
-        
+
         self._sig_panel = QWidget()
         self._perm_panel = QWidget()
         self._comp_panel = QWidget()
-        
-        self._tabs.addTab(self._sig_panel, "Signature")
-        self._tabs.addTab(self._perm_panel, "Permissions")
-        self._tabs.addTab(self._comp_panel, "Components")
-        
+
+        self._tabs.addTab(
+            self._sig_panel, get_icon("award", size=14, color=TEXT_MUTED), "Signature"
+        )
+        self._tabs.addTab(
+            self._perm_panel, get_icon("key-round", size=14, color=TEXT_MUTED), "Permissions"
+        )
+        self._tabs.addTab(
+            self._comp_panel, get_icon("layers", size=14, color=TEXT_MUTED), "Components"
+        )
+
         outer.addWidget(self._tabs, 1)
 
         self._empty_state = EmptyStateWidget(
@@ -100,7 +113,7 @@ class AnalyzerPage(QWidget):
     def _on_tab_changed(self, index: int) -> None:
         if not self._apk_info or self._full_analysis_loaded:
             return
-            
+
         if index in (0, 1, 2):
             try:
                 self._apk_info = self._ctx.apk_service.inspect_full(self._apk_info.file_path)
@@ -116,7 +129,7 @@ class AnalyzerPage(QWidget):
                 w = item.widget()
                 if w is not None:
                     w.deleteLater()
-                
+
         if self._apk_info:
             self._empty_state.hide()
             self._identity_container.show()
@@ -137,11 +150,16 @@ class AnalyzerPage(QWidget):
             self._perm_panel = self._build_permissions_panel()
             self._comp_panel = self._build_components_panel()
 
-            self._tabs.insertTab(0, self._sig_panel, "Signature")
-            self._tabs.insertTab(1, self._perm_panel, "Permissions")
-            self._tabs.insertTab(2, self._comp_panel, "Components")
+            self._tabs.insertTab(
+                0, self._sig_panel, get_icon("award", size=14, color=TEXT_MUTED), "Signature"
+            )
+            self._tabs.insertTab(
+                1, self._perm_panel, get_icon("key-round", size=14, color=TEXT_MUTED), "Permissions"
+            )
+            self._tabs.insertTab(
+                2, self._comp_panel, get_icon("layers", size=14, color=TEXT_MUTED), "Components"
+            )
             self._tabs.setCurrentIndex(current_idx)
-
 
     def _build_identity_bar(self) -> QWidget:
         bar = QWidget()
@@ -282,14 +300,14 @@ class AnalyzerPage(QWidget):
         panel = QWidget()
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(4, 16, 4, 4)
-        
+
         if not self._apk_info:
             return panel
-            
+
         list_widget = QListWidget()
         for permission in self._apk_info.permissions:
             short = permission.rsplit(".", 1)[-1]
-            flagged = permission in static_data.ANALYZER_HIGH_RISK_PERMISSIONS
+            flagged = permission in _HIGH_RISK_PERMISSIONS
             list_widget.addItem(f"{'⚠ ' if flagged else '   '}{short}")
         layout.addWidget(list_widget)
         return panel
@@ -299,7 +317,7 @@ class AnalyzerPage(QWidget):
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(4, 16, 4, 4)
         layout.setSpacing(16)
-        
+
         if not self._apk_info:
             return panel
 
@@ -310,7 +328,7 @@ class AnalyzerPage(QWidget):
             ("Receivers", len(self._apk_info.receivers)),
             ("Providers", len(self._apk_info.providers)),
         ]
-        
+
         for label, count in counts:
             col = QVBoxLayout()
             value = QLabel(str(count))

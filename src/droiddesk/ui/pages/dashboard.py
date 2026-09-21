@@ -7,7 +7,7 @@ from __future__ import annotations
 import contextlib
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.core.models import Device
+from droiddesk.ui.theme import TEXT, TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader, StatCard
 from droiddesk.ui.widgets.device_bar import ApkInstallWorker
 from droiddesk.ui.widgets.device_selector import DeviceSelector
@@ -55,7 +56,7 @@ class DashboardPage(QWidget):
         outer.setSpacing(16)
 
         header = PageHeader(
-            "Dashboard", "Current project state, and the last thing that happened in it."
+            "Home", "Current project state, and the last thing that happened in it."
         )
         outer.addWidget(header)
 
@@ -76,8 +77,10 @@ class DashboardPage(QWidget):
         self._apk_card = self._build_active_apk_card()
         outer.addWidget(self._apk_card)
 
-        # Key metrics row with live device monitoring
-        stats_row = QHBoxLayout()
+        # Key metrics row (hidden / removed from layout per user request)
+        self._stats_container = QWidget()
+        stats_row = QHBoxLayout(self._stats_container)
+        stats_row.setContentsMargins(0, 0, 0, 0)
         stats_row.setSpacing(14)
 
         self._stat_devices = StatCard("0", "Devices connected")
@@ -89,7 +92,7 @@ class DashboardPage(QWidget):
         stats_row.addWidget(self._stat_findings)
         stats_row.addWidget(self._stat_gate)
         stats_row.addWidget(self._stat_runs)
-        outer.addLayout(stats_row)
+        self._stats_container.hide()
 
         # Bottom panels: APK Installer and Emulator History
         panels_row = QHBoxLayout()
@@ -197,16 +200,18 @@ class DashboardPage(QWidget):
         apk_select_row.setSpacing(8)
 
         self._installer_apk_combo = QComboBox()
-        self._installer_apk_combo.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToContents
-        )
+        self._installer_apk_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         apk_select_row.addWidget(self._installer_apk_combo, 1)
 
         btn_upload = QPushButton("Upload APK")
+        btn_upload.setIcon(get_icon("upload", size=14, color=TEXT))
+        btn_upload.setIconSize(QSize(14, 14))
         btn_upload.clicked.connect(self.upload_requested.emit)
         apk_select_row.addWidget(btn_upload)
 
         btn_browse = QPushButton("Browse...")
+        btn_browse.setIcon(get_icon("folder-open", size=14, color=TEXT_MUTED))
+        btn_browse.setIconSize(QSize(14, 14))
         btn_browse.clicked.connect(self._on_installer_browse_clicked)
         apk_select_row.addWidget(btn_browse)
 
@@ -234,6 +239,8 @@ class DashboardPage(QWidget):
 
         self._installer_run_btn = QPushButton("Install to device")
         self._installer_run_btn.setProperty("role", "primary")
+        self._installer_run_btn.setIcon(get_icon("smartphone", size=14, color="#ffffff"))
+        self._installer_run_btn.setIconSize(QSize(14, 14))
         self._installer_run_btn.clicked.connect(self._on_installer_run_clicked)
         action_row.addWidget(self._installer_run_btn)
         action_row.addStretch(1)
@@ -266,6 +273,8 @@ class DashboardPage(QWidget):
 
         btn_refresh = QPushButton("Refresh")
         btn_refresh.setProperty("role", "secondary")
+        btn_refresh.setIcon(get_icon("rotate-cw", size=13, color=TEXT_MUTED))
+        btn_refresh.setIconSize(QSize(13, 13))
         btn_refresh.clicked.connect(self._refresh_emulator_history)
         sub_row.addWidget(btn_refresh)
 
@@ -308,9 +317,7 @@ class DashboardPage(QWidget):
             paths.append(self._apk_path)
             labels.append(f"{self._apk_path.name} (Active)")
 
-        if hasattr(self._ctx.repository, "list_apks") and callable(
-            self._ctx.repository.list_apks
-        ):
+        if hasattr(self._ctx.repository, "list_apks") and callable(self._ctx.repository.list_apks):
             try:
                 stored = self._ctx.repository.list_apks()
                 for info in stored:
@@ -364,6 +371,7 @@ class DashboardPage(QWidget):
         if self._installer_worker and self._installer_worker.isRunning():
             self._installer_worker.cancel()
             self._installer_run_btn.setText("Install to device")
+            self._installer_run_btn.setIcon(get_icon("smartphone", size=14, color="#ffffff"))
             self._installer_status_label.setText("Installation cancelled.")
             return
 
@@ -388,6 +396,7 @@ class DashboardPage(QWidget):
             return
 
         self._installer_run_btn.setText("Cancel")
+        self._installer_run_btn.setIcon(get_icon("square", size=14, color="#ffffff"))
         self._installer_progress.setRange(0, 1)
         self._installer_progress.setValue(0)
         self._installer_progress.show()
@@ -415,6 +424,7 @@ class DashboardPage(QWidget):
 
     def _on_installer_all_finished(self, successes: int, total: int) -> None:
         self._installer_run_btn.setText("Install to device")
+        self._installer_run_btn.setIcon(get_icon("smartphone", size=14, color="#ffffff"))
         self._installer_progress.setValue(1)
         self._installer_progress.hide()
 
@@ -579,5 +589,3 @@ class DashboardPage(QWidget):
             )
             return
         self.navigate_requested.emit("tester")
-
-

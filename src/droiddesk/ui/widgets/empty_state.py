@@ -4,7 +4,7 @@ Provides clear explanation and an action button to upload/add an APK (text and b
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -14,9 +14,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from droiddesk.ui.theme import get_icon
+
 
 class EmptyStateWidget(QFrame):
-    """Clean, modern empty state container with text and upload button (no icons)."""
+    """Clean, modern empty state container with text and upload button."""
 
     upload_requested = Signal()
 
@@ -40,29 +42,25 @@ class EmptyStateWidget(QFrame):
         self._upload_btn = QPushButton(button_text)
         self._upload_btn.setProperty("role", "primary")
         self._upload_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._upload_btn.setIcon(get_icon("upload", size=14, color="#ffffff"))
+        self._upload_btn.setIconSize(QSize(14, 14))
         self._upload_btn.clicked.connect(self.upload_requested.emit)
         self._upload_btn.setVisible(show_button)
 
         if frameless:
             # Embedded directly inside another Card or panel — no outer frame/border
-            self.setStyleSheet(
-                "#emptyStateWidget { background: transparent; border: none; }"
-            )
+            self.setStyleSheet("#emptyStateWidget { background: transparent; border: none; }")
             layout = QVBoxLayout(self)
             layout.setContentsMargins(0, 4, 0, 4)
             layout.setSpacing(10)
 
             self._title_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            self._title_label.setStyleSheet(
-                "font-size: 14px; font-weight: 700; color: #f0f2f5;"
-            )
+            self._title_label.setStyleSheet("font-size: 14px; font-weight: 700; color: #f0f2f5;")
             layout.addWidget(self._title_label)
 
             self._message_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._message_label.setWordWrap(True)
-            self._message_label.setStyleSheet(
-                "font-size: 12px; color: #8b8e94; line-height: 1.4;"
-            )
+            self._message_label.setStyleSheet("font-size: 12px; color: #8b8e94; line-height: 1.4;")
             layout.addWidget(self._message_label)
 
             self._upload_btn.setStyleSheet(
@@ -105,15 +103,11 @@ class EmptyStateWidget(QFrame):
             text_col = QVBoxLayout()
             text_col.setSpacing(3)
 
-            self._title_label.setStyleSheet(
-                "font-size: 13px; font-weight: 700; color: #f0f2f5;"
-            )
+            self._title_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #f0f2f5;")
             text_col.addWidget(self._title_label)
 
             self._message_label.setWordWrap(True)
-            self._message_label.setStyleSheet(
-                "font-size: 12px; color: #8b8e94;"
-            )
+            self._message_label.setStyleSheet("font-size: 12px; color: #8b8e94;")
             text_col.addWidget(self._message_label)
             h_layout.addLayout(text_col, 1)
 
@@ -155,17 +149,13 @@ class EmptyStateWidget(QFrame):
             layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._title_label.setStyleSheet(
-                "font-size: 17px; font-weight: 700; color: #f0f2f5;"
-            )
+            self._title_label.setStyleSheet("font-size: 17px; font-weight: 700; color: #f0f2f5;")
             layout.addWidget(self._title_label, 0, Qt.AlignmentFlag.AlignCenter)
 
             self._message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._message_label.setWordWrap(True)
             self._message_label.setMaximumWidth(500)
-            self._message_label.setStyleSheet(
-                "font-size: 13px; color: #8b8e94; line-height: 1.5;"
-            )
+            self._message_label.setStyleSheet("font-size: 13px; color: #8b8e94; line-height: 1.5;")
             layout.addWidget(self._message_label, 0, Qt.AlignmentFlag.AlignCenter)
 
             self._upload_btn.setStyleSheet(

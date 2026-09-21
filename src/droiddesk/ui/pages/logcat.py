@@ -314,14 +314,16 @@ class LogcatPage(QWidget):
                     if not source_idx.isValid():
                         continue
                     line = self._model._rows[source_idx.row()]
-                    writer.writerow([
-                        line.timestamp,
-                        line.pid,
-                        line.tid,
-                        line.priority,
-                        line.tag,
-                        line.message,
-                    ])
+                    writer.writerow(
+                        [
+                            line.timestamp,
+                            line.pid,
+                            line.tid,
+                            line.priority,
+                            line.tag,
+                            line.message,
+                        ]
+                    )
         else:
             with destination.open("w", encoding="utf-8") as f:
                 for i in range(count):

@@ -45,24 +45,18 @@ class EmptyStateWidget(QFrame):
 
         if frameless:
             # Embedded directly inside another Card or panel — no outer frame/border
-            self.setStyleSheet(
-                "#emptyStateWidget { background: transparent; border: none; }"
-            )
+            self.setStyleSheet("#emptyStateWidget { background: transparent; border: none; }")
             layout = QVBoxLayout(self)
             layout.setContentsMargins(0, 4, 0, 4)
             layout.setSpacing(10)
 
             self._title_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            self._title_label.setStyleSheet(
-                "font-size: 14px; font-weight: 700; color: #f0f2f5;"
-            )
+            self._title_label.setStyleSheet("font-size: 14px; font-weight: 700; color: #f0f2f5;")
             layout.addWidget(self._title_label)
 
             self._message_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._message_label.setWordWrap(True)
-            self._message_label.setStyleSheet(
-                "font-size: 12px; color: #8b8e94; line-height: 1.4;"
-            )
+            self._message_label.setStyleSheet("font-size: 12px; color: #8b8e94; line-height: 1.4;")
             layout.addWidget(self._message_label)
 
             self._upload_btn.setStyleSheet(
@@ -105,15 +99,11 @@ class EmptyStateWidget(QFrame):
             text_col = QVBoxLayout()
             text_col.setSpacing(3)
 
-            self._title_label.setStyleSheet(
-                "font-size: 13px; font-weight: 700; color: #f0f2f5;"
-            )
+            self._title_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #f0f2f5;")
             text_col.addWidget(self._title_label)
 
             self._message_label.setWordWrap(True)
-            self._message_label.setStyleSheet(
-                "font-size: 12px; color: #8b8e94;"
-            )
+            self._message_label.setStyleSheet("font-size: 12px; color: #8b8e94;")
             text_col.addWidget(self._message_label)
             h_layout.addLayout(text_col, 1)
 
@@ -155,17 +145,13 @@ class EmptyStateWidget(QFrame):
             layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._title_label.setStyleSheet(
-                "font-size: 17px; font-weight: 700; color: #f0f2f5;"
-            )
+            self._title_label.setStyleSheet("font-size: 17px; font-weight: 700; color: #f0f2f5;")
             layout.addWidget(self._title_label, 0, Qt.AlignmentFlag.AlignCenter)
 
             self._message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._message_label.setWordWrap(True)
             self._message_label.setMaximumWidth(500)
-            self._message_label.setStyleSheet(
-                "font-size: 13px; color: #8b8e94; line-height: 1.5;"
-            )
+            self._message_label.setStyleSheet("font-size: 13px; color: #8b8e94; line-height: 1.5;")
             layout.addWidget(self._message_label, 0, Qt.AlignmentFlag.AlignCenter)
 
             self._upload_btn.setStyleSheet(

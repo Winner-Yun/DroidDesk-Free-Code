@@ -117,9 +117,7 @@ class AdbClient:
         return AdbStream(self._adb_path, args)
 
     def screenshot(self, serial: str) -> bytes:
-        return self._runner.run_bytes(
-            self._adb_path, ["-s", serial, "exec-out", "screencap", "-p"]
-        )
+        return self._runner.run_bytes(self._adb_path, ["-s", serial, "exec-out", "screencap", "-p"])
 
     def logcat_dump(self, serial: str, pid: int | None = None) -> list[str]:
         args = ["-s", serial, "logcat", "-d", "-v", "threadtime"]

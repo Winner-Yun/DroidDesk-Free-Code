@@ -94,4 +94,3 @@ def detect_environment_info(file_path: Path, rule_id: str | None = None) -> tupl
         return ("APK Archive", "Compiled APK Asset / Resource")
 
     return ("Source File", "Project File")
-

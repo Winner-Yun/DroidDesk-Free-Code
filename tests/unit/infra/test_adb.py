@@ -82,8 +82,7 @@ def test_adb_client_logcat_dump() -> None:
     mock_runner = MagicMock(spec=ProcessRunner)
     dump_res = MagicMock()
     dump_res.stdout = (
-        "09-09 12:00:00.000 123 123 I Tag: Line 1\n"
-        "09-09 12:00:01.000 123 123 I Tag: Line 2\n"
+        "09-09 12:00:00.000 123 123 I Tag: Line 1\n09-09 12:00:01.000 123 123 I Tag: Line 2\n"
     )
     mock_runner.run.return_value = dump_res
 

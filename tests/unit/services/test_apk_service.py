@@ -314,4 +314,3 @@ def test_apk_service_import_and_local_resilience(tmp_path: Path) -> None:
     assert len(service.list_apks()) == 0
 
     repo.close()
-

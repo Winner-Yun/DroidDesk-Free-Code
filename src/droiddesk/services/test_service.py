@@ -429,9 +429,7 @@ class TestStateMachine:
                     detail="Device screenshot returned invalid or empty PNG data",
                 )
 
-            shot_dir = ctx.output_dir or (
-                Path(tempfile.gettempdir()) / "droiddesk" / "screenshots"
-            )
+            shot_dir = ctx.output_dir or (Path(tempfile.gettempdir()) / "droiddesk" / "screenshots")
 
             shot_dir.mkdir(parents=True, exist_ok=True)
             safe_serial = ctx.device_serial.replace(":", "_").replace("/", "_")

@@ -108,6 +108,15 @@ class EnvironmentBar(QWidget):
 
         layout.addStretch(1)
 
+        # Active environment indicator button (removed from appbar per user request)
+        self._env_button = QPushButton()
+        self._env_button.setObjectName("envBadgeButton")
+        self._env_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._env_button.setToolTip("Click to switch project environment")
+        self._env_button.clicked.connect(self.switch_requested.emit)
+        self._env_button.hide()
+        self.set_environment(None)
+
         self._load_apks_from_db()
 
     def _load_apks_from_db(self) -> None:
@@ -148,10 +157,86 @@ class EnvironmentBar(QWidget):
         self._apk_selector.blockSignals(False)
         self._remove_button.setEnabled(self.selected_apk() is not None)
 
-    def set_environment(self, key: str) -> None:
-        color = ENVIRONMENT_RISK_COLORS.get(key, ENVIRONMENT_RISK_COLORS["production"])
-        alpha_color = f"#55{color.lstrip('#')}"
-        self.setStyleSheet(f"#environmentBar {{ border-bottom: 1px solid {alpha_color}; }}")
+    def set_environment(self, env_or_key: object | None) -> None:
+        """Update the environment indicator button and bottom border."""
+        from droiddesk.core.profiles import Environment
+
+        if isinstance(env_or_key, Environment):
+            key = env_or_key.key
+            label = env_or_key.label
+            host = env_or_key.api_host or ""
+            note = "Release permitted" if env_or_key.allow_release_build else "Release blocked"
+            color = ENVIRONMENT_RISK_COLORS.get(key, "#8b8e94")
+            alpha_color = f"#55{color.lstrip('#')}"
+            self.setStyleSheet(f"#environmentBar {{ border-bottom: 1px solid {alpha_color}; }}")
+
+            host_part = f" · {host}" if host else ""
+            note_part = f" [{note}]" if note else ""
+            btn_text = f"● {label.upper()} ({key}){host_part}{note_part}"
+            self._env_button.setText(btn_text)
+            self._env_button.setStyleSheet(
+                f"""
+                QPushButton#envBadgeButton {{
+                    background-color: {color}22;
+                    border: 1px solid {color}88;
+                    border-radius: 4px;
+                    color: {color};
+                    font-size: 11px;
+                    font-weight: 700;
+                    padding: 4px 10px;
+                }}
+                QPushButton#envBadgeButton:hover {{
+                    background-color: {color}44;
+                    border-color: {color};
+                }}
+                """
+            )
+        elif isinstance(env_or_key, str) and env_or_key:
+            key = env_or_key
+            label = key.capitalize()
+            color = ENVIRONMENT_RISK_COLORS.get(key, "#8b8e94")
+            alpha_color = f"#55{color.lstrip('#')}"
+            self.setStyleSheet(f"#environmentBar {{ border-bottom: 1px solid {alpha_color}; }}")
+            btn_text = f"● {label.upper()} ({key})"
+            self._env_button.setText(btn_text)
+            self._env_button.setStyleSheet(
+                f"""
+                QPushButton#envBadgeButton {{
+                    background-color: {color}22;
+                    border: 1px solid {color}88;
+                    border-radius: 4px;
+                    color: {color};
+                    font-size: 11px;
+                    font-weight: 700;
+                    padding: 4px 10px;
+                }}
+                QPushButton#envBadgeButton:hover {{
+                    background-color: {color}44;
+                    border-color: {color};
+                }}
+                """
+            )
+        else:
+            self.setStyleSheet("#environmentBar { border-bottom: 1px solid #27282d; }")
+            self._env_button.setText("● No Environment  [Configure]")
+            self._env_button.setStyleSheet(
+                """
+                QPushButton#envBadgeButton {
+                    background-color: rgba(139, 142, 148, 0.12);
+                    border: 1px dashed #8b8e94;
+                    border-radius: 4px;
+                    color: #9ca3af;
+                    font-size: 11px;
+                    font-weight: 600;
+                    padding: 4px 10px;
+                }
+                QPushButton#envBadgeButton:hover {
+                    background-color: rgba(91, 155, 213, 0.18);
+                    border-color: #5b9bd5;
+                    color: #5b9bd5;
+                }
+                """
+            )
 
     def selected_apk(self) -> Path | None:
         data = self._apk_selector.currentData()
@@ -186,10 +271,7 @@ class EnvironmentBar(QWidget):
         if self._apk_selector.count() == 1 and self._apk_selector.itemData(0) is None:
             self._apk_selector.removeItem(0)
 
-        existing_paths = [
-            self._apk_selector.itemData(i)
-            for i in range(self._apk_selector.count())
-        ]
+        existing_paths = [self._apk_selector.itemData(i) for i in range(self._apk_selector.count())]
 
         target_idx = -1
         for p, file_hash in imported_items:
@@ -294,4 +376,3 @@ class EnvironmentBar(QWidget):
             self.add_and_select_apks(paths)
         else:
             event.ignore()
-

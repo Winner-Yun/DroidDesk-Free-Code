@@ -102,4 +102,3 @@ def test_analyzer_page_no_compare_button(qapp: QApplication, tmp_path: Path) -> 
     page = AnalyzerPage(ctx)
     buttons = [btn.text() for btn in page.findChildren(QPushButton)]
     assert not any("Compare" in text for text in buttons)
-

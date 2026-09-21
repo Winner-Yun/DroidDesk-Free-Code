@@ -41,9 +41,7 @@ def _make_mock_context(tmp_path: Path, devices: list[Device] | None = None) -> A
     )
 
 
-def test_dashboard_initial_state_and_empty_banner(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_initial_state_and_empty_banner(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = DashboardPage(ctx)
 
@@ -55,9 +53,7 @@ def test_dashboard_initial_state_and_empty_banner(
     assert "connected" in page._stat_devices.caption.text().lower()
 
 
-def test_dashboard_no_emulator_connected_stat(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_no_emulator_connected_stat(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path, devices=[])
     page = DashboardPage(ctx)
 
@@ -65,9 +61,7 @@ def test_dashboard_no_emulator_connected_stat(
     assert "no emulator connected" in page._stat_devices.caption.text().lower()
 
 
-def test_dashboard_set_apk_displays_card_and_badges(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_set_apk_displays_card_and_badges(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = DashboardPage(ctx)
 
@@ -102,9 +96,7 @@ def test_dashboard_set_apk_displays_card_and_badges(
     assert page._apk_card.isHidden()
 
 
-def test_dashboard_run_gate_no_apk_shows_alert(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_run_gate_no_apk_shows_alert(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = DashboardPage(ctx)
 
@@ -114,9 +106,7 @@ def test_dashboard_run_gate_no_apk_shows_alert(
         assert "No APK Selected" in mock_warning.call_args[0][1]
 
 
-def test_dashboard_run_gate_with_apk_navigates(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_run_gate_with_apk_navigates(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = DashboardPage(ctx)
 
@@ -131,9 +121,7 @@ def test_dashboard_run_gate_with_apk_navigates(
     assert nav_calls == ["gate"]
 
 
-def test_dashboard_run_tests_no_emulator_shows_alert(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_run_tests_no_emulator_shows_alert(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path, devices=[])
     page = DashboardPage(ctx)
 
@@ -143,9 +131,7 @@ def test_dashboard_run_tests_no_emulator_shows_alert(
         assert "No Emulator Connected" in mock_warning.call_args[0][1]
 
 
-def test_dashboard_run_tests_with_emulator_navigates(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_run_tests_with_emulator_navigates(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = DashboardPage(ctx)
 
@@ -156,9 +142,7 @@ def test_dashboard_run_tests_with_emulator_navigates(
     assert nav_calls == ["tester"]
 
 
-def test_dashboard_devices_changed_updates_stat(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_devices_changed_updates_stat(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path, devices=[])
     page = DashboardPage(ctx)
     assert page._stat_devices.value_label.text() == "0"
@@ -173,9 +157,7 @@ def test_dashboard_devices_changed_updates_stat(
     assert "connected devices" in page._stat_devices.caption.text().lower()
 
 
-def test_dashboard_apk_installer_alerts_no_apk(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_apk_installer_alerts_no_apk(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = DashboardPage(ctx)
 
@@ -185,9 +167,7 @@ def test_dashboard_apk_installer_alerts_no_apk(
         assert "No APK Selected" in mock_warning.call_args[0][1]
 
 
-def test_dashboard_apk_installer_alerts_no_device(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_apk_installer_alerts_no_device(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path, devices=[])
     page = DashboardPage(ctx)
 
@@ -201,9 +181,7 @@ def test_dashboard_apk_installer_alerts_no_device(
         assert "No Emulator Connected" in mock_warning.call_args[0][1]
 
 
-def test_dashboard_apk_installer_executes_worker(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_apk_installer_executes_worker(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = DashboardPage(ctx)
 
@@ -244,9 +222,7 @@ def test_dashboard_apk_installer_upload_requested_signal(
     assert uploaded == [True]
 
 
-def test_dashboard_emulator_history_empty_and_populated(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_dashboard_emulator_history_empty_and_populated(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path, devices=[])
     ctx.repository.list_device_history.return_value = []  # type: ignore[attr-defined]
     page = DashboardPage(ctx)
@@ -296,4 +272,3 @@ def test_dashboard_emulator_history_empty_and_populated(
     new_dev = Device(serial="EMU_99", state="device", model="Tablet")
     page._on_devices_changed([new_dev])
     ctx.repository.record_device.assert_called()  # type: ignore[attr-defined]
-

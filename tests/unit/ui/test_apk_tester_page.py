@@ -85,9 +85,7 @@ def test_apk_tester_page_on_apk_selected(qapp: QApplication, tmp_path: Path) -> 
     assert "target 34" in page._tag_target.text()
 
 
-def test_apk_tester_page_step_signals_update_widgets(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_apk_tester_page_step_signals_update_widgets(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = ApkTesterPage(ctx)
 
@@ -170,9 +168,7 @@ def test_apk_tester_page_run_test_no_device_shows_alert_and_disabled(
     assert page._run_button.isEnabled()
 
 
-def test_apk_tester_page_run_test_no_apk_shows_alert(
-    qapp: QApplication, tmp_path: Path
-) -> None:
+def test_apk_tester_page_run_test_no_apk_shows_alert(qapp: QApplication, tmp_path: Path) -> None:
     ctx = _make_mock_context(tmp_path)
     page = ApkTesterPage(ctx)
 

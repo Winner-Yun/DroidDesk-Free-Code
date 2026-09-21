@@ -199,4 +199,3 @@ def test_environment_bar_db_and_settings_persistence(qapp: QApplication, tmp_pat
     assert bar.selected_apk() is None
     assert bar._remove_button.isEnabled() is False
     assert settings.active_apk_hash is None
-

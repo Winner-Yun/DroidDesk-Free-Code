@@ -203,4 +203,3 @@ def test_dashboard_reports_security_commands_empty_states(
     assert not organizer._empty_banner.isHidden()
     organizer.set_apk(tmp_path / "app.apk")
     assert organizer._empty_banner.isHidden()
-

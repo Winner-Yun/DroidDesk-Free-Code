@@ -34,9 +34,13 @@ class StatusIcon(QLabel):
 
     def __init__(self, status: str) -> None:
         super().__init__(_ICONS.get(status, _ICONS["pass"]))
-        color = STATUS_COLORS.get(status, STATUS_COLORS["info"])
-        self.setStyleSheet(f"color: {color}; font-size: 14px; font-weight: 700;")
         self.setFixedWidth(18)
+        self.set_status(status)
+
+    def set_status(self, status: str) -> None:
+        self.setText(_ICONS.get(status, _ICONS.get("warn", "•")))
+        color = STATUS_COLORS.get(status, STATUS_COLORS.get("info", "#888888"))
+        self.setStyleSheet(f"color: {color}; font-size: 14px; font-weight: 700;")
 
 
 class StatusDot(QLabel):

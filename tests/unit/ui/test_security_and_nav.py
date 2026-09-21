@@ -100,7 +100,6 @@ def test_security_page_splitter_and_details(qapp: QApplication, tmp_path: Path) 
 
     from droiddesk.core.models import ScanResult
 
-
     result = ScanResult(
         target_type="project",
         target_path=tmp_path,
@@ -121,12 +120,7 @@ def test_code_view_line_and_token_highlighting(qapp: QApplication) -> None:
     from droiddesk.ui.widgets.code_view import CodeView
 
     cv = CodeView()
-    sample_text = (
-        'line 1\n'
-        'line 2\n'
-        '<string name="key">MY_SECRET_TOKEN_123</string>\n'
-        'line 4\n'
-    )
+    sample_text = 'line 1\nline 2\n<string name="key">MY_SECRET_TOKEN_123</string>\nline 4\n'
     cv.set_text(sample_text, highlight_line=3, token="MY_SECRET_TOKEN_123")
 
     assert cv._highlighted_line == 3
@@ -240,7 +234,3 @@ def test_engine_key_disambiguation(tmp_path: Path) -> None:
     gs_file.write_text(gs_payload, encoding="utf-8")
     gs_findings = engine.scan_file(gs_file)
     assert any(rule_id_to_key_name(f.rule_id) == "FIREBASE_API_KEY" for f in gs_findings)
-
-
-
-

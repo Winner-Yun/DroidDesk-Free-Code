@@ -50,6 +50,20 @@ class ApkReader:
 
             apk = APK(str(apk_path))
 
+            debuggable: bool | None = False
+            try:
+                manifest_xml = apk.get_android_manifest_xml()
+                if manifest_xml is not None:
+                    app_elem = manifest_xml.find("application")
+                    if app_elem is not None:
+                        dbg_attr = app_elem.get(
+                            "{http://schemas.android.com/apk/res/android}debuggable"
+                        )
+                        if dbg_attr is not None:
+                            debuggable = str(dbg_attr).lower() in ("true", "1")
+            except Exception:
+                debuggable = None
+
             info = ApkInfo(
                 file_path=apk_path,
                 file_hash=file_hash,
@@ -57,13 +71,12 @@ class ApkReader:
                 version_name=apk.version_name,
                 version_code=int(apk.version_code) if apk.version_code else None,
                 target_sdk=(
-                    int(apk.get_target_sdk_version())
-                    if apk.get_target_sdk_version()
-                    else None
+                    int(apk.get_target_sdk_version()) if apk.get_target_sdk_version() else None
                 ),
                 min_sdk=int(apk.get_min_sdk_version()) if apk.get_min_sdk_version() else None,
                 size_bytes=apk_path.stat().st_size,
                 compile_sdk=None,
+                debuggable=debuggable,
             )
 
             self._cache[file_hash] = info
@@ -129,12 +142,8 @@ class ApkReader:
             certificate_fingerprint_sha256=(
                 format_hex(sha256_match.group(1)) if sha256_match else None
             ),
-            certificate_fingerprint_sha1=(
-                format_hex(sha1_match.group(1)) if sha1_match else None
-            ),
-            certificate_fingerprint_md5=(
-                format_hex(md5_match.group(1)) if md5_match else None
-            ),
+            certificate_fingerprint_sha1=(format_hex(sha1_match.group(1)) if sha1_match else None),
+            certificate_fingerprint_md5=(format_hex(md5_match.group(1)) if md5_match else None),
             signature_source="apksigner",
         )
 

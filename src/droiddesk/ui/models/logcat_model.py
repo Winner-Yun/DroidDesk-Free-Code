@@ -95,15 +95,11 @@ class LogcatModel(QAbstractTableModel):
     # -- QAbstractTableModel ------------------------------------------------
 
     @override
-    def rowCount(
-        self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX
-    ) -> int:
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX) -> int:
         return 0 if parent.isValid() else len(self._rows)
 
     @override
-    def columnCount(
-        self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX
-    ) -> int:
+    def columnCount(self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX) -> int:
         return 0 if parent.isValid() else len(_COLUMNS)
 
     @override

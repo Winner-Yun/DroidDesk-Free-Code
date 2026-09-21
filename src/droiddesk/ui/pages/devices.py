@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.core.models import Device
-from droiddesk.ui import static_data
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.status_pill import StatusDot, TagPill
 
@@ -192,7 +191,10 @@ class DevicesPage(QWidget):
             layout.addLayout(self._property_row(label, value))
 
         layout.addWidget(self._section_label("TEST DEVICE PROFILE"))
-        note = QLabel(static_data.TEST_DEVICE_PROFILE_NOTE)
+        note = QLabel(
+            "Profiles govern which steps run during APK testing, observation "
+            "timeouts, and screenshot capture. Configure profiles under Settings."
+        )
         note.setWordWrap(True)
         note.setProperty("role", "muted")
         layout.addWidget(note)

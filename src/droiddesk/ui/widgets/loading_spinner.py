@@ -5,13 +5,16 @@ arc, providing a crisp, resolution-independent loading indicator.
 from __future__ import annotations
 
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QPainter, QPen
-from PySide6.QtWidgets import QDialog, QLabel, QVBoxLayout, QWidget,QGraphicsOpacityEffect
+from PySide6.QtGui import QColor, QHideEvent, QPainter, QPaintEvent, QPen, QShowEvent
+from PySide6.QtWidgets import QDialog, QGraphicsOpacityEffect, QLabel, QVBoxLayout, QWidget
 
 
 class SpinnerWidget(QWidget):
     """A resolution-independent animated spinner."""
-    def __init__(self, size: int = 40, color: str = "#3b82f6", parent: QWidget | None = None) -> None:
+
+    def __init__(
+        self, size: int = 40, color: str = "#3b82f6", parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self.setFixedSize(size, size)
         self._color = QColor(color)
@@ -19,29 +22,29 @@ class SpinnerWidget(QWidget):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._rotate)
         self._timer.setInterval(16)  # ~60fps
-        
+
     def start(self) -> None:
         self._timer.start()
-        
+
     def stop(self) -> None:
         self._timer.stop()
-        
+
     def _rotate(self) -> None:
         self._angle = (self._angle + 6) % 360
         self.update()
-        
-    def paintEvent(self, event) -> None:
+
+    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
         if not self._timer.isActive():
             return
-            
+
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
+
         pen = QPen(self._color)
         pen.setWidth(4)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
-        
+
         rect = QRectF(4, 4, self.width() - 8, self.height() - 8)
         # Draw a 270 degree arc. Angle is measured in 1/16th of a degree.
         # Negative angle makes it spin clockwise.
@@ -52,17 +55,10 @@ class SpinnerWidget(QWidget):
 class LoadingPage(QDialog):
     """Modern animated loading dialog."""
 
-    def __init__(
-        self,
-        message: str = "Loading...",
-        parent: QWidget | None = None
-    ) -> None:
+    def __init__(self, message: str = "Loading...", parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.Dialog
-        )
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setModal(True)
 
@@ -117,25 +113,13 @@ class LoadingPage(QDialog):
             margin-top: 6px;
         """)
 
-        c_layout.addWidget(
-            self.spinner,
-            0,
-            Qt.AlignmentFlag.AlignCenter
-        )
+        c_layout.addWidget(self.spinner, 0, Qt.AlignmentFlag.AlignCenter)
 
         c_layout.addSpacing(10)
 
-        c_layout.addWidget(
-            self.label,
-            0,
-            Qt.AlignmentFlag.AlignCenter
-        )
+        c_layout.addWidget(self.label, 0, Qt.AlignmentFlag.AlignCenter)
 
-        c_layout.addWidget(
-            self.status,
-            0,
-            Qt.AlignmentFlag.AlignCenter
-        )
+        c_layout.addWidget(self.status, 0, Qt.AlignmentFlag.AlignCenter)
 
         layout.addWidget(self.container)
 
@@ -143,18 +127,13 @@ class LoadingPage(QDialog):
         self.opacity_effect = QGraphicsOpacityEffect(self)
         self.setGraphicsEffect(self.opacity_effect)
 
-        self.fade_animation = QPropertyAnimation(
-            self.opacity_effect,
-            b"opacity"
-        )
+        self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
         self.fade_animation.setDuration(220)
         self.fade_animation.setStartValue(0.0)
         self.fade_animation.setEndValue(1.0)
-        self.fade_animation.setEasingCurve(
-            QEasingCurve.Type.OutCubic
-        )
+        self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-    def showEvent(self, event) -> None:
+    def showEvent(self, event: QShowEvent) -> None:  # noqa: N802
         super().showEvent(event)
 
         self.spinner.start()
@@ -162,7 +141,7 @@ class LoadingPage(QDialog):
         self.opacity_effect.setOpacity(0.0)
         self.fade_animation.start()
 
-    def hideEvent(self, event) -> None:
+    def hideEvent(self, event: QHideEvent) -> None:  # noqa: N802
         self.spinner.stop()
         super().hideEvent(event)
 

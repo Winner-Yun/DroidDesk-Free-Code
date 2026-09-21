@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPaintEvent, QPen
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -30,7 +30,7 @@ from droiddesk.context import AppContext
 from droiddesk.core.models import GateResult
 from droiddesk.core.severity import GateVerdict
 from droiddesk.ui.dialogs.override_dialog import OverrideDialog
-from droiddesk.ui.theme import STATUS_COLORS
+from droiddesk.ui.theme import STATUS_COLORS, TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import StatusIcon, TagPill
@@ -122,12 +122,16 @@ class GatePage(QWidget):
             "Every check at once, one verdict. A clean result means no issues "
             "were found by the checks performed — not that the build is secure.",
         )
-        export_btn = QPushButton("↓  Export gate report")
+        export_btn = QPushButton("Export gate report")
+        export_btn.setIcon(get_icon("file-down", size=14, color=TEXT_MUTED))
+        export_btn.setIconSize(QSize(14, 14))
         export_btn.clicked.connect(self._on_export_report)
         header.add_action(export_btn)
 
         self._run_button = QPushButton("Run gate")
         self._run_button.setProperty("role", "primary")
+        self._run_button.setIcon(get_icon("shield-check", size=14, color="#ffffff"))
+        self._run_button.setIconSize(QSize(14, 14))
         self._run_button.clicked.connect(self._on_run_gate)
         header.add_action(self._run_button)
         outer.addWidget(header)

@@ -49,7 +49,6 @@ from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.severity_badge import SeverityBadge
 
 _SUMMARY_CHIP_SPECS: list[tuple[str, Severity]] = [
-
     ("Critical", Severity.CRITICAL),
     ("High", Severity.HIGH),
     ("Needs review", Severity.NEEDS_REVIEW),
@@ -193,12 +192,7 @@ class SecurityPage(QWidget):
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self._splitter.setObjectName("securitySplitter")
-        self._splitter.setStyleSheet(
-            "QSplitter::handle {"
-            "    background: #23252a;"
-            "    width: 3px;"
-            "}"
-        )
+        self._splitter.setStyleSheet("QSplitter::handle {    background: #23252a;    width: 3px;}")
 
         self._table = self._build_table()
         self._splitter.addWidget(self._table)
@@ -229,7 +223,6 @@ class SecurityPage(QWidget):
         else:
             self._empty_banner.hide()
             self._scan_button.setText(f"Scan APK ({path.name})")
-
 
     def _create_summary_chip(
         self, label: str, severity: Severity, count: int
@@ -529,9 +522,7 @@ class SecurityPage(QWidget):
         lbl_file = QLabel("File:")
         lbl_file.setStyleSheet("color: #9ca3af; font-size: 11px;")
         display_name = (
-            "strings.xml"
-            if finding.file_path.name == "resources.arsc"
-            else finding.file_path.name
+            "strings.xml" if finding.file_path.name == "resources.arsc" else finding.file_path.name
         )
         val_file = QLabel(display_name)
         val_file.setStyleSheet("color: #f3f4f6; font-size: 12px; font-weight: 700;")
@@ -542,9 +533,7 @@ class SecurityPage(QWidget):
         lbl_line = QLabel("Line:")
         lbl_line.setStyleSheet("color: #9ca3af; font-size: 11px;")
         line_str = (
-            f"Line {finding.line_number}"
-            if finding.line_number is not None
-            else "File-level"
+            f"Line {finding.line_number}" if finding.line_number is not None else "File-level"
         )
         val_line = QLabel(line_str)
         if finding.line_number is not None:
@@ -846,4 +835,3 @@ class SecurityPage(QWidget):
 
         for sev, count_label in self._summary_chips.items():
             count_label.setText(str(counts.get(sev, 0)))
-

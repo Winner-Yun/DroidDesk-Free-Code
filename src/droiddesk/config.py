@@ -74,4 +74,3 @@ class Settings(BaseModel):
             escaped_hash = self.active_apk_hash.replace('"', '\\"')
             lines.append(f'active_apk_hash = "{escaped_hash}"')
         self.config_file.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-

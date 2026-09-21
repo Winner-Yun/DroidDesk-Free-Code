@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
-from send2trash import send2trash
+from send2trash import send2trash  # type: ignore[import-untyped]
 
 from droiddesk.infra.hashing import find_duplicates
 

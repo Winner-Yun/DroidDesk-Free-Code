@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.core.models import Device
+from droiddesk.ui.dialogs.screenshot_dialog import ScreenshotViewerDialog
 from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.status_pill import StatusDot, TagPill
@@ -56,14 +57,15 @@ class DevicesPage(QWidget):
         )
         self._wifi_input = QLineEdit("192.168.1.24:5555")
         self._wifi_input.setFixedWidth(180)
-        wifi_btn = QPushButton("Connect over Wi-Fi")
-        wifi_btn.setIcon(get_icon("wifi", size=13, color=TEXT_MUTED))
-        wifi_btn.setIconSize(QSize(13, 13))
+        self._wifi_btn = QPushButton("Connect over Wi-Fi")
+        self._wifi_btn.setIcon(get_icon("wifi", size=13, color=TEXT_MUTED))
+        self._wifi_btn.setIconSize(QSize(13, 13))
+        self._wifi_btn.clicked.connect(self._on_connect_wifi_clicked)
         self._refresh_btn = QPushButton("Refresh")
         self._refresh_btn.setIcon(get_icon("rotate-cw", size=13, color=TEXT_MUTED))
         self._refresh_btn.setIconSize(QSize(13, 13))
         header.add_action(self._wifi_input)
-        header.add_action(wifi_btn)
+        header.add_action(self._wifi_btn)
         header.add_action(self._refresh_btn)
         outer.addWidget(header)
 
@@ -83,6 +85,48 @@ class DevicesPage(QWidget):
         ctx.device_service.devices_changed.connect(self._repopulate)
         self._repopulate(ctx.device_service.devices())
         self._refresh_btn.clicked.connect(self._on_refresh_clicked)
+
+    def _on_connect_wifi_clicked(self) -> None:
+        target = self._wifi_input.text().strip()
+        if not target:
+            QMessageBox.warning(
+                self,
+                "Missing Address",
+                "Please enter an IP address or host:port to connect over Wi-Fi.\n\n"
+                "Example: 192.168.1.50:5555",
+            )
+            return
+
+        self._wifi_btn.setEnabled(False)
+        self._wifi_btn.setText("Connecting...")
+        from PySide6.QtGui import QGuiApplication
+        QGuiApplication.processEvents()
+
+        try:
+            success, msg = self._ctx.device_service.connect_wireless(target)
+            if success:
+                QMessageBox.information(
+                    self,
+                    "Wi-Fi Connection Successful",
+                    f"Successfully connected to {target}!\n\n"
+                    f"{msg}\n\nThe device is now active in the list.",
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Wi-Fi Connection Failed",
+                    f"Could not connect to {target}.\n\n"
+                    f"ADB response:\n{msg}\n\n"
+                    "Troubleshooting steps:\n"
+                    "1. Ensure the Android device and your PC are on the same Wi-Fi network.\n"
+                    "2. Enable 'Wireless debugging' in Developer Options on the device.\n"
+                    "3. If using standard TCP/IP debugging, run 'adb tcpip 5555' via USB first.",
+                )
+        except Exception as exc:
+            QMessageBox.warning(self, "Wi-Fi Error", f"An error occurred while connecting:\n{exc}")
+        finally:
+            self._wifi_btn.setEnabled(True)
+            self._wifi_btn.setText("Connect over Wi-Fi")
 
     def _on_refresh_clicked(self) -> None:
         self._ctx.device_service.refresh()
@@ -236,9 +280,44 @@ class DevicesPage(QWidget):
         screenshot_btn = QPushButton("Take screenshot")
         screenshot_btn.setIcon(get_icon("camera", size=13, color=TEXT_MUTED))
         screenshot_btn.setIconSize(QSize(13, 13))
+        screenshot_btn.clicked.connect(
+            lambda checked=False, d=device, btn=screenshot_btn: self._on_take_screenshot(d, btn)
+        )
         layout.addWidget(screenshot_btn)
 
         return card
+
+    def _on_take_screenshot(self, device: Device, btn: QPushButton | None = None) -> None:
+        if device.state != "device":
+            QMessageBox.warning(
+                self,
+                "Device Not Ready",
+                f"Device '{device.serial}' is currently {device.state}.\n\n"
+                "Please authorize or reconnect the device before taking a screenshot.",
+            )
+            return
+
+        if btn is not None:
+            btn.setEnabled(False)
+            btn.setText("Capturing...")
+        from PySide6.QtGui import QGuiApplication
+        QGuiApplication.processEvents()
+
+        try:
+            shot_path = self._ctx.device_service.take_screenshot(device.serial)
+            label = f"{device.model or 'Android'} ({device.serial})"
+            dialog = ScreenshotViewerDialog(shot_path, device_label=label, parent=self)
+            dialog.exec()
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                "Screenshot Failed",
+                f"Could not take screenshot from device '{device.serial}':\n\n{exc}",
+            )
+        finally:
+            if btn is not None:
+                btn.setEnabled(True)
+                btn.setText("Take screenshot")
 
     def _section_label(self, text: str) -> QLabel:
         label = QLabel(text)

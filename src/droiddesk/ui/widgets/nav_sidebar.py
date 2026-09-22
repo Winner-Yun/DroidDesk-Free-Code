@@ -31,6 +31,7 @@ NAV_SECTIONS: tuple[tuple[str, tuple[NavEntry, ...]], ...] = (
         (
             NavEntry("devices", "smartphone", "Devices"),
             NavEntry("logcat", "scroll-text", "Logcat"),
+            NavEntry("screenshots", "image", "Screenshots"),
         ),
     ),
     (

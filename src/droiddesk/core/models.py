@@ -41,11 +41,19 @@ class ApkInfo:
     providers: list[str] = field(default_factory=list)
     signature_schemes: list[int] = field(default_factory=list)
     certificate_fingerprint_sha256: str | None = None
+    certificate_fingerprint_sha1: str | None = None
+    certificate_fingerprint_md5: str | None = None
+    certificate_dn: str | None = None
+    signature_verified: bool = False
+    signature_source: str | None = None
+    debuggable: bool | None = None
     analyzed_at: datetime | None = None
 
 
 @dataclass(slots=True)
 class TestStepResult:
+    __test__ = False
+
     name: str
     passed: bool
     duration_ms: int
@@ -54,6 +62,8 @@ class TestStepResult:
 
 @dataclass(slots=True)
 class TestRun:
+    __test__ = False
+
     apk: ApkInfo
     device_serial: str
     profile_name: str
@@ -102,3 +112,27 @@ class GateResult:
     score: int
     verdict: GateVerdict
     override_note: str | None = None
+
+
+@dataclass(slots=True)
+class Project:
+    name: str
+    root_path: Path
+    package_name: str | None = None
+    id: int | None = None
+    created_at: datetime | None = None
+    last_opened: datetime | None = None
+
+
+@dataclass(slots=True)
+class BuildRecord:
+    command: str
+    environment: str
+    started_at: datetime
+    project_id: int | None = None
+    gate_score: int | None = None
+    gate_verdict: str | None = None
+    overridden: bool = False
+    override_note: str | None = None
+    exit_code: int | None = None
+    id: int | None = None

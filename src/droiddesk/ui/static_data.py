@@ -20,10 +20,6 @@ from droiddesk.core.severity import Severity
 
 # -- Active environment (top bar + status colouring everywhere) ------------
 
-ACTIVE_ENVIRONMENT_KEY = "production"
-ACTIVE_ENVIRONMENT_LABEL = "Production"
-ACTIVE_ENVIRONMENT_HOST = "api.example.com"
-ACTIVE_ENVIRONMENT_NOTE = "release builds allowed"
 
 # (tool name, is available on PATH)
 TOOL_STATUS: list[tuple[str, bool]] = [
@@ -62,7 +58,9 @@ class AttentionItem:
 
 NEEDS_ATTENTION: list[AttentionItem] = [
     AttentionItem("critical", "Service account private key", "config/service-account.json:4"),
-    AttentionItem("high", "Background location from a dependency", "merged manifest · com.analytics.sdk"),
+    AttentionItem(
+        "high", "Background location from a dependency", "merged manifest · com.analytics.sdk"
+    ),
     AttentionItem("review", "Maps API key in resources", "res/values/strings.xml:18"),
 ]
 
@@ -93,7 +91,9 @@ class DeviceRow:
 
 DEVICES: list[DeviceRow] = [
     DeviceRow(
-        Device("39021FDJH00K3M", "device", "Pixel 7", "14", 34, "arm64-v8a", 420, is_test_profile=True),
+        Device(
+            "39021FDJH00K3M", "device", "Pixel 7", "14", 34, "arm64-v8a", 420, is_test_profile=True
+        ),
         "USB",
         "ready",
     ),
@@ -204,11 +204,25 @@ TEST_PROFILE_NAME = "Smoke test"
 TEST_RUN_STEPS: list[TestStepRow] = [
     TestStepRow("Validate", "pass", "com.example.app 2.4.1", "androguard · in-process", 180),
     TestStepRow("Install", "pass", "Success", "adb -s $S install -r -t app.apk", 4210),
-    TestStepRow("Launch", "pass", "pid 4821", "adb -s $S shell monkey -p $PKG -c ...LAUNCHER 1", 940),
-    TestStepRow("Observe", "fail", "FATAL EXCEPTION in sync-worker", "adb -s $S logcat --pid=$PID -v threadtime", 6100),
+    TestStepRow(
+        "Launch", "pass", "pid 4821", "adb -s $S shell monkey -p $PKG -c ...LAUNCHER 1", 940
+    ),
+    TestStepRow(
+        "Observe",
+        "fail",
+        "FATAL EXCEPTION in sync-worker",
+        "adb -s $S logcat --pid=$PID -v threadtime",
+        6100,
+    ),
     TestStepRow("Screenshot", "pass", "1080x2400 PNG", "adb -s $S exec-out screencap -p", 620),
     TestStepRow("Permissions", "pass", "9 granted", "adb -s $S shell dumpsys package $PKG", 310),
-    TestStepRow("Static hosts", "warn", "staging-api.example.com found", "string extraction · informational only", 240),
+    TestStepRow(
+        "Static hosts",
+        "warn",
+        "staging-api.example.com found",
+        "string extraction · informational only",
+        240,
+    ),
     TestStepRow("Clean up", "pass", "Success", "adb -s $S uninstall $PKG", 1180),
 ]
 
@@ -236,55 +250,119 @@ class FindingDisplay:
 
 SECURITY_FINDINGS: list[FindingDisplay] = [
     FindingDisplay(
-        Finding("service-account-key", Severity.CRITICAL, Path("config/service-account.json"), "h1", '"private_key: "-----BEGIN PRIVATE KEY-----…', 4),
+        Finding(
+            "service-account-key",
+            Severity.CRITICAL,
+            Path("config/service-account.json"),
+            "h1",
+            '"private_key: "-----BEGIN PRIVATE KEY-----…',
+            4,
+        ),
         "Google Cloud service account private key",
         "Remove this file from the repository and rotate the key in the Cloud console. "
         "Move the credential to a secret manager or an untracked local file.",
     ),
     FindingDisplay(
-        Finding("keystore-tracked", Severity.CRITICAL, Path("app/release.jks"), "h2", "binary · 2,432 bytes · JKS magic", None),
+        Finding(
+            "keystore-tracked",
+            Severity.CRITICAL,
+            Path("app/release.jks"),
+            "h2",
+            "binary · 2,432 bytes · JKS magic",
+            None,
+        ),
         "Signing keystore tracked in the repository",
         "Remove the keystore from version control and rotate the signing key if it "
         "has ever been pushed to a remote.",
     ),
     FindingDisplay(
-        Finding("env-database-url", Severity.HIGH, Path(".env.production"), "h3", "DATABASE_URL=postgres://app:••••••@db.e…", 7),
+        Finding(
+            "env-database-url",
+            Severity.HIGH,
+            Path(".env.production"),
+            "h3",
+            "DATABASE_URL=postgres://app:••••••@db.e…",
+            7,
+        ),
         "Backend database URL in an .env file",
         "Move production connection strings out of tracked .env files and into a "
         "secret manager; rotate the credential.",
     ),
     FindingDisplay(
-        Finding("firebase-legacy-secret", Severity.HIGH, Path("app/src/main/res/values/secrets.xml"), "h4", '<string name="fb_secret">AAAA••••••••••••…', None),
+        Finding(
+            "firebase-legacy-secret",
+            Severity.HIGH,
+            Path("app/src/main/res/values/secrets.xml"),
+            "h4",
+            '<string name="fb_secret">AAAA••••••••••••…',
+            None,
+        ),
         "Legacy Firebase database secret",
         "This legacy secret grants full read/write to the Realtime Database. "
         "Migrate to Firebase security rules and revoke the legacy secret.",
     ),
     FindingDisplay(
-        Finding("google-maps-key", Severity.NEEDS_REVIEW, Path("app/src/main/res/values/strings.xml"), "h5", '<string name="maps_key">AIzaSy•••••••••••••••••••••</string>', 18),
+        Finding(
+            "google-maps-key",
+            Severity.NEEDS_REVIEW,
+            Path("app/src/main/res/values/strings.xml"),
+            "h5",
+            '<string name="maps_key">AIzaSy•••••••••••••••••••••</string>',
+            18,
+        ),
         "Google Maps API key in string resources",
         "Restrict this key — do not remove it. A Maps key is designed to ship "
         "inside the APK. In the Cloud console, restrict it to this package name "
         "and your release SHA-1 fingerprint, and cap it to the Maps SDK.",
     ),
     FindingDisplay(
-        Finding("high-entropy-string", Severity.NEEDS_REVIEW, Path("app/src/main/java/com/example/Auth.kt"), "h6", 'String token = "b7f3••••••••••••••••…', None),
+        Finding(
+            "high-entropy-string",
+            Severity.NEEDS_REVIEW,
+            Path("app/src/main/java/com/example/Auth.kt"),
+            "h6",
+            'String token = "b7f3••••••••••••••••…',
+            None,
+        ),
         "High-entropy string assigned to a variable",
         "Confirm whether this is a real credential or a generated test fixture "
         "before deciding whether it needs to move out of source.",
     ),
     FindingDisplay(
-        Finding("google-services-present", Severity.INFORMATIONAL, Path("app/google-services.json"), "h7", "project_id: example-prod · 3 clients", None),
+        Finding(
+            "google-services-present",
+            Severity.INFORMATIONAL,
+            Path("app/google-services.json"),
+            "h7",
+            "project_id: example-prod · 3 clients",
+            None,
+        ),
         "google-services.json present",
-        "This file is meant to ship with the app and is not a secret by itself. "
-        "No action needed.",
+        "This file is meant to ship with the app and is not a secret by itself. No action needed.",
     ),
 ]
 
 SECURITY_SUMMARY = [
-    ("Critical", Severity.CRITICAL, sum(1 for f in SECURITY_FINDINGS if f.finding.severity == Severity.CRITICAL)),
-    ("High", Severity.HIGH, sum(1 for f in SECURITY_FINDINGS if f.finding.severity == Severity.HIGH)),
-    ("Needs review", Severity.NEEDS_REVIEW, sum(1 for f in SECURITY_FINDINGS if f.finding.severity == Severity.NEEDS_REVIEW)),
-    ("Informational", Severity.INFORMATIONAL, sum(1 for f in SECURITY_FINDINGS if f.finding.severity == Severity.INFORMATIONAL)),
+    (
+        "Critical",
+        Severity.CRITICAL,
+        sum(1 for f in SECURITY_FINDINGS if f.finding.severity == Severity.CRITICAL),
+    ),
+    (
+        "High",
+        Severity.HIGH,
+        sum(1 for f in SECURITY_FINDINGS if f.finding.severity == Severity.HIGH),
+    ),
+    (
+        "Needs review",
+        Severity.NEEDS_REVIEW,
+        sum(1 for f in SECURITY_FINDINGS if f.finding.severity == Severity.NEEDS_REVIEW),
+    ),
+    (
+        "Informational",
+        Severity.INFORMATIONAL,
+        sum(1 for f in SECURITY_FINDINGS if f.finding.severity == Severity.INFORMATIONAL),
+    ),
 ]
 
 SECURITY_SELECTED = SECURITY_FINDINGS[4]  # Google Maps API key — matches the mockup detail panel
@@ -387,14 +465,61 @@ GATE_SCORE_NOTE = (
 )
 
 GATE_CHECKS: list[GateCheckRow] = [
-    GateCheckRow("Project", "pass", "Package name matches the expected release identifier \u2014 com.example.app", True, 10),
-    GateCheckRow("Environment", "pass", "Production active and permitted to build releases \u2014 production \u00b7 api.example.com", True, 20),
-    GateCheckRow("Git", "warn", "Working tree clean, on a release branch \u2014 3 modified files on release/2.4", False, 10),
-    GateCheckRow("Secrets", "fail", "No critical findings in the project tree \u2014 1 critical \u00b7 config/service-account.json", True, 20),
-    GateCheckRow("APK", "pass", "Valid, signed with v2 or later, correct target SDK \u2014 v2 + v3 \u00b7 targetSdk 34", True, 15),
-    GateCheckRow("Privacy", "pass", "No credential files present inside the APK \u2014 assets/, res/raw/ clean", True, 15),
-    GateCheckRow("Permissions", "warn", "No unreviewed high-risk permissions \u2014 ACCESS_BACKGROUND_LOCATION unreviewed", False, 5),
-    GateCheckRow("Size", "pass", "Under the configured threshold \u2014 38.2 MB of 60 MB", False, 5),
+    GateCheckRow(
+        "Project",
+        "pass",
+        "Package name matches the expected release identifier \u2014 com.example.app",
+        True,
+        10,
+    ),
+    GateCheckRow(
+        "Environment",
+        "pass",
+        "Production active and permitted to build releases — production · api.example.com",
+        True,
+        20,
+    ),
+    GateCheckRow(
+        "Git",
+        "warn",
+        "Working tree clean, on a release branch — 3 modified files on release/2.4",
+        False,
+        10,
+    ),
+    GateCheckRow(
+        "Secrets",
+        "fail",
+        (
+            "No critical findings in the project tree — "
+            "1 critical · config/service-account.json"
+        ),
+        True,
+        20,
+    ),
+    GateCheckRow(
+        "APK",
+        "pass",
+        "Valid, signed with v2 or later, correct target SDK \u2014 v2 + v3 \u00b7 targetSdk 34",
+        True,
+        15,
+    ),
+    GateCheckRow(
+        "Privacy",
+        "pass",
+        "No credential files present inside the APK \u2014 assets/, res/raw/ clean",
+        True,
+        15,
+    ),
+    GateCheckRow(
+        "Permissions",
+        "warn",
+        "No unreviewed high-risk permissions \u2014 ACCESS_BACKGROUND_LOCATION unreviewed",
+        False,
+        5,
+    ),
+    GateCheckRow(
+        "Size", "pass", "Under the configured threshold \u2014 38.2 MB of 60 MB", False, 5
+    ),
 ]
 
 GATE_FOOTER_NOTE = (

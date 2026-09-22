@@ -5,7 +5,7 @@ Devices, etc.), plus the small stat tile used at the top of the Dashboard.
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 
 class Card(QFrame):
@@ -20,6 +20,7 @@ class Card(QFrame):
         if title:
             heading = QLabel(title)
             heading.setProperty("role", "sectionTitle")
+            heading.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             self._layout.addWidget(heading)
 
     def body_layout(self) -> QVBoxLayout:
@@ -35,12 +36,18 @@ class StatCard(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(2)
-        value_label = QLabel(value)
-        value_label.setProperty("role", "statNumber")
-        caption = QLabel(label)
-        caption.setProperty("role", "muted")
-        layout.addWidget(value_label)
-        layout.addWidget(caption)
+        self.value_label = QLabel(value)
+        self.value_label.setProperty("role", "statNumber")
+        self.caption = QLabel(label)
+        self.caption.setProperty("role", "muted")
+        layout.addWidget(self.value_label)
+        layout.addWidget(self.caption)
+
+    def set_value(self, value: str) -> None:
+        self.value_label.setText(value)
+
+    def set_caption(self, caption: str) -> None:
+        self.caption.setText(caption)
 
 
 class PageHeader(QWidget):
@@ -65,9 +72,9 @@ class PageHeader(QWidget):
 
         outer.addLayout(text_col, 1)
 
-        self.actions = QHBoxLayout()
-        self.actions.setSpacing(8)
-        outer.addLayout(self.actions)
+        self.actions_layout = QHBoxLayout()
+        self.actions_layout.setSpacing(8)
+        outer.addLayout(self.actions_layout)
 
     def add_action(self, button: QWidget) -> None:
-        self.actions.addWidget(button)
+        self.actions_layout.addWidget(button)

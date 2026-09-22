@@ -63,6 +63,10 @@ class ToolLocator:
             return False
         return True
 
+    def discover_all(self) -> dict[str, bool]:
+        """Check availability of all known tools without raising ToolNotFoundError."""
+        return {tool_name: self.is_available(tool_name) for tool_name in _KNOWN_TOOLS}
+
     def _from_settings(self, tool_name: str) -> Path | None:
         attr = f"{tool_name}_path"
         return getattr(self._settings, attr, None)
@@ -106,3 +110,46 @@ class ToolLocator:
     def _from_system_path(self, tool_name: str) -> Path | None:
         found = shutil.which(tool_name)
         return Path(found) if found else None
+
+    def find_java_home(self) -> Path | None:
+        """Locate a Java runtime home directory (Android Studio JBR or JDK)."""
+        exe_name = "java.exe" if os.name == "nt" else "java"
+        if os.environ.get("JAVA_HOME"):
+            cand = Path(os.environ["JAVA_HOME"])
+            if (cand / "bin" / exe_name).is_file():
+                return cand
+
+        candidates: list[Path] = [
+            Path(r"C:\Program Files\Android\Android Studio\jbr"),
+            Path(r"C:\Program Files\Android\Android Studio\jre"),
+            Path(r"C:\Program Files (x86)\Android\Android Studio\jbr"),
+            Path(r"C:\Android\Android Studio\jbr"),
+        ]
+
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            candidates.append(Path(local_app_data) / "Android" / "jbr")
+            candidates.append(Path(local_app_data) / "Android" / "Sdk" / "jbr")
+
+        prog_java = Path(r"C:\Program Files\Java")
+        if prog_java.is_dir():
+            candidates.extend(sorted(prog_java.glob("jdk*"), reverse=True))
+
+        for cand in candidates:
+            if (cand / "bin" / exe_name).is_file():
+                return cand
+        return None
+
+    def execution_env(self) -> dict[str, str]:
+        """Return environment variables with JAVA_HOME and PATH configured for tools."""
+        env = os.environ.copy()
+        exe_name = "java.exe" if os.name == "nt" else "java"
+        jh_val = env.get("JAVA_HOME")
+        if not jh_val or not (Path(jh_val) / "bin" / exe_name).is_file():
+            found_jh = self.find_java_home()
+            if found_jh:
+                env["JAVA_HOME"] = str(found_jh)
+                bin_dir = str(found_jh / "bin")
+                sep = ";" if os.name == "nt" else ":"
+                env["PATH"] = f"{bin_dir}{sep}{env.get('PATH', '')}"
+        return env

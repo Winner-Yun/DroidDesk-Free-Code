@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
-from send2trash import send2trash
+from send2trash import send2trash  # type: ignore[import-untyped]
 
 from droiddesk.infra.hashing import find_duplicates
 
@@ -38,8 +38,8 @@ class PlannedMove:
 
 class OrganizerService(QObject):
     progress = Signal(int, int)
-    plan_ready = Signal(list)  # list[PlannedMove]
-    finished = Signal(str)  # batch id
+    plan_ready = Signal(list)
+    finished = Signal(str)
 
     def __init__(self, journal_dir: Path) -> None:
         super().__init__()

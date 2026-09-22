@@ -52,9 +52,18 @@ class AdbClient:
         result = self._runner.run(self._adb_path, ["pair", host_port, pairing_code])
         return result.exit_code == 0
 
-    def connect(self, host_port: str) -> bool:
-        result = self._runner.run(self._adb_path, ["connect", host_port])
-        return result.exit_code == 0
+    def connect(self, host_port: str) -> tuple[bool, str]:
+        result = self._runner.run(self._adb_path, ["connect", host_port], timeout=15.0)
+        output = (result.stdout + " " + result.stderr).strip()
+        low = output.lower()
+        success = (
+            result.exit_code == 0
+            and ("connected to" in low or "already connected to" in low)
+            and "failed" not in low
+            and "cannot" not in low
+            and "unable" not in low
+        )
+        return success, output
 
     def reconnect(self, serial: str) -> bool:
         result = self._runner.run(self._adb_path, ["-s", serial, "reconnect"])
@@ -117,5 +126,42 @@ class AdbClient:
         return AdbStream(self._adb_path, args)
 
     def screenshot(self, serial: str) -> bytes:
-        result = self._runner.run(self._adb_path, ["-s", serial, "exec-out", "screencap", "-p"])
-        return result.stdout.encode("latin-1")  # TODO(Phase 3): capture raw bytes, not decoded text
+        raw = self._runner.run_bytes(
+            self._adb_path, ["-s", serial, "exec-out", "screencap", "-p"], timeout=20.0
+        )
+        if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+            return raw
+        if b"\x89PNG" in raw:
+            fixed = raw.replace(b"\r\r\n", b"\r\n")
+            if fixed.startswith(b"\x89PNG\r\n\x1a\n"):
+                return fixed
+
+        # Fallback to device-side capture and pull if exec-out is corrupted or unsupported
+        safe_name = serial.replace(":", "_").replace("/", "_")
+        tmp_remote = f"/sdcard/droiddesk_cap_{safe_name}.png"
+        self._runner.run(
+            self._adb_path, ["-s", serial, "shell", "screencap", "-p", tmp_remote], timeout=20.0
+        )
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_local = Path(tmp.name)
+        try:
+            self._runner.run(
+                self._adb_path, ["-s", serial, "pull", tmp_remote, str(tmp_local)], timeout=20.0
+            )
+            self._runner.run(
+                self._adb_path, ["-s", serial, "shell", "rm", "-f", tmp_remote], timeout=5.0
+            )
+            if tmp_local.exists() and tmp_local.stat().st_size > 0:
+                return tmp_local.read_bytes()
+        finally:
+            if tmp_local.exists():
+                tmp_local.unlink(missing_ok=True)
+        return raw
+
+    def logcat_dump(self, serial: str, pid: int | None = None) -> list[str]:
+        args = ["-s", serial, "logcat", "-d", "-v", "threadtime"]
+        if pid is not None:
+            args.append(f"--pid={pid}")
+        result = self._runner.run(self._adb_path, args)
+        return [line for line in result.stdout.splitlines() if line.strip()]

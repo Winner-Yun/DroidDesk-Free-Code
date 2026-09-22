@@ -6,7 +6,9 @@ through the same Jinja2 template set referenced in `reports/renderer.py`.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from pathlib import Path
+
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
@@ -20,16 +22,21 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.ui import static_data
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 from droiddesk.ui.widgets.status_pill import StatusPill
 
 _VERDICT_STATUS = {"NO-GO": "fail", "GO": "pass", "PASS": "pass", "FAIL": "fail"}
 
 
 class ReportsPage(QWidget):
+    upload_requested = Signal()
+
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
         self._ctx = ctx
+        self._apk_path: Path | None = None
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
@@ -37,16 +44,48 @@ class ReportsPage(QWidget):
 
         header = PageHeader(
             "Reports",
-            "One template set. HTML is the source of truth; PDF and Markdown are rendered from it, and JSON comes straight off the domain model.",
+            "One template set. HTML is the source of truth; PDF and Markdown are "
+            "rendered from it, and JSON comes straight off the domain model.",
         )
-        header.add_action(QPushButton("⛁  Open output folder"))
+        folder_btn = QPushButton("Open output folder")
+        folder_btn.setIcon(get_icon("folder-open", size=13, color=TEXT_MUTED))
+        folder_btn.setIconSize(QSize(13, 13))
+        header.add_action(folder_btn)
         outer.addWidget(header)
+
+        self._content_container = QWidget()
+        content_layout = QVBoxLayout(self._content_container)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         content_row = QHBoxLayout()
         content_row.setSpacing(14)
         content_row.addWidget(self._build_history_panel(), 2)
         content_row.addWidget(self._build_export_panel(), 1)
-        outer.addLayout(content_row, 1)
+        content_layout.addLayout(content_row)
+        outer.addWidget(self._content_container, 1)
+
+        self._empty_state = EmptyStateWidget(
+            title="No Active APK Selected",
+            message=(
+                "Reports reflect test runs, gate verdicts, and security findings for "
+                "an APK. Select or upload an APK to generate and export reports."
+            ),
+            button_text="Upload APK",
+        )
+        self._empty_state.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_state, 1)
+
+        self.set_apk(None)
+
+    def set_apk(self, path: Path | None) -> None:
+        self._apk_path = path
+        if path is None:
+            self._content_container.hide()
+            self._empty_state.show()
+        else:
+            self._empty_state.hide()
+            self._content_container.show()
 
     def _build_history_panel(self) -> QWidget:
         card = Card("History")
@@ -81,6 +120,8 @@ class ReportsPage(QWidget):
         card = Card("Export")
         for label, caption in static_data.REPORT_EXPORTS:
             button = QPushButton(label)
+            button.setIcon(get_icon("file-down", size=13, color=TEXT_MUTED))
+            button.setIconSize(QSize(13, 13))
             card.body_layout().addWidget(button)
             note = QLabel(caption)
             note.setWordWrap(True)

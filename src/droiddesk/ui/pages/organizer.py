@@ -6,7 +6,9 @@ Populated from `static_data.ORGANIZER_PLANNED_MOVES`; Phase 6 swaps in
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from pathlib import Path
+
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
@@ -22,13 +24,18 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.ui import static_data
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
+from droiddesk.ui.widgets.empty_state import EmptyStateWidget
 
 
 class OrganizerPage(QWidget):
+    upload_requested = Signal()
+
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
         self._ctx = ctx
+        self._apk_path: Path | None = None
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
         outer.setContentsMargins(24, 20, 24, 20)
@@ -36,16 +43,36 @@ class OrganizerPage(QWidget):
 
         header = PageHeader(
             "File organizer",
-            "Nothing moves until you have seen the plan. Every batch writes an undo journal first, and deletions go to the Recycle Bin.",
+            "Nothing moves until you have seen the plan. Every batch writes an undo "
+            "journal first, and deletions go to the Recycle Bin.",
         )
         path_input = QLineEdit(static_data.ORGANIZER_PATH)
         path_input.setFixedWidth(220)
         header.add_action(path_input)
-        header.add_action(QPushButton("▽  Preview plan"))
+
+        preview_btn = QPushButton("Preview plan")
+        preview_btn.setIcon(get_icon("eye", size=13, color=TEXT_MUTED))
+        preview_btn.setIconSize(QSize(13, 13))
+        header.add_action(preview_btn)
+
         apply_button = QPushButton(f"Apply {len(static_data.ORGANIZER_PLANNED_MOVES)} moves")
         apply_button.setProperty("role", "primary")
+        apply_button.setIcon(get_icon("check", size=13, color="#ffffff"))
+        apply_button.setIconSize(QSize(13, 13))
         header.add_action(apply_button)
         outer.addWidget(header)
+
+        self._empty_banner = EmptyStateWidget(
+            title="No Active APK Selected",
+            message=(
+                "Organize, deduplicate, and sort Android packages. Upload an APK "
+                "or add APK directories to analyze your files."
+            ),
+            button_text="Upload APK",
+            compact=True,
+        )
+        self._empty_banner.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_banner)
 
         outer.addLayout(self._build_progress_row())
 
@@ -61,6 +88,15 @@ class OrganizerPage(QWidget):
         content_row.addLayout(side_col, 1)
 
         outer.addLayout(content_row, 1)
+
+        self.set_apk(None)
+
+    def set_apk(self, path: Path | None) -> None:
+        self._apk_path = path
+        if path is None:
+            self._empty_banner.show()
+        else:
+            self._empty_banner.hide()
 
     def _build_progress_row(self) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -130,7 +166,10 @@ class OrganizerPage(QWidget):
         note.setProperty("role", "muted")
         card.body_layout().addWidget(note)
 
-        card.body_layout().addWidget(QPushButton("Undo last batch"))
+        undo_btn = QPushButton("Undo last batch")
+        undo_btn.setIcon(get_icon("undo", size=13, color=TEXT_MUTED))
+        undo_btn.setIconSize(QSize(13, 13))
+        card.body_layout().addWidget(undo_btn)
         return card
 
     # TODO(Phase 6): bind the moves table to FilesModel, wire Apply to

@@ -11,9 +11,9 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel
 
-from droiddesk.ui.theme import STATUS_COLORS
+from droiddesk.ui.theme import STATUS_COLORS, get_pixmap
 
-_ICONS = {"pass": "✓", "warn": "⚠", "fail": "✕"}
+_LUCIDE_STATUS_ICONS = {"pass": "circle-check", "warn": "triangle-alert", "fail": "circle-x"}
 
 
 class StatusPill(QLabel):
@@ -30,13 +30,19 @@ class StatusPill(QLabel):
 
 
 class StatusIcon(QLabel):
-    """Bare check/warning/cross glyph used at the start of a guard/gate row."""
+    """Vector check/warning/cross icon used at the start of a guard/gate row."""
 
     def __init__(self, status: str) -> None:
-        super().__init__(_ICONS.get(status, _ICONS["pass"]))
-        color = STATUS_COLORS.get(status, STATUS_COLORS["info"])
-        self.setStyleSheet(f"color: {color}; font-size: 14px; font-weight: 700;")
-        self.setFixedWidth(18)
+        super().__init__()
+        self.setFixedSize(18, 18)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.set_status(status)
+
+    def set_status(self, status: str) -> None:
+        icon_name = _LUCIDE_STATUS_ICONS.get(status, "circle-help")
+        color = STATUS_COLORS.get(status, STATUS_COLORS.get("info", "#888888"))
+        pix = get_pixmap(icon_name, size=16, color=color)
+        self.setPixmap(pix)
 
 
 class StatusDot(QLabel):

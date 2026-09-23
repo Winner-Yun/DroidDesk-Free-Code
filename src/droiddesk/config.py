@@ -1,7 +1,7 @@
 """Settings model, per-user paths, and persisted configuration.
 
 Config lives under %APPDATA%\\DroidDesk; the SQLite database and cache live under
-%LOCALAPPDATA%\\DroidDesk — never under Program Files, which is not user-writable.
+%LOCALAPPDATA%\\DroidDesk - never under Program Files, which is not user-writable.
 See Section 10.2 of the spec.
 """
 
@@ -74,4 +74,3 @@ class Settings(BaseModel):
             escaped_hash = self.active_apk_hash.replace('"', '\\"')
             lines.append(f'active_apk_hash = "{escaped_hash}"')
         self.config_file.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
-

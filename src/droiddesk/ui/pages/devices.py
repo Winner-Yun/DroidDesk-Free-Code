@@ -1,4 +1,4 @@
-"""Devices page — Section 6.1. Live polling list, explicit unauthorized/offline
+"""Devices page - Section 6.1. Live polling list, explicit unauthorized/offline
 states (pairing instruction and reconnect action, not a raw error), wireless
 debugging entry, and the Test Device Profile toggle.
 """
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import override
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QHideEvent, QShowEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -24,7 +24,8 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.core.models import Device
-from droiddesk.ui import static_data
+from droiddesk.ui.dialogs.screenshot_dialog import ScreenshotViewerDialog
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.status_pill import StatusDot, TagPill
 
@@ -56,9 +57,15 @@ class DevicesPage(QWidget):
         )
         self._wifi_input = QLineEdit("192.168.1.24:5555")
         self._wifi_input.setFixedWidth(180)
-        self._refresh_btn = QPushButton("↻  Refresh")
+        self._wifi_btn = QPushButton("Connect over Wi-Fi")
+        self._wifi_btn.setIcon(get_icon("wifi", size=13, color=TEXT_MUTED))
+        self._wifi_btn.setIconSize(QSize(13, 13))
+        self._wifi_btn.clicked.connect(self._on_connect_wifi_clicked)
+        self._refresh_btn = QPushButton("Refresh")
+        self._refresh_btn.setIcon(get_icon("rotate-cw", size=13, color=TEXT_MUTED))
+        self._refresh_btn.setIconSize(QSize(13, 13))
         header.add_action(self._wifi_input)
-        header.add_action(QPushButton("Connect over Wi-Fi"))
+        header.add_action(self._wifi_btn)
         header.add_action(self._refresh_btn)
         outer.addWidget(header)
 
@@ -78,6 +85,48 @@ class DevicesPage(QWidget):
         ctx.device_service.devices_changed.connect(self._repopulate)
         self._repopulate(ctx.device_service.devices())
         self._refresh_btn.clicked.connect(self._on_refresh_clicked)
+
+    def _on_connect_wifi_clicked(self) -> None:
+        target = self._wifi_input.text().strip()
+        if not target:
+            QMessageBox.warning(
+                self,
+                "Missing Address",
+                "Please enter an IP address or host:port to connect over Wi-Fi.\n\n"
+                "Example: 192.168.1.50:5555",
+            )
+            return
+
+        self._wifi_btn.setEnabled(False)
+        self._wifi_btn.setText("Connecting...")
+        from PySide6.QtGui import QGuiApplication
+        QGuiApplication.processEvents()
+
+        try:
+            success, msg = self._ctx.device_service.connect_wireless(target)
+            if success:
+                QMessageBox.information(
+                    self,
+                    "Wi-Fi Connection Successful",
+                    f"Successfully connected to {target}!\n\n"
+                    f"{msg}\n\nThe device is now active in the list.",
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Wi-Fi Connection Failed",
+                    f"Could not connect to {target}.\n\n"
+                    f"ADB response:\n{msg}\n\n"
+                    "Troubleshooting steps:\n"
+                    "1. Ensure the Android device and your PC are on the same Wi-Fi network.\n"
+                    "2. Enable 'Wireless debugging' in Developer Options on the device.\n"
+                    "3. If using standard TCP/IP debugging, run 'adb tcpip 5555' via USB first.",
+                )
+        except Exception as exc:
+            QMessageBox.warning(self, "Wi-Fi Error", f"An error occurred while connecting:\n{exc}")
+        finally:
+            self._wifi_btn.setEnabled(True)
+            self._wifi_btn.setText("Connect over Wi-Fi")
 
     def _on_refresh_clicked(self) -> None:
         self._ctx.device_service.refresh()
@@ -113,11 +162,11 @@ class DevicesPage(QWidget):
             model_item.setData(Qt.ItemDataRole.UserRole, device)
             self._table.setItem(row, 1, model_item)
             self._table.setItem(row, 2, self._mono_item(device.serial))
-            self._table.setItem(row, 3, QTableWidgetItem(device.android_version or "—"))
+            self._table.setItem(row, 3, QTableWidgetItem(device.android_version or "-"))
             self._table.setItem(
-                row, 4, QTableWidgetItem(str(device.api_level) if device.api_level else "—")
+                row, 4, QTableWidgetItem(str(device.api_level) if device.api_level else "-")
             )
-            self._table.setItem(row, 5, QTableWidgetItem(device.abi or "—"))
+            self._table.setItem(row, 5, QTableWidgetItem(device.abi or "-"))
             self._table.setItem(row, 6, QTableWidgetItem(_link_type(device.serial)))
 
         self._restore_selection()
@@ -184,15 +233,18 @@ class DevicesPage(QWidget):
         layout.addWidget(self._section_label("PROPERTIES"))
         for label, value in [
             ("serial", device.serial),
-            ("release", device.android_version or "—"),
-            ("sdk", str(device.api_level) if device.api_level else "—"),
-            ("abi", device.abi or "—"),
-            ("density", f"{device.density}dpi" if device.density else "—"),
+            ("release", device.android_version or "-"),
+            ("sdk", str(device.api_level) if device.api_level else "-"),
+            ("abi", device.abi or "-"),
+            ("density", f"{device.density}dpi" if device.density else "-"),
         ]:
             layout.addLayout(self._property_row(label, value))
 
         layout.addWidget(self._section_label("TEST DEVICE PROFILE"))
-        note = QLabel(static_data.TEST_DEVICE_PROFILE_NOTE)
+        note = QLabel(
+            "Profiles govern which steps run during APK testing, observation "
+            "timeouts, and screenshot capture. Configure profiles under Settings."
+        )
         note.setWordWrap(True)
         note.setProperty("role", "muted")
         layout.addWidget(note)
@@ -200,7 +252,9 @@ class DevicesPage(QWidget):
         layout.addStretch(1)
 
         if device.state == "offline":
-            reconnect_btn = QPushButton("⟳  Reconnect")
+            reconnect_btn = QPushButton("Reconnect")
+            reconnect_btn.setIcon(get_icon("rotate-cw", size=13, color=TEXT_MUTED))
+            reconnect_btn.setIconSize(QSize(13, 13))
             reconnect_btn.clicked.connect(
                 lambda checked=False, s=device.serial: self._ctx.device_service.reconnect(s)
             )
@@ -208,20 +262,62 @@ class DevicesPage(QWidget):
 
         test_label = "Unmark test device" if device.is_test_profile else "Mark as test device"
         mark_btn = QPushButton(test_label)
+        mark_btn.setIcon(get_icon("bookmark", size=13, color=TEXT_MUTED))
+        mark_btn.setIconSize(QSize(13, 13))
         mark_btn.clicked.connect(
             lambda checked=False, d=device: self._ctx.device_service.mark_test_profile(
                 d.serial, not d.is_test_profile
             )
         )
         layout.addWidget(mark_btn)
-        logcat_btn = QPushButton("≡  Open logcat")
+        logcat_btn = QPushButton("Open logcat")
+        logcat_btn.setIcon(get_icon("scroll-text", size=13, color=TEXT_MUTED))
+        logcat_btn.setIconSize(QSize(13, 13))
         logcat_btn.clicked.connect(
             lambda checked=False, s=device.serial: self.open_logcat_requested.emit(s)
         )
         layout.addWidget(logcat_btn)
-        layout.addWidget(QPushButton("↓  Take screenshot"))
+        screenshot_btn = QPushButton("Take screenshot")
+        screenshot_btn.setIcon(get_icon("camera", size=13, color=TEXT_MUTED))
+        screenshot_btn.setIconSize(QSize(13, 13))
+        screenshot_btn.clicked.connect(
+            lambda checked=False, d=device, btn=screenshot_btn: self._on_take_screenshot(d, btn)
+        )
+        layout.addWidget(screenshot_btn)
 
         return card
+
+    def _on_take_screenshot(self, device: Device, btn: QPushButton | None = None) -> None:
+        if device.state != "device":
+            QMessageBox.warning(
+                self,
+                "Device Not Ready",
+                f"Device '{device.serial}' is currently {device.state}.\n\n"
+                "Please authorize or reconnect the device before taking a screenshot.",
+            )
+            return
+
+        if btn is not None:
+            btn.setEnabled(False)
+            btn.setText("Capturing...")
+        from PySide6.QtGui import QGuiApplication
+        QGuiApplication.processEvents()
+
+        try:
+            shot_path = self._ctx.device_service.take_screenshot(device.serial)
+            label = f"{device.model or 'Android'} ({device.serial})"
+            dialog = ScreenshotViewerDialog(shot_path, device_label=label, parent=self)
+            dialog.exec()
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                "Screenshot Failed",
+                f"Could not take screenshot from device '{device.serial}':\n\n{exc}",
+            )
+        finally:
+            if btn is not None:
+                btn.setEnabled(True)
+                btn.setText("Take screenshot")
 
     def _section_label(self, text: str) -> QLabel:
         label = QLabel(text)

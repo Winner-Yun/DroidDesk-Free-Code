@@ -1,14 +1,11 @@
 ; DroidDesk installer. See Section 10.2.
 ;
 ; - Config goes to {userappdata}\DroidDesk, database to {localappdata}\DroidDesk
-;   — never Program Files, which is not user-writable.
+;   - never Program Files, which is not user-writable.
 ; - Bundles gitleaks.exe (the only external tool shipped; everything else is
 ;   discovered on the host via the ToolLocator chain, Section 3.1).
 ; - Registers a .apk file association so double-clicking opens the analyzer.
-; - Enables long path support (Section 8.1 — deep Flutter/Gradle build trees).
-;
-; SDK detection (offering to download platform-tools if no SDK is found) is a
-; [Code] section TODO for Phase 6 — see Section 10.2.
+; - Enables long path support (Section 8.1 - deep Flutter/Gradle build trees).
 
 #define MyAppName "DroidDesk"
 #define MyAppVersion "0.1.0"
@@ -48,5 +45,41 @@ Root: HKCU; Subkey: "Software\Classes\DroidDesk.ApkFile\shell\open\command"; Val
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
 
-; Long path support — see the application manifest embedded by the Nuitka build
-; (Section 8.1). No [Code] entry needed here beyond documenting the requirement.
+[Code]
+function CheckAndroidSdk(): Boolean;
+var
+  AndroidHome: String;
+  SdkRoot: String;
+  LocalApp: String;
+  Found: Boolean;
+begin
+  Found := False;
+  AndroidHome := GetEnv('ANDROID_HOME');
+  SdkRoot := GetEnv('ANDROID_SDK_ROOT');
+  LocalApp := GetEnv('LOCALAPPDATA');
+
+  if (AndroidHome <> '') and DirExists(AndroidHome) then
+    Found := True
+  else if (SdkRoot <> '') and DirExists(SdkRoot) then
+    Found := True
+  else if (LocalApp <> '') and DirExists(LocalApp + '\Android\Sdk') then
+    Found := True;
+
+  if not Found then
+  begin
+    SuppressibleMsgBox(
+      'Notice: No Android SDK installation was automatically detected.' + #13#10 + #13#10 +
+      'DroidDesk requires Android SDK command-line tools (adb, aapt2, apksigner) ' +
+      'for device control and APK analysis. You can configure SDK locations ' +
+      'in DroidDesk Settings or install Android Studio.',
+      mbInformation, MB_OK, IDOK
+    );
+  end;
+
+  Result := True;
+end;
+
+function InitializeSetup(): Boolean;
+begin
+  Result := CheckAndroidSdk();
+end;

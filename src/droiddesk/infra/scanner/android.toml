@@ -2,21 +2,21 @@
 #
 # The classification is the product: a scanner reporting every match at the same
 # severity trains the developer to ignore the panel. The Maps-key case is the
-# clearest example — correct advice is "restrict this key," not "remove it."
+# clearest example - correct advice is "restrict this key," not "remove it."
 
 [[rules]]
 id = "android-service-account-json"
 literal_prefixes = ["private_key", "\"type\": \"service_account\""]
 match_name = "service-account*.json"
 severity = "critical"
-description = "Google Cloud service account key — grants server-side access, never belongs in a mobile project"
+description = "Google Cloud service account key - grants server-side access, never belongs in a mobile project"
 
 [[rules]]
 id = "android-signing-key"
 literal_prefixes = []
 match_ext = [".jks", ".keystore", ".p12"]
 severity = "critical"
-description = "Signing key tracked in the repository — compromise permits publishing forged updates"
+description = "Signing key tracked in the repository - compromise permits publishing forged updates"
 
 [[rules]]
 id = "android-env-backend-secret"
@@ -29,16 +29,29 @@ description = "Backend credential with no legitimate reason to exist in a client
 id = "android-firebase-legacy-token"
 literal_prefixes = ["AIzaSy"]  # narrowed further by context in engine.py
 severity = "high"
-description = "Firebase database secret (legacy token) — deprecated but still grants full database access where present"
+description = "Firebase database secret (legacy token) - deprecated but still grants full database access where present"
 
 [[rules]]
 id = "android-google-services-json"
 match_name = "google-services.json"
 severity = "info"
-description = "Expected in every Firebase-enabled Android project — flag only if it contains an unexpected field"
+description = "Expected in every Firebase-enabled Android project - flag only if it contains an unexpected field"
 
 [[rules]]
 id = "android-maps-api-key"
 literal_prefixes = ["AIzaSy"]
 severity = "review"
-description = "Google Maps/Places API key — designed to ship in the APK; recommend restricting by package name and SHA-1 fingerprint, not removal"
+description = "Google Maps/Places API key - designed to ship in the APK; recommend restricting by package name and SHA-1 fingerprint, not removal"
+
+[[rules]]
+id = "firebase-api-key"
+literal_prefixes = ["AIzaSy"]
+severity = "review"
+description = "Firebase Web/Client API key - designed to ship in the APK; recommend restricting by package name and SHA-1 fingerprint in Google Cloud Console"
+
+[[rules]]
+id = "google-api-key"
+literal_prefixes = ["AIzaSy"]
+severity = "review"
+description = "Google Cloud API key - recommend restricting by package name and SHA-1 fingerprint in Google Cloud Console"
+

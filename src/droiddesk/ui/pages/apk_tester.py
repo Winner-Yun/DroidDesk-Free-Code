@@ -1,4 +1,4 @@
-"""APK Tester page — Section 6.3. Artifact-under-test panel, the run
+"""APK Tester page - Section 6.3. Artifact-under-test panel, the run
 sequence checklist, and the verdict panel. Wired to ApkService.step_started,
 step_finished, and test_complete.
 """
@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QUrl, Signal
+from PySide6.QtCore import QSize, Qt, QThread, QUrl, Signal
 from PySide6.QtGui import (
     QDesktopServices,
     QPixmap,
@@ -30,6 +30,7 @@ from droiddesk.core.models import ApkInfo, Device, TestRun
 from droiddesk.core.profiles import TestProfile
 from droiddesk.core.severity import Verdict
 from droiddesk.services.apk_service import ApkService
+from droiddesk.ui.theme import TEXT_MUTED, get_icon, get_pixmap
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.device_selector import DeviceSelector
 from droiddesk.ui.widgets.empty_state import EmptyStateWidget
@@ -46,9 +47,10 @@ class StepRowWidget(QWidget):
         row.setContentsMargins(0, 4, 0, 4)
         row.setSpacing(10)
 
-        self.icon_label = QLabel("○")
-        self.icon_label.setFixedWidth(18)
-        self.icon_label.setStyleSheet("color: #5c5f66; font-size: 14px; font-weight: 700;")
+        self.icon_label = QLabel()
+        self.icon_label.setFixedSize(18, 18)
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.icon_label.setPixmap(get_pixmap("circle", size=14, color="#5c5f66"))
         row.addWidget(self.icon_label)
 
         text_col = QVBoxLayout()
@@ -74,13 +76,12 @@ class StepRowWidget(QWidget):
         text_col.addWidget(self.command_label)
         row.addLayout(text_col, 1)
 
-        self.duration_label = QLabel("—")
+        self.duration_label = QLabel("-")
         self.duration_label.setProperty("role", "muted")
         row.addWidget(self.duration_label)
 
     def set_running(self) -> None:
-        self.icon_label.setText("▶")
-        self.icon_label.setStyleSheet("color: #3b82f6; font-size: 14px; font-weight: 700;")
+        self.icon_label.setPixmap(get_pixmap("play", size=14, color="#3b82f6"))
         self.headline_label.setText("Running...")
         self.headline_label.setStyleSheet("color: #3b82f6;")
 
@@ -88,13 +89,11 @@ class StepRowWidget(QWidget):
         self, passed: bool, duration_ms: int | None = None, detail: str | None = None
     ) -> None:
         if passed:
-            self.icon_label.setText("✓")
-            self.icon_label.setStyleSheet("color: #27ae60; font-size: 14px; font-weight: 700;")
+            self.icon_label.setPixmap(get_pixmap("circle-check", size=14, color="#27ae60"))
             self.headline_label.setText(detail or "Success")
             self.headline_label.setStyleSheet("color: #27ae60;")
         else:
-            self.icon_label.setText("✕")
-            self.icon_label.setStyleSheet("color: #e0574a; font-size: 14px; font-weight: 700;")
+            self.icon_label.setPixmap(get_pixmap("circle-x", size=14, color="#e0574a"))
             self.headline_label.setText(detail or "Failed")
             self.headline_label.setStyleSheet("color: #e0574a;")
 
@@ -102,11 +101,10 @@ class StepRowWidget(QWidget):
             self.duration_label.setText(f"{duration_ms} ms")
 
     def reset(self) -> None:
-        self.icon_label.setText("○")
-        self.icon_label.setStyleSheet("color: #5c5f66; font-size: 14px; font-weight: 700;")
+        self.icon_label.setPixmap(get_pixmap("circle", size=14, color="#5c5f66"))
         self.headline_label.setText("Pending")
         self.headline_label.setStyleSheet("color: #5c5f66;")
-        self.duration_label.setText("—")
+        self.duration_label.setText("-")
 
 
 class TestWorker(QThread):
@@ -159,7 +157,7 @@ class ApkTesterPage(QWidget):
 
         header = PageHeader(
             "Test runner",
-            "Install, launch, observe, capture, clean up — the same sequence every time, "
+            "Install, launch, observe, capture, clean up - the same sequence every time, "
             "against the device you choose.",
         )
 
@@ -187,12 +185,16 @@ class ApkTesterPage(QWidget):
         self._device_selector.set_devices(devs or [])
         self._device_selector.device_selected.connect(self._update_button_states)
 
-        self._cancel_button = QPushButton("☐  Cancel")
+        self._cancel_button = QPushButton("Cancel")
+        self._cancel_button.setIcon(get_icon("square", size=13, color=TEXT_MUTED))
+        self._cancel_button.setIconSize(QSize(13, 13))
         self._cancel_button.clicked.connect(self._on_cancel)
         header.add_action(self._cancel_button)
 
         self._run_button = QPushButton("Run test")
         self._run_button.setProperty("role", "primary")
+        self._run_button.setIcon(get_icon("play", size=14, color="#ffffff"))
+        self._run_button.setIconSize(QSize(14, 14))
         self._run_button.clicked.connect(self._on_run_test)
         header.add_action(self._run_button)
 
@@ -252,9 +254,9 @@ class ApkTesterPage(QWidget):
         details_layout.addWidget(self._apk_package_label)
 
         self._tags_layout = QHBoxLayout()
-        self._tag_version = QLabel("—")
-        self._tag_min = QLabel("—")
-        self._tag_target = QLabel("—")
+        self._tag_version = QLabel("-")
+        self._tag_min = QLabel("-")
+        self._tag_target = QLabel("-")
         for tag in (self._tag_version, self._tag_min, self._tag_target):
             tag.setStyleSheet(
                 "border: 1px solid #35373e; color: #8b8e94; border-radius: 3px; "
@@ -264,9 +266,7 @@ class ApkTesterPage(QWidget):
         self._tags_layout.addStretch(1)
         details_layout.addLayout(self._tags_layout)
 
-        self._artifact_note = QLabel(
-            "Select an APK from the app bar to begin."
-        )
+        self._artifact_note = QLabel("Select an APK from the app bar to begin.")
         self._artifact_note.setWordWrap(True)
         self._artifact_note.setProperty("role", "muted")
         details_layout.addWidget(self._artifact_note)
@@ -397,9 +397,9 @@ class ApkTesterPage(QWidget):
             self._apk_info = None
             self._apk_name_label.setText("No APK selected")
             self._apk_package_label.setText("Select an APK from the app bar")
-            self._tag_version.setText("–")
-            self._tag_min.setText("–")
-            self._tag_target.setText("–")
+            self._tag_version.setText("-")
+            self._tag_min.setText("-")
+            self._tag_target.setText("-")
             self._artifact_note.setText("Select an APK from the app bar to begin.")
             self._artifact_note.setStyleSheet("color: #8b8e94;")
             self._artifact_details.hide()
@@ -428,7 +428,6 @@ class ApkTesterPage(QWidget):
             self._artifact_note.setStyleSheet("color: #e0574a;")
             self._artifact_empty_state.hide()
             self._artifact_details.show()
-
 
     def _on_run_test(self) -> None:
         if not self._apk_path or not self._apk_path.is_file():

@@ -9,6 +9,12 @@ everywhere in the app (Section 1.3, "classify, do not alarm").
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QPixmap
+from tkinter_icons import LucideIcon  # type: ignore[import-untyped]
+
 # -- Palette ------------------------------------------------------------
 
 BG_APP = "#1c1d20"
@@ -39,12 +45,13 @@ HEADER_BG_END = "#1c1719"
 HEADER_BORDER = "#4a2226"
 
 # Risk colours for the persistently-visible active-environment indicator
-# (Section 6.8) — the single piece of always-visible state that prevents most of
+# (Section 6.8) - the single piece of always-visible state that prevents most of
 # the mistakes the tool exists to catch.
 ENVIRONMENT_RISK_COLORS = {
     "production": ACCENT_RED,
     "staging": ACCENT_ORANGE,
     "development": ACCENT_GREEN,
+    "dev": ACCENT_GREEN,
 }
 
 # Verdict / status colours shared across Dashboard, Test runner, Release gate.
@@ -64,6 +71,107 @@ SEVERITY_COLORS = {
 
 FONT_FAMILY = "Segoe UI"
 MONO_FAMILY = "Cascadia Mono"
+
+_ICON_CACHE: dict[tuple[str, int, str, str | None], QIcon] = {}
+_PIXMAP_CACHE: dict[tuple[str, int, str], QPixmap] = {}
+
+
+def get_pixmap(name: str, size: int = 16, color: str = TEXT_MUTED) -> QPixmap:
+    """Render a Lucide icon by name as a QPixmap with caching."""
+    cache_key = (name, size, color)
+    if cache_key in _PIXMAP_CACHE:
+        return _PIXMAP_CACHE[cache_key]
+
+    try:
+        data: bytes = LucideIcon.render_data(name, size=size, color=color)
+        pix = QPixmap()
+        if pix.loadFromData(data):
+            _PIXMAP_CACHE[cache_key] = pix
+            return pix
+    except Exception:
+        pass
+    fallback = QPixmap(size, size)
+    fallback.fill(Qt.GlobalColor.transparent)
+    return fallback
+
+
+def get_icon(
+    name: str,
+    size: int = 16,
+    color: str = TEXT_MUTED,
+    active_color: str | None = None,
+) -> QIcon:
+    """Render a Lucide icon by name as a QIcon.
+
+    Supports an optional active_color for checked/selected widget states.
+    """
+    cache_key = (name, size, color, active_color)
+    if cache_key in _ICON_CACHE:
+        return _ICON_CACHE[cache_key]
+
+    icon = QIcon()
+    off_pix = get_pixmap(name, size=size, color=color)
+    icon.addPixmap(off_pix, QIcon.Mode.Normal, QIcon.State.Off)
+
+    if active_color:
+        on_pix = get_pixmap(name, size=size, color=active_color)
+        icon.addPixmap(on_pix, QIcon.Mode.Normal, QIcon.State.On)
+        icon.addPixmap(on_pix, QIcon.Mode.Selected, QIcon.State.Off)
+        icon.addPixmap(on_pix, QIcon.Mode.Selected, QIcon.State.On)
+
+    _ICON_CACHE[cache_key] = icon
+    return icon
+
+
+RESOURCES_ICONS_DIR = Path(__file__).resolve().parent.parent / "resources" / "icons"
+APP_LOGO_PNG = RESOURCES_ICONS_DIR / "logo.png"
+APP_LOGO_ICO = RESOURCES_ICONS_DIR / "droiddesk.ico"
+
+_APP_LOGO_PIXMAP_CACHE: dict[int, QPixmap] = {}
+_APP_LOGO_ICON_CACHE: QIcon | None = None
+
+
+def get_app_logo_pixmap(size: int = 24) -> QPixmap:
+    """Return the application logo rendered as a smoothly scaled QPixmap."""
+    if size in _APP_LOGO_PIXMAP_CACHE:
+        return _APP_LOGO_PIXMAP_CACHE[size]
+
+    if APP_LOGO_PNG.exists():
+        src_pix = QPixmap(str(APP_LOGO_PNG))
+        if not src_pix.isNull():
+            scaled = src_pix.scaled(
+                size,
+                size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            _APP_LOGO_PIXMAP_CACHE[size] = scaled
+            return scaled
+
+    # Fallback to vector icon if image resource is missing
+    return get_pixmap("smartphone", size=size, color=ACCENT_BLUE)
+
+
+def get_app_logo_icon() -> QIcon:
+    """Return the application logo as a multi-resolution QIcon."""
+    global _APP_LOGO_ICON_CACHE
+    if _APP_LOGO_ICON_CACHE is not None:
+        return _APP_LOGO_ICON_CACHE
+
+    if APP_LOGO_ICO.exists():
+        icon = QIcon(str(APP_LOGO_ICO))
+        if not icon.isNull():
+            _APP_LOGO_ICON_CACHE = icon
+            return icon
+
+    if APP_LOGO_PNG.exists():
+        icon = QIcon(str(APP_LOGO_PNG))
+        if not icon.isNull():
+            _APP_LOGO_ICON_CACHE = icon
+            return icon
+
+    # Fallback to vector icon
+    return get_icon("smartphone", size=32, color=ACCENT_BLUE)
 
 STYLESHEET = f"""
 * {{

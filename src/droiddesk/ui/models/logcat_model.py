@@ -1,4 +1,4 @@
-"""LogcatModel — Section 8.4, verbatim. A logcat stream can produce thousands of
+"""LogcatModel - Section 8.4, verbatim. A logcat stream can produce thousands of
 lines per second during app startup; calling beginInsertRows/endInsertRows per line
 would make the interface unresponsive. Batching model signals to a fixed 100ms
 interval decouples interface responsiveness from log volume entirely.
@@ -95,15 +95,11 @@ class LogcatModel(QAbstractTableModel):
     # -- QAbstractTableModel ------------------------------------------------
 
     @override
-    def rowCount(
-        self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX
-    ) -> int:
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX) -> int:
         return 0 if parent.isValid() else len(self._rows)
 
     @override
-    def columnCount(
-        self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX
-    ) -> int:
+    def columnCount(self, parent: QModelIndex | QPersistentModelIndex = _EMPTY_INDEX) -> int:
         return 0 if parent.isValid() else len(_COLUMNS)
 
     @override

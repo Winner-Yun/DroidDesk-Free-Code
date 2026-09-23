@@ -1,4 +1,4 @@
-"""Logcat page — Section 6.4. LogcatModel-backed table view with a filter
+"""Logcat page - Section 6.4. LogcatModel-backed table view with a filter
 toolbar (level/tag/PID/regex) and pause control. Starts empty and streams live
 logs from the selected device via AdbStream.
 """
@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import override
 
-from PySide6.QtCore import QModelIndex, QObject, QPersistentModelIndex, QSortFilterProxyModel
+from PySide6.QtCore import QModelIndex, QObject, QPersistentModelIndex, QSize, QSortFilterProxyModel
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 from droiddesk.context import AppContext
 from droiddesk.infra.process import AdbStream
 from droiddesk.ui.models.logcat_model import LogcatModel
+from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import PageHeader
 
 _PRIORITY_COLORS = {"E": "#e05a4d", "W": "#f1c40f", "I": "#5b9bd5", "D": "#8b8e94", "V": "#5c5f66"}
@@ -111,17 +112,25 @@ class LogcatPage(QWidget):
         self._device_combo.setFixedWidth(200)
 
         self._pause_button = QPushButton("Pause")
+        self._pause_button.setIcon(get_icon("pause", size=13, color=TEXT_MUTED))
+        self._pause_button.setIconSize(QSize(13, 13))
         self._pause_button.setCheckable(True)
         self._pause_button.toggled.connect(self._on_pause_toggled)
 
         self._clear_button = QPushButton("Clear")
+        self._clear_button.setIcon(get_icon("trash-2", size=13, color=TEXT_MUTED))
+        self._clear_button.setIconSize(QSize(13, 13))
         self._clear_button.clicked.connect(self._on_clear_clicked)
 
         self._export_button = QPushButton("Export view")
+        self._export_button.setIcon(get_icon("file-down", size=13, color=TEXT_MUTED))
+        self._export_button.setIconSize(QSize(13, 13))
         self._export_button.clicked.connect(self._on_export_clicked)
 
         self._stream_button = QPushButton("Start stream")
         self._stream_button.setProperty("role", "primary")
+        self._stream_button.setIcon(get_icon("play", size=13, color="#ffffff"))
+        self._stream_button.setIconSize(QSize(13, 13))
         self._stream_button.setCheckable(True)
         self._stream_button.toggled.connect(self._on_stream_toggled)
 
@@ -252,9 +261,14 @@ class LogcatPage(QWidget):
         )
         self._update_count()
 
-    def _on_pause_toggled(self, paused: bool) -> None:
-        self._model.set_paused(paused)
-        self._pause_button.setText("Resume" if paused else "Pause")
+    def _on_pause_toggled(self, checked: bool) -> None:
+        self._model.set_paused(checked)
+        if checked:
+            self._pause_button.setText("Resume")
+            self._pause_button.setIcon(get_icon("play", size=13, color=TEXT_MUTED))
+        else:
+            self._pause_button.setText("Pause")
+            self._pause_button.setIcon(get_icon("pause", size=13, color=TEXT_MUTED))
 
     def _on_stream_toggled(self, checked: bool) -> None:
         if checked:
@@ -271,6 +285,7 @@ class LogcatPage(QWidget):
                 return
 
             self._stream_button.setText("Stop stream")
+            self._stream_button.setIcon(get_icon("square", size=13, color="#ffffff"))
 
             self._stream = self._ctx.device_service._adb.logcat_stream(serial)
             self._stream.line_received.connect(self._model.queue)
@@ -278,9 +293,11 @@ class LogcatPage(QWidget):
             self._stream.start()
         else:
             self._stream_button.setText("Start stream")
+            self._stream_button.setIcon(get_icon("play", size=13, color="#ffffff"))
             if self._pause_button.isChecked():
                 self._pause_button.setChecked(False)
             self._pause_button.setText("Pause")
+            self._pause_button.setIcon(get_icon("pause", size=13, color=TEXT_MUTED))
             if self._stream:
                 self._stream.stop()
                 self._stream = None
@@ -290,9 +307,11 @@ class LogcatPage(QWidget):
     def _on_stream_finished(self) -> None:
         self._stream_button.setChecked(False)
         self._stream_button.setText("Start stream")
+        self._stream_button.setIcon(get_icon("play", size=13, color="#ffffff"))
         if self._pause_button.isChecked():
             self._pause_button.setChecked(False)
         self._pause_button.setText("Pause")
+        self._pause_button.setIcon(get_icon("pause", size=13, color=TEXT_MUTED))
         self._stream = None
         self._update_button_states()
 
@@ -314,14 +333,16 @@ class LogcatPage(QWidget):
                     if not source_idx.isValid():
                         continue
                     line = self._model._rows[source_idx.row()]
-                    writer.writerow([
-                        line.timestamp,
-                        line.pid,
-                        line.tid,
-                        line.priority,
-                        line.tag,
-                        line.message,
-                    ])
+                    writer.writerow(
+                        [
+                            line.timestamp,
+                            line.pid,
+                            line.tid,
+                            line.priority,
+                            line.tag,
+                            line.message,
+                        ]
+                    )
         else:
             with destination.open("w", encoding="utf-8") as f:
                 for i in range(count):

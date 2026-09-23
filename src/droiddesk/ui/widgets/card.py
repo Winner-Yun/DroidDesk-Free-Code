@@ -1,4 +1,3 @@
-
 """Generic bordered panel used to group content on every page (the "Needs
 attention" / "Recent runs" boxes on the Dashboard, the detail panel on
 Devices, etc.), plus the small stat tile used at the top of the Dashboard.
@@ -52,7 +51,7 @@ class StatCard(QFrame):
 
 
 class PageHeader(QWidget):
-    """Title + subtitle on the left, action buttons on the right — the row
+    """Title + subtitle on the left, action buttons on the right - the row
     that opens every page in the mockups.
     """
 

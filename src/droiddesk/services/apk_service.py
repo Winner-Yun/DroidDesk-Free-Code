@@ -1,4 +1,4 @@
-"""ApkService — Section 6.2 and Section 4.3 (the APK Test Run data flow). Orchestrates
+"""ApkService - Section 6.2 and Section 4.3 (the APK Test Run data flow). Orchestrates
 ApkReader, AdbClient, and the test state machine (TestService). Owns no widgets;
 progress and completion surface via Qt signals.
 """
@@ -175,13 +175,13 @@ class ApkService(QObject):
 
     def compare(self, apk_a: Path, apk_b: Path) -> dict[str, object]:
         from droiddesk.infra.process import ProcessRunner
+
         runner = ProcessRunner()
         result = runner.run(
             self._apkanalyzer_path,
             ["apk", "compare", str(apk_a), str(apk_b)],
         )
         return {"output": result.stdout, "exit_code": result.exit_code}
-
 
     def run_test(
         self,

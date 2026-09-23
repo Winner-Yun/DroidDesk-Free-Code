@@ -1,10 +1,9 @@
-"""Application shell — Section 5. A brand block and active-environment bar
+"""Application shell - Section 5. A brand block and active-environment bar
 across the top, a grouped sidebar over a `QStackedWidget` below it, and a
 persistent status bar for the idle/tool-availability strip. This module
 contains no business logic and reacts only to service signals, per the
 Presentation layer constraint in Section 4.1.
 """
-
 
 from __future__ import annotations
 
@@ -23,7 +22,6 @@ from PySide6.QtWidgets import (
 )
 
 from droiddesk.context import AppContext
-from droiddesk.ui import static_data
 from droiddesk.ui.pages.analyzer import AnalyzerPage
 from droiddesk.ui.pages.apk_tester import ApkTesterPage
 from droiddesk.ui.pages.commands import CommandsPage
@@ -33,9 +31,10 @@ from droiddesk.ui.pages.gate import GatePage
 from droiddesk.ui.pages.logcat import LogcatPage
 from droiddesk.ui.pages.organizer import OrganizerPage
 from droiddesk.ui.pages.reports import ReportsPage
+from droiddesk.ui.pages.screenshots import ScreenshotsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
-from droiddesk.ui.theme import STYLESHEET
+from droiddesk.ui.theme import STYLESHEET, get_app_logo_icon
 from droiddesk.ui.widgets.device_bar import DeviceBar
 from droiddesk.ui.widgets.environment_bar import EnvironmentBar
 from droiddesk.ui.widgets.loading_spinner import LoadingPage
@@ -45,6 +44,7 @@ _PAGES: tuple[tuple[str, Callable[[AppContext], QWidget]], ...] = (
     ("dashboard", DashboardPage),
     ("devices", DevicesPage),
     ("logcat", LogcatPage),
+    ("screenshots", ScreenshotsPage),
     ("analyzer", AnalyzerPage),
     ("tester", ApkTesterPage),
     ("security", SecurityPage),
@@ -66,6 +66,7 @@ class MainWindow(QMainWindow):
         self._device_service = ctx.device_service
 
         self.setWindowTitle("DroidDesk")
+        self.setWindowIcon(get_app_logo_icon())
         self.resize(1440, 900)
         self.setStyleSheet(STYLESHEET)
 
@@ -80,7 +81,6 @@ class MainWindow(QMainWindow):
         top_row.setSpacing(0)
         top_row.addWidget(BrandBlock())
 
-
         # Environment bar with APK selector, upload action, and removal
         self._environment_bar = EnvironmentBar(
             apk_service=self._ctx.apk_service,
@@ -88,11 +88,17 @@ class MainWindow(QMainWindow):
         )
         self._environment_bar.apk_selected.connect(self._on_active_apk_changed)
         self._environment_bar.apks_uploaded.connect(self._on_apks_uploaded)
+        self._environment_bar.switch_requested.connect(self._on_switch_environment)
+        if self._ctx.env_service:
+            self._ctx.env_service.active_environment_changed.connect(
+                self._environment_bar.set_environment
+            )
+            self._environment_bar.set_environment(self._ctx.env_service.active_environment())
         top_row.addWidget(self._environment_bar, 1)
 
         # Device selector
         self._device_bar = DeviceBar(self._device_service)
-        
+
         top_row.addSpacing(20)
         top_row.addWidget(self._device_bar)
         top_row.addSpacing(20)
@@ -131,6 +137,8 @@ class MainWindow(QMainWindow):
     def _build_pages(self) -> None:
         for key, page_cls in _PAGES:
             self._page_index[key] = self._stack.addWidget(page_cls(self._ctx))
+        if "dashboard" in self._page_index:
+            self._page_index["home"] = self._page_index["dashboard"]
 
         for i in range(self._stack.count()):
             page = self._stack.widget(i)
@@ -139,6 +147,10 @@ class MainWindow(QMainWindow):
                     page.upload_requested.connect(self._environment_bar._on_upload_clicked)
                 if hasattr(page, "navigate_requested"):
                     page.navigate_requested.connect(self._on_navigate_requested)
+                if hasattr(page, "findings_changed"):
+                    page.findings_changed.connect(
+                        lambda c: self._sidebar.set_badge("security", c if c > 0 else None)
+                    )
 
         devices_idx = self._page_index.get("devices")
         if devices_idx is not None:
@@ -153,24 +165,23 @@ class MainWindow(QMainWindow):
 
     def _build_status_bar(self) -> None:
         bar = self.statusBar()
-        bar.addWidget(QLabel(static_data.STATUS_MESSAGE))
+        self._status_label = QLabel("Idle")
+        bar.addWidget(self._status_label)
         bar.addPermanentWidget(QLabel("tools"))
-        for name, available in static_data.TOOL_STATUS:
+        tool_status = self._tool_locator.discover_all()
+        for name, available in tool_status.items():
             chip = QLabel(name)
             chip.setProperty("role", "toolChip" if available else "toolChipWarn")
             bar.addPermanentWidget(chip)
-        # TODO(Phase 1+): replace the static tool strip with
-        # ToolLocator.discover() results, and the idle label with real
-        # service activity (scan running, test running, ...).
 
     def _on_page_selected(self, key: str) -> None:
         # Show the loading screen to create a visual transition
         self.show_loading(f"Loading {key}...")
-        
+
         def finish_switch() -> None:
             self._stack.setCurrentIndex(self._page_index[key])
             self.hide_loading()
-            
+
         # Delay the actual switch by a fraction of a second so the animation paints
         QTimer.singleShot(150, finish_switch)
 
@@ -184,8 +195,12 @@ class MainWindow(QMainWindow):
                 logcat_widget.select_device(serial)
 
     def _on_switch_environment(self) -> None:
-        # TODO(Phase 5): open the environment-switch dialog via EnvService.
-        pass
+        if not self._ctx.env_service:
+            return
+        from droiddesk.ui.dialogs.environment_dialog import EnvironmentSwitchDialog
+
+        dialog = EnvironmentSwitchDialog(self._ctx.env_service, parent=self)
+        dialog.exec()
 
     def show_loading(self, message: str = "Loading...") -> None:
         """Display the loading popup."""
@@ -199,9 +214,9 @@ class MainWindow(QMainWindow):
 
     def _on_active_apk_changed(self, apk_path: Path | None) -> None:
         if apk_path is None:
-            self.statusBar().showMessage("No active APK", 3000)
+            self._status_label.setText("Idle")
         else:
-            self.statusBar().showMessage(f"Active APK: {apk_path.name}", 5000)
+            self._status_label.setText(f"Active APK: {apk_path.name}")
 
         # Notify all pages supporting set_apk or load_apk
         for i in range(self._stack.count()):
@@ -215,7 +230,7 @@ class MainWindow(QMainWindow):
                     page._on_apk_selected(apk_path)
 
     def _on_apks_uploaded(self, paths: list[Path]) -> None:
-        self.statusBar().showMessage(f"Uploaded {len(paths)} APK file(s)", 5000)
+        self._status_label.setText(f"Uploaded {len(paths)} APK file(s)")
         device = self._device_bar.selected_device()
         if paths:
             from droiddesk.ui.widgets.device_bar import ApkUploadDialog

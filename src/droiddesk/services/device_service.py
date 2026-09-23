@@ -1,4 +1,4 @@
-"""DeviceService — Section 6.1. Polls `adb devices -l` every 2s while the Devices
+"""DeviceService - Section 6.1. Polls `adb devices -l` every 2s while the Devices
 page is visible, 5s otherwise; enriches entries via getprop. Owns unauthorized /
 offline state and Test Device Profile marking. Emits devices_changed; owns no widgets.
 """
@@ -59,6 +59,39 @@ class DeviceService(QObject):
 
     def pair_wireless(self, host_port: str, pairing_code: str) -> bool:
         return self._adb.pair(host_port, pairing_code)
+
+    def connect_wireless(self, host_port: str) -> tuple[bool, str]:
+        target = host_port.strip()
+        if not target:
+            return False, "Host / IP address cannot be empty."
+        if ":" not in target:
+            target = f"{target}:5555"
+        success, message = self._adb.connect(target)
+        if success:
+            self.refresh()
+        return success, message
+
+    def take_screenshot(self, serial: str, dest_dir: Path | None = None) -> Path:
+        from datetime import datetime
+
+        target_dir = dest_dir or (Path.home() / "Pictures" / "DroidDesk")
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_serial = "".join(c if c.isalnum() else "_" for c in serial)
+        file_path = target_dir / f"screenshot_{safe_serial}_{timestamp}.png"
+
+        png_bytes = self._adb.screenshot(serial)
+        is_valid = bool(
+            png_bytes
+            and len(png_bytes) >= 8
+            and (png_bytes.startswith(b"\x89PNG") or b"PNG" in png_bytes[:16])
+        )
+        if not is_valid:
+            raise DroidDeskError(f"Device '{serial}' returned invalid or empty screenshot data.")
+
+        file_path.write_bytes(png_bytes)
+        return file_path
 
     def install_apk(
         self, serial: str, apk_path: Path, replace: bool = True, test_ok: bool = True

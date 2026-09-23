@@ -15,4 +15,5 @@ weasyprint>=62.0
 loguru>=0.7
 sqlalchemy>=2.0
 pyahocorasick>=2.1
+tkinter-icons[lucide]>=5.1
 pytest>=8.2

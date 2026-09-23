@@ -1,4 +1,4 @@
-"""Application shell — Section 5. A brand block and active-environment bar
+"""Application shell - Section 5. A brand block and active-environment bar
 across the top, a grouped sidebar over a `QStackedWidget` below it, and a
 persistent status bar for the idle/tool-availability strip. This module
 contains no business logic and reacts only to service signals, per the
@@ -31,6 +31,7 @@ from droiddesk.ui.pages.gate import GatePage
 from droiddesk.ui.pages.logcat import LogcatPage
 from droiddesk.ui.pages.organizer import OrganizerPage
 from droiddesk.ui.pages.reports import ReportsPage
+from droiddesk.ui.pages.screenshots import ScreenshotsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
 from droiddesk.ui.theme import STYLESHEET, get_app_logo_icon
@@ -43,6 +44,7 @@ _PAGES: tuple[tuple[str, Callable[[AppContext], QWidget]], ...] = (
     ("dashboard", DashboardPage),
     ("devices", DevicesPage),
     ("logcat", LogcatPage),
+    ("screenshots", ScreenshotsPage),
     ("analyzer", AnalyzerPage),
     ("tester", ApkTesterPage),
     ("security", SecurityPage),

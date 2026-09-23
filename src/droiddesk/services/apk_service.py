@@ -1,4 +1,4 @@
-"""ApkService — Section 6.2 and Section 4.3 (the APK Test Run data flow). Orchestrates
+"""ApkService - Section 6.2 and Section 4.3 (the APK Test Run data flow). Orchestrates
 ApkReader, AdbClient, and the test state machine (TestService). Owns no widgets;
 progress and completion surface via Qt signals.
 """

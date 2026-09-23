@@ -1,0 +1,48 @@
+# Default organizer rules for DroidDesk Smart File Organizer.
+# First matching rule wins, ordered by priority (lower number = higher priority).
+
+[[rules]]
+name = "APKs & Bundles"
+destination = "APKs"
+priority = 10
+match_ext = ["apk", "aab", "xapk", "apks"]
+magic_bytes = ["504B0304"]
+
+[[rules]]
+name = "Images"
+destination = "Images"
+priority = 20
+match_ext = ["png", "jpg", "jpeg", "gif", "webp", "svg", "ico"]
+magic_bytes = ["89504E47", "FFD8FF", "47494638"]
+
+[[rules]]
+name = "Documents"
+destination = "Documents"
+priority = 30
+match_ext = ["pdf", "doc", "docx", "txt", "md", "rtf", "csv", "xlsx", "xls", "json", "xml", "toml", "yaml", "yml"]
+
+[[rules]]
+name = "Videos"
+destination = "Videos"
+priority = 40
+match_ext = ["mp4", "mkv", "avi", "mov", "webm", "flv"]
+
+[[rules]]
+name = "Audio"
+destination = "Audio"
+priority = 50
+match_ext = ["mp3", "wav", "flac", "m4a", "ogg", "aac"]
+
+[[rules]]
+name = "Archives"
+destination = "Archives"
+priority = 60
+match_ext = ["zip", "tar", "gz", "tgz", "bz2", "7z", "rar"]
+magic_bytes = ["504B0304", "1F8B", "377ABCAF271C", "52617221"]
+
+[[rules]]
+name = "Installers"
+destination = "Installers"
+priority = 70
+match_ext = ["exe", "msi"]
+magic_bytes = ["4D5A"]

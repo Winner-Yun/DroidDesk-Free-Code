@@ -1,4 +1,4 @@
-"""EnvService — Section 6.8. Reads .droiddesk/environments.toml, switches the
+"""EnvService - Section 6.8. Reads .droiddesk/environments.toml, switches the
 active environment (copying env/Firebase files into place after backing up what
 was there), and publishes the active environment so it can be shown persistently
 in the status bar, coloured by risk. That always-visible state is what prevents

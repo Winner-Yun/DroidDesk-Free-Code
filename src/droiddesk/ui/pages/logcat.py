@@ -1,4 +1,4 @@
-"""Logcat page — Section 6.4. LogcatModel-backed table view with a filter
+"""Logcat page - Section 6.4. LogcatModel-backed table view with a filter
 toolbar (level/tag/PID/regex) and pause control. Starts empty and streams live
 logs from the selected device via AdbStream.
 """

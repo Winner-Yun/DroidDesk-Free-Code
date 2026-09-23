@@ -1,11 +1,11 @@
-"""GateService (Release Gate) — Section 6.10. Composes every other check into a
+"""GateService (Release Gate) - Section 6.10. Composes every other check into a
 single scored, categorical verdict. Runs checks in dependency order, short-
 circuiting on the first hard (blocking) failure. The score tracks improvement over
 time; the verdict is what actually governs the build.
 
 Override policy: a blocking check can only be bypassed through a dialog that
 requires typing a reason, permanently recorded in build_record. Visible-but-possible
-beats impossible — making it impossible just drives people around the tool.
+beats impossible - making it impossible just drives people around the tool.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from droiddesk.services.apk_service import ApkService
 from droiddesk.services.env_service import EnvService
 from droiddesk.services.scan_service import ScanService
 
-# (category, weight, blocking) — see Section 6.10
+# (category, weight, blocking) - see Section 6.10
 _CHECKS: tuple[tuple[str, int, bool], ...] = (
     ("project_identifier", 10, True),
     ("environment", 20, True),
@@ -148,14 +148,14 @@ class GateService(QObject):
                 if expected_pkg:
                     if apk_info.package_name == expected_pkg:
                         return True, (
-                            f"Package name matches expected release identifier — "
+                            f"Package name matches expected release identifier - "
                             f"{apk_info.package_name}"
                         )
                     return False, (
                         f"Package name mismatch: expected {expected_pkg}, "
                         f"got {apk_info.package_name}"
                     )
-                return True, f"Valid release identifier — {apk_info.package_name}"
+                return True, f"Valid release identifier - {apk_info.package_name}"
             return False, "No valid APK package identifier found"
 
         elif category == "environment":
@@ -180,7 +180,7 @@ class GateService(QObject):
                 1 for f in scan_res.findings if f.severity == Severity.CRITICAL and not f.suppressed
             )
             if crit > 0:
-                return False, f"No critical findings in project tree — {crit} critical finding(s)"
+                return False, f"No critical findings in project tree - {crit} critical finding(s)"
             return True, (
                 f"No critical findings in the project tree ({scan_res.files_scanned} files scanned)"
             )
@@ -201,8 +201,8 @@ class GateService(QObject):
                     if not f.suppressed and f.severity in (Severity.CRITICAL, Severity.HIGH)
                 ]
                 if sens:
-                    return False, f"Credential files present inside APK — {len(sens)} finding(s)"
-                return True, "No credential files present inside the APK — assets/, res/raw/ clean"
+                    return False, f"Credential files present inside APK - {len(sens)} finding(s)"
+                return True, "No credential files present inside the APK - assets/, res/raw/ clean"
             return False, "APK file not available for privacy inspection"
 
         elif category == "permissions":
@@ -212,7 +212,7 @@ class GateService(QObject):
                 ]
                 if high_risk:
                     short_names = [p.split(".")[-1] for p in high_risk[:2]]
-                    return False, f"Unreviewed high-risk permissions — {', '.join(short_names)}"
+                    return False, f"Unreviewed high-risk permissions - {', '.join(short_names)}"
                 return True, "No unreviewed high-risk permissions"
             return True, "No high-risk permissions detected"
 
@@ -222,9 +222,9 @@ class GateService(QObject):
                 sz = apk_path.stat().st_size
                 mb = sz / (1024 * 1024)
                 if sz <= max_bytes:
-                    return True, f"Under the configured threshold — {mb:.1f} MB of 60 MB"
-                return False, f"Exceeds configured threshold — {mb:.1f} MB of 60 MB"
-            return True, "Under the configured threshold — 0 MB of 60 MB"
+                    return True, f"Under the configured threshold - {mb:.1f} MB of 60 MB"
+                return False, f"Exceeds configured threshold - {mb:.1f} MB of 60 MB"
+            return True, "Under the configured threshold - 0 MB of 60 MB"
 
         return False, f"Unknown check category: {category}"
 

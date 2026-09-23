@@ -47,6 +47,7 @@ class ToolLocator:
 
         path = (
             self._from_settings(tool_name)
+            or self._from_bundled(tool_name)
             or self._from_sdk_env(tool_name)
             or self._from_default_sdk_location(tool_name)
             or self._from_system_path(tool_name)
@@ -63,9 +64,34 @@ class ToolLocator:
             return False
         return True
 
+    def is_bundled(self, tool_name: str) -> bool:
+        """Return True if the resolved tool resides in the bundled resources."""
+        try:
+            resolved = self.resolve(tool_name)
+            bundled = self._from_bundled(tool_name)
+            return bundled is not None and resolved.resolve() == bundled.resolve()
+        except ToolNotFoundError:
+            return False
+
     def discover_all(self) -> dict[str, bool]:
         """Check availability of all known tools without raising ToolNotFoundError."""
         return {tool_name: self.is_available(tool_name) for tool_name in _KNOWN_TOOLS}
+
+    def _from_bundled(self, tool_name: str) -> Path | None:
+        import sys
+
+        exe = f"{tool_name}.exe" if os.name == "nt" else tool_name
+        pkg_root = Path(__file__).resolve().parent.parent
+        candidates = [
+            pkg_root / "resources" / "bin" / exe,
+            Path(sys.executable).parent / "resources" / "bin" / exe,
+            Path(sys.executable).parent / "droiddesk" / "resources" / "bin" / exe,
+            Path(sys.executable).parent / exe,
+        ]
+        for cand in candidates:
+            if cand.is_file():
+                return cand
+        return None
 
     def _from_settings(self, tool_name: str) -> Path | None:
         attr = f"{tool_name}_path"

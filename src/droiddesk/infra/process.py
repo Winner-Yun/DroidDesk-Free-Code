@@ -3,8 +3,8 @@ signal-driven streaming via QProcess). See Section 4.2 and Section 8.1.
 
 Windows rules that apply to every subprocess launched here:
   - CREATE_NO_WINDOW, or QProcess's equivalent, or a console window flashes.
-  - Never shell=True — paths and project names contain spaces / user text.
-  - Decode with errors="replace" — logcat output is not guaranteed valid UTF-8.
+  - Never shell=True - paths and project names contain spaces / user text.
+  - Decode with errors="replace" - logcat output is not guaranteed valid UTF-8.
   - Every one-shot call has a timeout; an adb command against a dead device hangs
     indefinitely otherwise.
 """
@@ -92,7 +92,7 @@ class ProcessRunner:
 
 class AdbStream(QObject):
     """Long-lived streaming process (`adb logcat`, ...). QProcess integrates with
-    the Qt event loop natively — no thread is created for I/O-bound subprocess work.
+    the Qt event loop natively - no thread is created for I/O-bound subprocess work.
     Verbatim from Section 4.2.
     """
 

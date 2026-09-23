@@ -182,7 +182,7 @@ ANALYZER_SIZE_BREAKDOWN = [
 
 ANALYZER_HOSTS = [
     ("api.example.com", "release endpoint"),
-    ("staging-api.example.com", "found in a debug-only string — informational"),
+    ("staging-api.example.com", "found in a debug-only string - informational"),
     ("maps.googleapis.com", "Maps SDK"),
     ("firebaseinstallations.googleapis.com", "Firebase"),
 ]
@@ -311,7 +311,7 @@ SECURITY_FINDINGS: list[FindingDisplay] = [
             18,
         ),
         "Google Maps API key in string resources",
-        "Restrict this key — do not remove it. A Maps key is designed to ship "
+        "Restrict this key - do not remove it. A Maps key is designed to ship "
         "inside the APK. In the Cloud console, restrict it to this package name "
         "and your release SHA-1 fingerprint, and cap it to the Maps SDK.",
     ),
@@ -365,12 +365,12 @@ SECURITY_SUMMARY = [
     ),
 ]
 
-SECURITY_SELECTED = SECURITY_FINDINGS[4]  # Google Maps API key — matches the mockup detail panel
+SECURITY_SELECTED = SECURITY_FINDINGS[4]  # Google Maps API key - matches the mockup detail panel
 
 # -- File organizer ---------------------------------------------------------
 
 ORGANIZER_PATH = r"C:\Users\dev\Downloads"
-ORGANIZER_HASH_PROGRESS_LABEL = "Hashing tier 3 — 412 of 640 candidates"
+ORGANIZER_HASH_PROGRESS_LABEL = "Hashing tier 3 - 412 of 640 candidates"
 ORGANIZER_HASH_PROGRESS = (412, 640)
 
 
@@ -420,7 +420,7 @@ BUILD_COMMAND_NAME = "assembleRelease"
 BUILD_GUARDS: list[GuardRow] = [
     GuardRow("environment_matches", "pass", "production · required production", "blocking"),
     GuardRow("release_allowed", "pass", "environment permits releases", "blocking"),
-    GuardRow("git_clean", "warn", "3 modified files — overridable", None),
+    GuardRow("git_clean", "warn", "3 modified files - overridable", None),
     GuardRow("secret_scan_clean", "fail", "1 critical finding", "blocking"),
     GuardRow("no_debug_flags", "pass", "debuggable absent from manifest", "blocking"),
     GuardRow("version_bumped", "pass", "241 > 238", None),
@@ -475,14 +475,14 @@ GATE_CHECKS: list[GateCheckRow] = [
     GateCheckRow(
         "Environment",
         "pass",
-        "Production active and permitted to build releases — production · api.example.com",
+        "Production active and permitted to build releases - production · api.example.com",
         True,
         20,
     ),
     GateCheckRow(
         "Git",
         "warn",
-        "Working tree clean, on a release branch — 3 modified files on release/2.4",
+        "Working tree clean, on a release branch - 3 modified files on release/2.4",
         False,
         10,
     ),
@@ -490,7 +490,7 @@ GATE_CHECKS: list[GateCheckRow] = [
         "Secrets",
         "fail",
         (
-            "No critical findings in the project tree — "
+            "No critical findings in the project tree - "
             "1 critical · config/service-account.json"
         ),
         True,

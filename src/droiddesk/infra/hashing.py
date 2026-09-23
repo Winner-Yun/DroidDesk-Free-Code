@@ -21,7 +21,7 @@ _PARTIAL_READ_BYTES = 8 * 1024
 
 def hash_file(path: Path) -> str:
     """Full-content xxhash. Fast enough to be imperceptible even on a 100 MB APK
-    (Section 8.5) — used as the APK analysis cache key.
+    (Section 8.5) - used as the APK analysis cache key.
     """
     hasher = xxhash.xxh3_64()
     with path.open("rb") as f:
@@ -31,7 +31,7 @@ def hash_file(path: Path) -> str:
 
 
 def hash_partial(path: Path) -> str:
-    """First and last 8 KB only — tier 2 of duplicate detection."""
+    """First and last 8 KB only - tier 2 of duplicate detection."""
     hasher = xxhash.xxh3_64()
     size = path.stat().st_size
     with path.open("rb") as f:

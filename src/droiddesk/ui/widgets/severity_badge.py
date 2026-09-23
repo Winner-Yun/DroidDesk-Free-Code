@@ -1,4 +1,4 @@
-"""Colour-coded severity badge — the visual half of "classify, do not alarm"
+"""Colour-coded severity badge - the visual half of "classify, do not alarm"
 (Section 1.3). Critical/high/review/info must read as distinct at a glance.
 """
 

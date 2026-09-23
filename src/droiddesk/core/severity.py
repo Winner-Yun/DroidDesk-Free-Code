@@ -1,4 +1,4 @@
-"""Finding classification. See Section 6.5 — classification is the product: a
+"""Finding classification. See Section 6.5 - classification is the product: a
 scanner that reports every match at the same severity trains the user to ignore it.
 """
 

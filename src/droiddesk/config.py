@@ -1,7 +1,7 @@
 """Settings model, per-user paths, and persisted configuration.
 
 Config lives under %APPDATA%\\DroidDesk; the SQLite database and cache live under
-%LOCALAPPDATA%\\DroidDesk — never under Program Files, which is not user-writable.
+%LOCALAPPDATA%\\DroidDesk - never under Program Files, which is not user-writable.
 See Section 10.2 of the spec.
 """
 

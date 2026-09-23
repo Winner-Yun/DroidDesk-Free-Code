@@ -1,7 +1,7 @@
 """AdbClient: typed wrapper over adb. Commands drawn from Appendix A.
 
 Every method delegates to ProcessRunner (one-shot) or returns an AdbStream
-(long-lived). No parsing logic belongs above this layer — callers get typed
+(long-lived). No parsing logic belongs above this layer - callers get typed
 results, not raw adb text.
 """
 

@@ -11,6 +11,8 @@ from droiddesk.services.build_service import BuildService
 from droiddesk.services.device_service import DeviceService
 from droiddesk.services.env_service import EnvService
 from droiddesk.services.gate_service import GateService
+from droiddesk.services.organizer_service import OrganizerService
+from droiddesk.services.report_service import ReportService
 from droiddesk.services.scan_service import ScanService
 
 
@@ -26,3 +28,5 @@ class AppContext:
     env_service: EnvService | None = None
     build_service: BuildService | None = None
     gate_service: GateService | None = None
+    organizer_service: OrganizerService | None = None
+    report_service: ReportService | None = None

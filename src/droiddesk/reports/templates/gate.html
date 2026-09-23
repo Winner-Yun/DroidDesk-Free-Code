@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>DroidDesk Release Gate — {{ result.verdict }}</title>
+  <title>DroidDesk Release Gate - {{ result.verdict }}</title>
 </head>
 <body>
   <header>
     <h1>Release Gate</h1>
-    <p class="verdict verdict-{{ result.verdict|lower }}">{{ result.verdict }} — {{ result.score }}/100</p>
+    <p class="verdict verdict-{{ result.verdict|lower }}">{{ result.verdict }} - {{ result.score }}/100</p>
     {% if result.override_note %}
     <p class="override">Overridden: {{ result.override_note }}</p>
     {% endif %}

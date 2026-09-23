@@ -1,4 +1,4 @@
-"""Application shell navigation — Section 5. A grouped, badge-aware sidebar
+"""Application shell navigation - Section 5. A grouped, badge-aware sidebar
 (Overview / Connect / Inspect / Protect / Ship, with Settings pinned to the
 bottom) replaces the flat `QListWidget` the scaffold started with, matching
 the approved mockups.
@@ -87,10 +87,6 @@ class BrandBlock(QWidget):
         title_row.addWidget(title)
         title_row.addStretch(1)
         layout.addLayout(title_row)
-
-        subtitle = QLabel("local · no account · no upload")
-        subtitle.setObjectName("brandSubtitle")
-        layout.addWidget(subtitle)
         layout.addStretch(1)
 
 

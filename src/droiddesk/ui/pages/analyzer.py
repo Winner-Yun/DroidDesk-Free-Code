@@ -1,6 +1,6 @@
-"""APK Analyzer page — Section 6.2. Identity header + Signature, Permissions,
+"""APK Analyzer page - Section 6.2. Identity header + Signature, Permissions,
 Components, Size, Hosts panels. Populated from `static_data.ANALYZER_APK`;
-Phase 2 swaps in `ApkService.inspect()` without changing this layout — panels
+Phase 2 swaps in `ApkService.inspect()` without changing this layout - panels
 still load lazily once full androguard analysis lands.
 """
 

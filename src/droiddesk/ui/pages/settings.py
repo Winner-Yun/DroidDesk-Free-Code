@@ -1,5 +1,5 @@
 """Settings page. Pinned at the bottom of the sidebar on every mockup screen,
-but no mockup was supplied for its own contents — this is a minimal static
+but no mockup was supplied for its own contents - this is a minimal static
 placeholder (tool discovery status) rather than an invented full design.
 """
 

@@ -145,7 +145,7 @@ class DashboardPage(QWidget):
         self._badge_version = QLabel("v1.0")
         self._badge_min = QLabel("min 24")
         self._badge_target = QLabel("target 34")
-        self._badge_size = QLabel("—")
+        self._badge_size = QLabel("-")
 
         for badge in (self._badge_version, self._badge_min, self._badge_target, self._badge_size):
             badge.setStyleSheet(
@@ -461,10 +461,10 @@ class DashboardPage(QWidget):
             serial = str(item.get("serial", ""))
             model = str(item.get("model", "") or serial)
             state = str(item.get("state", "device"))
-            version = str(item.get("android_version", "—"))
+            version = str(item.get("android_version", "-"))
             api = item.get("api_level", 0)
-            abi = str(item.get("abi", "—"))
-            last_conn = str(item.get("last_connected", "—"))
+            abi = str(item.get("abi", "-"))
+            last_conn = str(item.get("last_connected", "-"))
 
             is_online = serial in active_serials
 
@@ -481,14 +481,14 @@ class DashboardPage(QWidget):
             dev_item.setToolTip(f"Serial: {serial}\nState: {state}\nABI: {abi}")
             self._history_table.setItem(row_idx, 1, dev_item)
 
-            if version and version != "—" and api:
+            if version and version != "-" and api:
                 platform_str = f"Android {version} (API {api})"
             elif api:
                 platform_str = f"API {api}"
-            elif version and version != "—":
+            elif version and version != "-":
                 platform_str = f"Android {version}"
             else:
-                platform_str = "—"
+                platform_str = "-"
             plat_item = QTableWidgetItem(platform_str)
             plat_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._history_table.setItem(row_idx, 2, plat_item)
@@ -553,9 +553,9 @@ class DashboardPage(QWidget):
                 if path.is_file():
                     self._badge_size.setText(_format_size(path.stat().st_size))
                 else:
-                    self._badge_size.setText("—")
+                    self._badge_size.setText("-")
             except OSError:
-                self._badge_size.setText("—")
+                self._badge_size.setText("-")
 
             self._apk_card.show()
 

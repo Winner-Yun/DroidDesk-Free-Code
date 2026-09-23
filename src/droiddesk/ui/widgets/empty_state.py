@@ -60,7 +60,7 @@ class EmptyStateWidget(QFrame):
 
             self._message_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._message_label.setWordWrap(True)
-            self._message_label.setStyleSheet("font-size: 12px; color: #8b8e94; line-height: 1.4;")
+            self._message_label.setStyleSheet("font-size: 12px; color: #8b8e94;")
             layout.addWidget(self._message_label)
 
             self._upload_btn.setStyleSheet(
@@ -133,7 +133,7 @@ class EmptyStateWidget(QFrame):
             h_layout.addWidget(self._upload_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
         else:
-            # Standalone full page empty state (Analyzer, Gate, Reports)
+            # Standalone full page empty state (Analyzer, Gate, Reports, Screenshots)
             self.setStyleSheet(
                 """
                 #emptyStateWidget {
@@ -154,8 +154,8 @@ class EmptyStateWidget(QFrame):
 
             self._message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._message_label.setWordWrap(True)
-            self._message_label.setMaximumWidth(500)
-            self._message_label.setStyleSheet("font-size: 13px; color: #8b8e94; line-height: 1.5;")
+            self._message_label.setFixedWidth(520)
+            self._message_label.setStyleSheet("font-size: 13px; color: #8b8e94;")
             layout.addWidget(self._message_label, 0, Qt.AlignmentFlag.AlignCenter)
 
             self._upload_btn.setStyleSheet(

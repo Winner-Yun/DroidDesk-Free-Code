@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.context import AppContext
 from droiddesk.core.models import GateResult
-from droiddesk.core.severity import GateVerdict
+from droiddesk.core.severity import GateVerdict, Severity
 from droiddesk.ui.dialogs.override_dialog import OverrideDialog
 from droiddesk.ui.theme import STATUS_COLORS, TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
@@ -369,10 +369,31 @@ class GatePage(QWidget):
             return
 
         # Check for critical secrets hard-block
-        has_secret_fail = any(
-            c.category == "secrets" and not c.passed for c in self._current_result.checks
+        # Only hard-block if actual critical secret findings exist in the project tree
+        # (do not hard-block if the secrets check was merely short-circuited by preceding checks).
+        has_critical_secrets = False
+        secret_check = next(
+            (c for c in self._current_result.checks if c.category == "secrets"), None
         )
-        if has_secret_fail:
+        if secret_check and not secret_check.passed:
+            if "Short-circuited" in secret_check.detail:
+                # If short-circuited, verify with scan_service if real critical secrets exist
+                if self._ctx.scan_service:
+                    project_root = (
+                        self._env_service.project_root if self._env_service else Path.cwd()
+                    )
+                    scan_res = self._ctx.scan_service.scan_project(project_root)
+                    crit = sum(
+                        1
+                        for f in scan_res.findings
+                        if f.severity == Severity.CRITICAL and not f.suppressed
+                    )
+                    if crit > 0:
+                        has_critical_secrets = True
+            elif "critical finding" in secret_check.detail.lower():
+                has_critical_secrets = True
+
+        if has_critical_secrets:
             QMessageBox.critical(
                 self,
                 "Override Hard-Blocked",
@@ -382,9 +403,12 @@ class GatePage(QWidget):
             )
             return
 
-        blocking_fails = [c for c in self._current_result.checks if c.blocking and not c.passed]
+        blocking_fails = [
+            c for c in self._current_result.checks
+            if c.blocking and not c.passed and "Short-circuited" not in c.detail
+        ]
         if not blocking_fails:
-            return
+            blocking_fails = [c for c in self._current_result.checks if c.blocking and not c.passed]
 
         failed_descs = [f"{c.category}: {c.detail}" for c in blocking_fails]
         dialog = OverrideDialog(failed_descs, title="Override Release Gate", parent=self)

@@ -1,6 +1,6 @@
 """User-editable structured data: test profiles, environments, command guards.
 
-Pydantic, per Section 2.1 — these are edited by the user (directly as TOML, or via a
+Pydantic, per Section 2.1 - these are edited by the user (directly as TOML, or via a
 form), so schema validation with readable errors matters more here than elsewhere.
 """
 

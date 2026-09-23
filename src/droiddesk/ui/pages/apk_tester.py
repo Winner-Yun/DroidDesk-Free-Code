@@ -1,4 +1,4 @@
-"""APK Tester page — Section 6.3. Artifact-under-test panel, the run
+"""APK Tester page - Section 6.3. Artifact-under-test panel, the run
 sequence checklist, and the verdict panel. Wired to ApkService.step_started,
 step_finished, and test_complete.
 """
@@ -76,7 +76,7 @@ class StepRowWidget(QWidget):
         text_col.addWidget(self.command_label)
         row.addLayout(text_col, 1)
 
-        self.duration_label = QLabel("—")
+        self.duration_label = QLabel("-")
         self.duration_label.setProperty("role", "muted")
         row.addWidget(self.duration_label)
 
@@ -104,7 +104,7 @@ class StepRowWidget(QWidget):
         self.icon_label.setPixmap(get_pixmap("circle", size=14, color="#5c5f66"))
         self.headline_label.setText("Pending")
         self.headline_label.setStyleSheet("color: #5c5f66;")
-        self.duration_label.setText("—")
+        self.duration_label.setText("-")
 
 
 class TestWorker(QThread):
@@ -157,7 +157,7 @@ class ApkTesterPage(QWidget):
 
         header = PageHeader(
             "Test runner",
-            "Install, launch, observe, capture, clean up — the same sequence every time, "
+            "Install, launch, observe, capture, clean up - the same sequence every time, "
             "against the device you choose.",
         )
 
@@ -254,9 +254,9 @@ class ApkTesterPage(QWidget):
         details_layout.addWidget(self._apk_package_label)
 
         self._tags_layout = QHBoxLayout()
-        self._tag_version = QLabel("—")
-        self._tag_min = QLabel("—")
-        self._tag_target = QLabel("—")
+        self._tag_version = QLabel("-")
+        self._tag_min = QLabel("-")
+        self._tag_target = QLabel("-")
         for tag in (self._tag_version, self._tag_min, self._tag_target):
             tag.setStyleSheet(
                 "border: 1px solid #35373e; color: #8b8e94; border-radius: 3px; "
@@ -397,9 +397,9 @@ class ApkTesterPage(QWidget):
             self._apk_info = None
             self._apk_name_label.setText("No APK selected")
             self._apk_package_label.setText("Select an APK from the app bar")
-            self._tag_version.setText("–")
-            self._tag_min.setText("–")
-            self._tag_target.setText("–")
+            self._tag_version.setText("-")
+            self._tag_min.setText("-")
+            self._tag_target.setText("-")
             self._artifact_note.setText("Select an APK from the app bar to begin.")
             self._artifact_note.setStyleSheet("color: #8b8e94;")
             self._artifact_details.hide()

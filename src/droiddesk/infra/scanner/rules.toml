@@ -1,8 +1,8 @@
-# Stage-two, DroidDesk-owned pattern rules — supplements the bundled gitleaks
+# Stage-two, DroidDesk-owned pattern rules - supplements the bundled gitleaks
 # ruleset (Stage one, ~200 maintained rules for common providers, run via
 # `gitleaks detect --report-format=json`). See Section 6.5.
 #
-# Each rule: id, regex (compiled with the `regex` module — atomic groups /
+# Each rule: id, regex (compiled with the `regex` module - atomic groups /
 # possessive quantifiers required to prevent catastrophic backtracking per
 # Section 8.2), severity, and a literal prefix used to seed the Aho-Corasick
 # pre-filter so most files never reach full regex evaluation.

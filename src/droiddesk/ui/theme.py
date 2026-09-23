@@ -45,7 +45,7 @@ HEADER_BG_END = "#1c1719"
 HEADER_BORDER = "#4a2226"
 
 # Risk colours for the persistently-visible active-environment indicator
-# (Section 6.8) — the single piece of always-visible state that prevents most of
+# (Section 6.8) - the single piece of always-visible state that prevents most of
 # the mistakes the tool exists to catch.
 ENVIRONMENT_RISK_COLORS = {
     "production": ACCENT_RED,

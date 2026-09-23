@@ -17,6 +17,8 @@ from droiddesk.services.build_service import BuildService
 from droiddesk.services.device_service import DeviceService
 from droiddesk.services.env_service import EnvService
 from droiddesk.services.gate_service import GateService
+from droiddesk.services.organizer_service import OrganizerService
+from droiddesk.services.report_service import ReportService
 from droiddesk.services.scan_service import ScanService
 from droiddesk.services.test_service import CrashDetector, TestStateMachine
 from droiddesk.ui.main_window import MainWindow
@@ -77,6 +79,8 @@ def build_application(settings: Settings) -> MainWindow:
         apk_service=apk_service,
         repository=repository,
     )
+    organizer_service = OrganizerService(journal_dir=settings.data_dir / "journals")
+    report_service = ReportService()
 
     ctx = AppContext(
         settings=settings,
@@ -89,8 +93,8 @@ def build_application(settings: Settings) -> MainWindow:
         env_service=env_service,
         build_service=build_service,
         gate_service=gate_service,
+        organizer_service=organizer_service,
+        report_service=report_service,
     )
-
-    # TODO(Phase 6+): construct OrganizerService, ReportService as each phase lands.
 
     return MainWindow(ctx)

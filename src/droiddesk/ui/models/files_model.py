@@ -1,4 +1,4 @@
-"""FilesModel — backs the Smart Organizer page (Section 6.12). Shows the planned
+"""FilesModel - backs the Smart Organizer page (Section 6.12). Shows the planned
 source/destination moves for review before Apply commits them.
 """
 

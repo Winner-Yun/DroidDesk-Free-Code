@@ -1,4 +1,4 @@
-"""Application shell — Section 5. A brand block and active-environment bar
+"""Application shell - Section 5. A brand block and active-environment bar
 across the top, a grouped sidebar over a `QStackedWidget` below it, and a
 persistent status bar for the idle/tool-availability strip. This module
 contains no business logic and reacts only to service signals, per the

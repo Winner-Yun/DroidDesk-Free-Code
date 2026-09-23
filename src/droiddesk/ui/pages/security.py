@@ -1,4 +1,4 @@
-"""Security page — Section 6.5/6.6. Severity summary chips, a findings table,
+"""Security page - Section 6.5/6.6. Severity summary chips, a findings table,
 and a detail panel with the recommended action, code view with line highlighting,
 and quick action to reveal leaked file locations in File Explorer. Backed by
 `FindingsModel` and `ScanService`.
@@ -213,7 +213,7 @@ class SecurityPage(QWidget):
 
         outer.addWidget(self._splitter, 1)
 
-        # Initial findings start empty — only populate on scan
+        # Initial findings start empty - only populate on scan
         self._model.set_findings([])
         self._update_summary_chips()
 

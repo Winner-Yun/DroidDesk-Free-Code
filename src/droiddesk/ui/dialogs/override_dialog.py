@@ -3,7 +3,7 @@
 Per Section 6.9 & 6.10:
 A blocking check can only be bypassed through a dialog that requires typing
 a reason, permanently recorded in build_record. Visible-but-possible beats
-impossible — making it impossible just drives people around the tool.
+impossible - making it impossible just drives people around the tool.
 """
 
 from __future__ import annotations

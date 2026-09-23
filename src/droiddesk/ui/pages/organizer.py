@@ -83,6 +83,7 @@ class OrganizerPage(QWidget):
         self._path_input = QLineEdit()
         self._path_input.setPlaceholderText("Select any folder to organize...")
         self._path_input.setFixedWidth(220)
+        self._path_input.returnPressed.connect(self._on_preview_plan)
         header.add_action(self._path_input)
 
         browse_btn = QPushButton("Browse...")
@@ -105,6 +106,7 @@ class OrganizerPage(QWidget):
         self._style_combo.addItem("Date Prefix (YYYY-MM-DD_name)", "date_prefix")
         self._style_combo.addItem("Title Case (Clean Name.ext)", "title")
         self._style_combo.setToolTip("Rename pattern to apply to filenames")
+        self._style_combo.currentIndexChanged.connect(self._on_preview_plan)
         header.add_action(self._style_combo)
 
         preview_btn = QPushButton("Suggest renames")
@@ -326,7 +328,7 @@ class OrganizerPage(QWidget):
             self._empty_banner.hide()
             self._on_preview_plan()
 
-    def _on_preview_plan(self) -> None:
+    def _on_preview_plan(self, *_: object) -> None:
         path_str = self._path_input.text().strip()
         if not path_str:
             return

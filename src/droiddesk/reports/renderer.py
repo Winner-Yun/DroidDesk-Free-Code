@@ -1,4 +1,4 @@
-"""HTML -> PDF conversion via WeasyPrint. See Section 2.2 and 10.1 — verify this in
+"""HTML -> PDF conversion via WeasyPrint. See Section 2.2 and 10.1 - verify this in
 a packaged (Nuitka) build early, since WeasyPrint's GTK dependency is known to be
 awkward to bundle on Windows; ReportLab is the documented fallback.
 """

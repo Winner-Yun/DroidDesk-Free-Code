@@ -1,4 +1,4 @@
-"""LogcatModel — Section 8.4, verbatim. A logcat stream can produce thousands of
+"""LogcatModel - Section 8.4, verbatim. A logcat stream can produce thousands of
 lines per second during app startup; calling beginInsertRows/endInsertRows per line
 would make the interface unresponsive. Batching model signals to a fixed 100ms
 interval decouples interface responsiveness from log volume entirely.

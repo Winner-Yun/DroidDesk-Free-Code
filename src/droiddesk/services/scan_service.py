@@ -1,4 +1,4 @@
-"""ScanService — Section 6.5 and 6.6. Two-stage secret scanning: gitleaks (stage
+"""ScanService - Section 6.5 and 6.6. Two-stage secret scanning: gitleaks (stage
 one, subprocess, JSON report) merged with DroidDesk's own engine (stage two, Android
 rules + entropy). Also drives the APK Privacy Scanner (archive enumeration, resource
 string extraction, opt-in DEX deep scan). CPU-bound work runs off the UI thread via

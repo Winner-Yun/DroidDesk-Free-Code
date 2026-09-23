@@ -64,10 +64,10 @@ found. See Section 3 of the spec for the full discovery strategy.
 
 ```
 src/droiddesk/
-├── core/        # domain layer — dataclasses/Pydantic models, no I/O, no Qt
-├── infra/       # infrastructure — subprocess, adb, APK parsing, scanner engine, DB
-├── services/    # orchestration layer — owns workflows, emits Qt signals
-├── ui/          # Qt widgets, pages, table models — no business logic
+├── core/        # domain layer - dataclasses/Pydantic models, no I/O, no Qt
+├── infra/       # infrastructure - subprocess, adb, APK parsing, scanner engine, DB
+├── services/    # orchestration layer - owns workflows, emits Qt signals
+├── ui/          # Qt widgets, pages, table models - no business logic
 ├── reports/     # Jinja2 templates, HTML/PDF rendering
 └── resources/   # icons, fonts, QSS, bundled gitleaks binary
 ```

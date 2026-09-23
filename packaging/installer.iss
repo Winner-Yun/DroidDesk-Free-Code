@@ -1,14 +1,14 @@
 ; DroidDesk installer. See Section 10.2.
 ;
 ; - Config goes to {userappdata}\DroidDesk, database to {localappdata}\DroidDesk
-;   — never Program Files, which is not user-writable.
+;   - never Program Files, which is not user-writable.
 ; - Bundles gitleaks.exe (the only external tool shipped; everything else is
 ;   discovered on the host via the ToolLocator chain, Section 3.1).
 ; - Registers a .apk file association so double-clicking opens the analyzer.
-; - Enables long path support (Section 8.1 — deep Flutter/Gradle build trees).
+; - Enables long path support (Section 8.1 - deep Flutter/Gradle build trees).
 ;
 ; SDK detection (offering to download platform-tools if no SDK is found) is a
-; [Code] section TODO for Phase 6 — see Section 10.2.
+; [Code] section TODO for Phase 6 - see Section 10.2.
 
 #define MyAppName "DroidDesk"
 #define MyAppVersion "0.1.0"
@@ -48,5 +48,5 @@ Root: HKCU; Subkey: "Software\Classes\DroidDesk.ApkFile\shell\open\command"; Val
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
 
-; Long path support — see the application manifest embedded by the Nuitka build
+; Long path support - see the application manifest embedded by the Nuitka build
 ; (Section 8.1). No [Code] entry needed here beyond documenting the requirement.

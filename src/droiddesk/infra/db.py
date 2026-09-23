@@ -1,6 +1,6 @@
 """SQLite schema, migrations, and the Repository. Schema is Section 7, verbatim.
 
-Never store a discovered secret's raw text — only a redacted preview and a hash of
+Never store a discovered secret's raw text - only a redacted preview and a hash of
 the matched line (see the warning at the end of Section 7). Writing plaintext
 credentials into the database would make DroidDesk the exposure it exists to catch.
 """
@@ -140,7 +140,7 @@ class Repository:
             self._connection.close()
 
     # TODO(Phase 2+): save_test_run, save_scan, save_finding,
-    # list_findings, save_build_record — one method per write/read the services
+    # list_findings, save_build_record - one method per write/read the services
     # layer needs, backed by SQLAlchemy Core per Section 2.1.
 
     def save_apk(self, apk: ApkInfo) -> None:
@@ -296,9 +296,9 @@ class Repository:
                     device.serial,
                     device.model or device.serial,
                     device.state,
-                    device.android_version or "—",
+                    device.android_version or "-",
                     device.api_level or 0,
-                    device.abi or "—",
+                    device.abi or "-",
                     now,
                 ),
             )
@@ -321,9 +321,9 @@ class Repository:
                 "serial": str(row[0]),
                 "model": str(row[1] or row[0]),
                 "state": str(row[2] or "device"),
-                "android_version": str(row[3] or "—"),
+                "android_version": str(row[3] or "-"),
                 "api_level": int(row[4] or 0),
-                "abi": str(row[5] or "—"),
+                "abi": str(row[5] or "-"),
                 "last_connected": str(row[6]),
             }
             for row in rows

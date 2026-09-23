@@ -1,4 +1,4 @@
-"""Commands page — Section 6.9. Safe Command Runner & Defensive Security Audit.
+"""Commands page - Section 6.9. Safe Command Runner & Defensive Security Audit.
 
 Provides 50 system-supplied commands across security audits, Gradle builds,
 unit/connected tests, ADB device operations, and APK inspection tools.

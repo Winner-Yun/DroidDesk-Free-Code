@@ -1,6 +1,6 @@
-"""ReportService — Section 6.13. One Jinja2 template set renders every format:
+"""ReportService - Section 6.13. One Jinja2 template set renders every format:
 HTML is the source of truth, PDF is produced from it via WeasyPrint (ReportLab is
-the documented fallback if WeasyPrint's GTK dependency proves awkward to bundle —
+the documented fallback if WeasyPrint's GTK dependency proves awkward to bundle -
 see Section 2.2 and 10.1), JSON is serialized directly from the domain model, and
 Markdown is derived for pasting into a PR description.
 """
@@ -42,7 +42,7 @@ class ReportService:
                 return json.dumps(dataclasses.asdict(run), default=str, indent=2)
             case "markdown":
                 lines = [
-                    f"# Test Report — {run.apk.package_name}",
+                    f"# Test Report - {run.apk.package_name}",
                     f"**Verdict:** {run.verdict} | **Device:** {run.device_serial} | "
                     f"**Profile:** {run.profile_name}",
                     "",

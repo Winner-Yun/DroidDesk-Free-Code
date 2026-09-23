@@ -1,4 +1,4 @@
-"""OrganizerService (Smart File Organizer) — Section 6.12. Rule engine (first match
+"""OrganizerService (Smart File Organizer) - Section 6.12. Rule engine (first match
 wins, ordered by priority) evaluates extension, filename pattern, magic bytes, size,
 and age. Every batch operation writes an undo journal before moving anything;
 deletions go through send2trash, never os.remove, so OS-level recovery stays

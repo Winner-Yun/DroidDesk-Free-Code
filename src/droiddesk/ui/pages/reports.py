@@ -1,4 +1,4 @@
-"""Reports page — Section 6.13. Report history table plus the export panel
+"""Reports page - Section 6.13. Report history table plus the export panel
 (HTML/PDF/JSON/Markdown). Populated from `static_data.REPORT_HISTORY`; the
 export buttons call `ReportService` once it exists (Phase 3+), rendering
 through the same Jinja2 template set referenced in `reports/renderer.py`.

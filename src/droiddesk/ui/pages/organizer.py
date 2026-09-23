@@ -1,4 +1,4 @@
-"""Smart Organizer page — Section 6.12. Path picker, hashing progress, the
+"""Smart Organizer page - Section 6.12. Path picker, hashing progress, the
 planned-moves preview table, duplicate-scan stats, and the undo journal.
 Populated from `static_data.ORGANIZER_PLANNED_MOVES`; Phase 6 swaps in
 `OrganizerService.plan()` / `apply()` / `undo()` without changing this layout.

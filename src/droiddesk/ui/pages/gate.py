@@ -1,4 +1,4 @@
-"""Release Gate page — Section 6.10. A single verdict panel (score + GO/NO-GO)
+"""Release Gate page - Section 6.10. A single verdict panel (score + GO/NO-GO)
 next to the dependency-ordered checks list.
 
 Phase 5 connects GateService:
@@ -120,7 +120,7 @@ class GatePage(QWidget):
         header = PageHeader(
             "Release gate",
             "Every check at once, one verdict. A clean result means no issues "
-            "were found by the checks performed — not that the build is secure.",
+            "were found by the checks performed - not that the build is secure.",
         )
         export_btn = QPushButton("Export gate report")
         export_btn.setIcon(get_icon("file-down", size=14, color=TEXT_MUTED))
@@ -179,7 +179,7 @@ class GatePage(QWidget):
         layout = card.body_layout()
         layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
-        self._score_dial = _ScoreDial(0, "—", "#6b7280")
+        self._score_dial = _ScoreDial(0, "-", "#6b7280")
         layout.addWidget(self._score_dial, 0, Qt.AlignmentFlag.AlignCenter)
 
         self._blocked_label = QLabel("Awaiting Release Gate Run")

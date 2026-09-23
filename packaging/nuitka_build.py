@@ -1,4 +1,4 @@
-"""Nuitka build driver. See Section 10.1 for the flags and their rationale —
+"""Nuitka build driver. See Section 10.1 for the flags and their rationale -
 in particular `--windows-console-mode=disable` (without it a console window
 accompanies the app) and `--include-package-data=androguard` (androguard loads
 data files at runtime; omitting this fails only in the packaged build).

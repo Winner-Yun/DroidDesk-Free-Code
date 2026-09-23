@@ -48,7 +48,7 @@ class EmptyStateWidget(QFrame):
         self._upload_btn.setVisible(show_button)
 
         if frameless:
-            # Embedded directly inside another Card or panel — no outer frame/border
+            # Embedded directly inside another Card or panel - no outer frame/border
             self.setStyleSheet("#emptyStateWidget { background: transparent; border: none; }")
             layout = QVBoxLayout(self)
             layout.setContentsMargins(0, 4, 0, 4)

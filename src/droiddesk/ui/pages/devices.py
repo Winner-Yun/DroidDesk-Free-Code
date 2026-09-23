@@ -1,4 +1,4 @@
-"""Devices page — Section 6.1. Live polling list, explicit unauthorized/offline
+"""Devices page - Section 6.1. Live polling list, explicit unauthorized/offline
 states (pairing instruction and reconnect action, not a raw error), wireless
 debugging entry, and the Test Device Profile toggle.
 """
@@ -162,11 +162,11 @@ class DevicesPage(QWidget):
             model_item.setData(Qt.ItemDataRole.UserRole, device)
             self._table.setItem(row, 1, model_item)
             self._table.setItem(row, 2, self._mono_item(device.serial))
-            self._table.setItem(row, 3, QTableWidgetItem(device.android_version or "—"))
+            self._table.setItem(row, 3, QTableWidgetItem(device.android_version or "-"))
             self._table.setItem(
-                row, 4, QTableWidgetItem(str(device.api_level) if device.api_level else "—")
+                row, 4, QTableWidgetItem(str(device.api_level) if device.api_level else "-")
             )
-            self._table.setItem(row, 5, QTableWidgetItem(device.abi or "—"))
+            self._table.setItem(row, 5, QTableWidgetItem(device.abi or "-"))
             self._table.setItem(row, 6, QTableWidgetItem(_link_type(device.serial)))
 
         self._restore_selection()
@@ -233,10 +233,10 @@ class DevicesPage(QWidget):
         layout.addWidget(self._section_label("PROPERTIES"))
         for label, value in [
             ("serial", device.serial),
-            ("release", device.android_version or "—"),
-            ("sdk", str(device.api_level) if device.api_level else "—"),
-            ("abi", device.abi or "—"),
-            ("density", f"{device.density}dpi" if device.density else "—"),
+            ("release", device.android_version or "-"),
+            ("sdk", str(device.api_level) if device.api_level else "-"),
+            ("abi", device.abi or "-"),
+            ("density", f"{device.density}dpi" if device.density else "-"),
         ]:
             layout.addLayout(self._property_row(label, value))
 

@@ -27,6 +27,10 @@ class DeviceService(QObject):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
 
+    @property
+    def adb_client(self) -> AdbClient:
+        return self._adb
+
     def start_polling(self, page_visible: bool = True) -> None:
         self._timer.setInterval(
             _POLL_INTERVAL_VISIBLE_MS if page_visible else _POLL_INTERVAL_HIDDEN_MS

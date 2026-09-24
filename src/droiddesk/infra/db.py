@@ -149,6 +149,11 @@ class Repository:
         with self._lock:
             self._connection.close()
 
+    def vacuum(self) -> None:
+        """Run SQLite VACUUM to reclaim unused disk space."""
+        with self._lock:
+            self._connection.execute("VACUUM")
+
     # TODO(Phase 2+): save_test_run, save_scan, save_finding,
     # list_findings, save_build_record - one method per write/read the services
     # layer needs, backed by SQLAlchemy Core per Section 2.1.

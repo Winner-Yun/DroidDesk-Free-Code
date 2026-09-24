@@ -171,10 +171,6 @@ class OrganizerPage(QWidget):
 
     def set_apk(self, path: Path | None) -> None:
         self._apk_path = path
-        if path is not None and not self._path_input.text():
-            self._path_input.setText(str(path.parent))
-            self._empty_banner.hide()
-            self._on_preview_plan()
 
 
     def _build_moves_panel(self) -> QWidget:

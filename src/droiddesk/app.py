@@ -26,6 +26,13 @@ from droiddesk.ui.main_window import MainWindow
 
 def build_application(settings: Settings) -> MainWindow:
     tool_locator = ToolLocator(settings)
+    if not tool_locator.is_available("adb"):
+        from droiddesk.ui.dialogs.setup_dialog import SetupDialog
+
+        dlg = SetupDialog(settings, tool_locator)
+        dlg.exec()
+        tool_locator.invalidate_cache()
+
     repository = Repository(settings.database_path)
     try:
         adb_path = tool_locator.resolve("adb")

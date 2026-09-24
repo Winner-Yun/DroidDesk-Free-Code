@@ -53,6 +53,9 @@ class ApkService(QObject):
         if self._storage_dir:
             self._storage_dir.mkdir(parents=True, exist_ok=True)
 
+    def set_apkanalyzer_path(self, path: Path) -> None:
+        self._apkanalyzer_path = path
+
     def import_apk(self, source_path: Path) -> ApkInfo:
         """Import an APK into project storage and persist its metadata to the database.
 

@@ -1,16 +1,4 @@
-"""Shannon entropy heuristic for the scanner engine. See Section 8.3.
-
-Applied naively this produces enough noise to make the feature useless — hashes,
-UUIDs, base64 images, and minified JS all look random too. Three guards keep it
-useful:
-  - Only score strings assigned to a credential-shaped variable name (key, token,
-    secret, password, auth, credential).
-  - Minimum length 32 chars, threshold ~4.5 bits/char for a base64-like alphabet.
-  - Exclude known-benign shapes: UUIDs, git SHAs, standard hash lengths, data URIs.
-
-An entropy finding is always classified NEEDS_REVIEW, never CRITICAL — it's a hint,
-not a determination.
-"""
+"""Shannon entropy heuristics for credential and secret detection."""
 
 from __future__ import annotations
 

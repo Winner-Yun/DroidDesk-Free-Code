@@ -1,7 +1,4 @@
-"""DeviceService — Section 6.1. Polls `adb devices -l` every 2s while the Devices
-page is visible, 5s otherwise; enriches entries via getprop. Owns unauthorized /
-offline state and Test Device Profile marking. Emits devices_changed; owns no widgets.
-"""
+"""Service managing connected Android devices, state polling, and hardware details."""
 
 from __future__ import annotations
 
@@ -26,6 +23,10 @@ class DeviceService(QObject):
         self._devices: list[Device] = []
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
+
+    @property
+    def adb_client(self) -> AdbClient:
+        return self._adb
 
     def start_polling(self, page_visible: bool = True) -> None:
         self._timer.setInterval(

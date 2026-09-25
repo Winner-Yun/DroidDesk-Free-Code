@@ -51,35 +51,35 @@ class BuildService(QObject):
         profile: CommandProfile,
         apk_path: Path | None = None,
     ) -> list[GuardResult]:
-        """Evaluate all 6 build guards in Section 6.9."""
+        """Evaluate safety build guards."""
         results: list[GuardResult] = []
 
-        # 1. environment_matches
+        # Environment match check
         g_env = self._guard_environment_matches(profile)
         results.append(g_env)
         self.guard_evaluated.emit(g_env)
 
-        # 2. release_allowed
+        # Release permissions check
         g_rel = self._guard_release_allowed(profile)
         results.append(g_rel)
         self.guard_evaluated.emit(g_rel)
 
-        # 3. git_clean
+        # Git status check
         g_git = self._guard_git_clean(profile)
         results.append(g_git)
         self.guard_evaluated.emit(g_git)
 
-        # 4. secret_scan_clean
+        # Secret scan verification
         g_sec = self._guard_secret_scan_clean(profile)
         results.append(g_sec)
         self.guard_evaluated.emit(g_sec)
 
-        # 5. no_debug_flags
+        # Debug flags verification
         g_dbg = self._guard_no_debug_flags(profile, apk_path)
         results.append(g_dbg)
         self.guard_evaluated.emit(g_dbg)
 
-        # 6. version_bumped
+        # Version bump verification
         g_ver = self._guard_version_bumped(profile, apk_path)
         results.append(g_ver)
         self.guard_evaluated.emit(g_ver)

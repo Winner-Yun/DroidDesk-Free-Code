@@ -293,7 +293,7 @@ class ScreenshotsPage(QWidget):
                 mtime = datetime.fromtimestamp(path.stat().st_mtime)
                 date_str = mtime.strftime("%b %d, %H:%M")
             except Exception:
-                date_str = "—"
+                date_str = "-"
             date_item = QTableWidgetItem(date_str)
             date_item.setForeground(Qt.GlobalColor.gray)
             self._table.setItem(row, 1, date_item)
@@ -307,7 +307,7 @@ class ScreenshotsPage(QWidget):
                     else f"{sz / (1024 * 1024):.2f} MB"
                 )
             except Exception:
-                sz_str = "—"
+                sz_str = "-"
             size_item = QTableWidgetItem(sz_str)
             size_item.setForeground(Qt.GlobalColor.gray)
             self._table.setItem(row, 2, size_item)

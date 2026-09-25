@@ -85,12 +85,10 @@ class DashboardPage(QWidget):
 
         self._stat_devices = StatCard("0", "Devices connected")
         self._stat_findings = StatCard("1", "Critical findings")
-        self._stat_gate = StatCard("72", "Last gate score")
         self._stat_runs = StatCard("4", "Test runs today")
 
         stats_row.addWidget(self._stat_devices)
         stats_row.addWidget(self._stat_findings)
-        stats_row.addWidget(self._stat_gate)
         stats_row.addWidget(self._stat_runs)
         self._stats_container.hide()
 
@@ -145,7 +143,7 @@ class DashboardPage(QWidget):
         self._badge_version = QLabel("v1.0")
         self._badge_min = QLabel("min 24")
         self._badge_target = QLabel("target 34")
-        self._badge_size = QLabel("—")
+        self._badge_size = QLabel("-")
 
         for badge in (self._badge_version, self._badge_min, self._badge_target, self._badge_size):
             badge.setStyleSheet(
@@ -174,10 +172,6 @@ class DashboardPage(QWidget):
         btn_security = QPushButton("Scan secrets")
         btn_security.clicked.connect(lambda: self.navigate_requested.emit("security"))
         actions_row.addWidget(btn_security)
-
-        btn_gate = QPushButton("Release gate")
-        btn_gate.clicked.connect(self._on_run_gate_clicked)
-        actions_row.addWidget(btn_gate)
 
         actions_col.addLayout(actions_row)
         row.addLayout(actions_col)
@@ -461,10 +455,10 @@ class DashboardPage(QWidget):
             serial = str(item.get("serial", ""))
             model = str(item.get("model", "") or serial)
             state = str(item.get("state", "device"))
-            version = str(item.get("android_version", "—"))
+            version = str(item.get("android_version", "-"))
             api = item.get("api_level", 0)
-            abi = str(item.get("abi", "—"))
-            last_conn = str(item.get("last_connected", "—"))
+            abi = str(item.get("abi", "-"))
+            last_conn = str(item.get("last_connected", "-"))
 
             is_online = serial in active_serials
 
@@ -481,14 +475,14 @@ class DashboardPage(QWidget):
             dev_item.setToolTip(f"Serial: {serial}\nState: {state}\nABI: {abi}")
             self._history_table.setItem(row_idx, 1, dev_item)
 
-            if version and version != "—" and api:
+            if version and version != "-" and api:
                 platform_str = f"Android {version} (API {api})"
             elif api:
                 platform_str = f"API {api}"
-            elif version and version != "—":
+            elif version and version != "-":
                 platform_str = f"Android {version}"
             else:
-                platform_str = "—"
+                platform_str = "-"
             plat_item = QTableWidgetItem(platform_str)
             plat_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self._history_table.setItem(row_idx, 2, plat_item)
@@ -553,23 +547,12 @@ class DashboardPage(QWidget):
                 if path.is_file():
                     self._badge_size.setText(_format_size(path.stat().st_size))
                 else:
-                    self._badge_size.setText("—")
+                    self._badge_size.setText("-")
             except OSError:
-                self._badge_size.setText("—")
+                self._badge_size.setText("-")
 
             self._apk_card.show()
 
-    def _on_run_gate_clicked(self) -> None:
-        if not self._apk_path:
-            QMessageBox.warning(
-                self,
-                "No APK Selected",
-                "No APK file selected.\n\n"
-                "Please select an APK from the app bar or upload an APK file before "
-                "running the release gate.",
-            )
-            return
-        self.navigate_requested.emit("gate")
 
     def _on_run_tests_clicked(self) -> None:
         if hasattr(self._ctx.device_service, "devices") and callable(

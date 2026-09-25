@@ -1,7 +1,4 @@
-"""FindingsModel — backs the Security page (Section 6.5/6.6). Displays redacted
-previews only; the raw matched text never reaches the UI layer, matching the
-"never store the secret itself" rule in Section 7.
-"""
+"""Table model displaying secret scan findings with redacted previews and severity ratings."""
 
 from __future__ import annotations
 
@@ -89,7 +86,7 @@ class FindingsModel(QAbstractTableModel):
                     return "strings.xml"
                 return finding.file_path.name
             if col == 4:
-                return str(finding.line_number) if finding.line_number is not None else "—"
+                return str(finding.line_number) if finding.line_number is not None else "-"
             if col == 5:
                 return finding.redacted
             return ""

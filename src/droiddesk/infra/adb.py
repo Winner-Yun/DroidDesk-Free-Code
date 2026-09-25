@@ -1,7 +1,7 @@
 """AdbClient: typed wrapper over adb. Commands drawn from Appendix A.
 
 Every method delegates to ProcessRunner (one-shot) or returns an AdbStream
-(long-lived). No parsing logic belongs above this layer — callers get typed
+(long-lived). No parsing logic belongs above this layer - callers get typed
 results, not raw adb text.
 """
 
@@ -17,6 +17,13 @@ class AdbClient:
     def __init__(self, adb_path: Path, runner: ProcessRunner | None = None) -> None:
         self._adb_path = adb_path
         self._runner = runner or ProcessRunner()
+
+    @property
+    def adb_path(self) -> Path:
+        return self._adb_path
+
+    def set_adb_path(self, path: Path) -> None:
+        self._adb_path = path
 
     def list_devices(self) -> list[Device]:
         result = self._runner.run(self._adb_path, ["devices", "-l"])

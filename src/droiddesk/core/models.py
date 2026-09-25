@@ -1,6 +1,4 @@
-"""Domain models: pure data, no I/O. Mirrors the SQLite schema in Section 7 plus the
-in-memory shapes (Device, Finding) that are not persisted directly.
-"""
+"""Core domain models for devices, APK information, findings, and test runs."""
 
 from __future__ import annotations
 
@@ -8,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from droiddesk.core.severity import GateVerdict, Severity, Verdict
+from droiddesk.core.severity import Severity, Verdict
 
 
 @dataclass(slots=True)
@@ -96,22 +94,6 @@ class ScanResult:
     files_scanned: int = 0
     duration_ms: int = 0
 
-
-@dataclass(slots=True)
-class ReleaseCheck:
-    category: str
-    passed: bool
-    weight: int
-    blocking: bool
-    detail: str = ""
-
-
-@dataclass(slots=True)
-class GateResult:
-    checks: list[ReleaseCheck]
-    score: int
-    verdict: GateVerdict
-    override_note: str | None = None
 
 
 @dataclass(slots=True)

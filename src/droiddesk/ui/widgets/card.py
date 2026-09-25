@@ -51,7 +51,7 @@ class StatCard(QFrame):
 
 
 class PageHeader(QWidget):
-    """Title + subtitle on the left, action buttons on the right — the row
+    """Title + subtitle on the left, action buttons on the right - the row
     that opens every page in the mockups.
     """
 

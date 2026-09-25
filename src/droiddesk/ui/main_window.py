@@ -1,9 +1,4 @@
-"""Application shell — Section 5. A brand block and active-environment bar
-across the top, a grouped sidebar over a `QStackedWidget` below it, and a
-persistent status bar for the idle/tool-availability strip. This module
-contains no business logic and reacts only to service signals, per the
-Presentation layer constraint in Section 4.1.
-"""
+"""Main application window managing top navigation, sidebar, and page views."""
 
 from __future__ import annotations
 
@@ -27,10 +22,8 @@ from droiddesk.ui.pages.apk_tester import ApkTesterPage
 from droiddesk.ui.pages.commands import CommandsPage
 from droiddesk.ui.pages.dashboard import DashboardPage
 from droiddesk.ui.pages.devices import DevicesPage
-from droiddesk.ui.pages.gate import GatePage
 from droiddesk.ui.pages.logcat import LogcatPage
 from droiddesk.ui.pages.organizer import OrganizerPage
-from droiddesk.ui.pages.reports import ReportsPage
 from droiddesk.ui.pages.screenshots import ScreenshotsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
@@ -50,8 +43,6 @@ _PAGES: tuple[tuple[str, Callable[[AppContext], QWidget]], ...] = (
     ("security", SecurityPage),
     ("organizer", OrganizerPage),
     ("commands", CommandsPage),
-    ("gate", GatePage),
-    ("reports", ReportsPage),
     ("settings", SettingsPage),
 )
 
@@ -131,8 +122,7 @@ class MainWindow(QMainWindow):
         initial_apk = self._environment_bar.selected_apk()
         self._on_active_apk_changed(initial_apk)
 
-        # TODO(Phase 5): drive the environment bar from
-        # EnvService.active_environment_changed instead of static_data.
+
 
     def _build_pages(self) -> None:
         for key, page_cls in _PAGES:

@@ -211,7 +211,7 @@ class ApkUploadDialog(QDialog):
                 try:
                     size_str = _format_size(p.stat().st_size)
                 except OSError:
-                    size_str = "—"
+                    size_str = "-"
                 size_item = QTableWidgetItem(size_str)
                 size_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._table.setItem(row, 1, size_item)

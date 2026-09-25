@@ -50,11 +50,7 @@ NAV_SECTIONS: tuple[tuple[str, tuple[NavEntry, ...]], ...] = (
     ),
     (
         "Ship",
-        (
-            NavEntry("commands", "terminal", "Build commands"),
-            NavEntry("gate", "door-open", "Release gate"),
-            NavEntry("reports", "file-text", "Reports"),
-        ),
+        (NavEntry("commands", "terminal", "Build commands"),),
     ),
 )
 

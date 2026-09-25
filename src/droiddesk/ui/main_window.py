@@ -27,10 +27,8 @@ from droiddesk.ui.pages.apk_tester import ApkTesterPage
 from droiddesk.ui.pages.commands import CommandsPage
 from droiddesk.ui.pages.dashboard import DashboardPage
 from droiddesk.ui.pages.devices import DevicesPage
-from droiddesk.ui.pages.gate import GatePage
 from droiddesk.ui.pages.logcat import LogcatPage
 from droiddesk.ui.pages.organizer import OrganizerPage
-from droiddesk.ui.pages.reports import ReportsPage
 from droiddesk.ui.pages.screenshots import ScreenshotsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
@@ -50,8 +48,6 @@ _PAGES: tuple[tuple[str, Callable[[AppContext], QWidget]], ...] = (
     ("security", SecurityPage),
     ("organizer", OrganizerPage),
     ("commands", CommandsPage),
-    ("gate", GatePage),
-    ("reports", ReportsPage),
     ("settings", SettingsPage),
 )
 

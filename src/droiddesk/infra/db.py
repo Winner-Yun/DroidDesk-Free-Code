@@ -1,9 +1,4 @@
-"""SQLite schema, migrations, and the Repository. Schema is Section 7, verbatim.
-
-Never store a discovered secret's raw text - only a redacted preview and a hash of
-the matched line (see the warning at the end of Section 7). Writing plaintext
-credentials into the database would make DroidDesk the exposure it exists to catch.
-"""
+"""SQLite schema, migrations, and repository layer for DroidDesk data persistence."""
 
 from __future__ import annotations
 
@@ -134,8 +129,6 @@ class Repository:
             self._migrate()
 
     def _migrate(self) -> None:
-        # TODO(Phase 2): replace with numbered migration scripts applied in order,
-        # tracked via schema_version, once the schema needs to evolve past v1.
         with self._lock:
             self._connection.executescript(SCHEMA)
             row = self._connection.execute("SELECT version FROM schema_version").fetchone()
@@ -149,9 +142,10 @@ class Repository:
         with self._lock:
             self._connection.close()
 
-    # TODO(Phase 2+): save_test_run, save_scan, save_finding,
-    # list_findings, save_build_record - one method per write/read the services
-    # layer needs, backed by SQLAlchemy Core per Section 2.1.
+    def vacuum(self) -> None:
+        """Run SQLite VACUUM to reclaim unused disk space."""
+        with self._lock:
+            self._connection.execute("VACUUM")
 
     def save_apk(self, apk: ApkInfo) -> None:
         from datetime import UTC, datetime
@@ -765,7 +759,7 @@ class Repository:
         results: list[dict[str, object]] = []
 
         with self._lock:
-            # 1. Release Gates (build_record)
+            # Build records
             cursor_gates = self._connection.execute(
                 """
                 SELECT id, command, gate_verdict, gate_score, started_at, overridden
@@ -789,7 +783,7 @@ class Repository:
                     }
                 )
 
-            # 2. Test Runs
+            # Test runs
             cursor_tests = self._connection.execute(
                 """
                 SELECT t.id, t.device_serial, t.profile_name, t.verdict,
@@ -813,7 +807,7 @@ class Repository:
                     }
                 )
 
-            # 3. Secret Scans
+            # Secret scans
             cursor_scans = self._connection.execute(
                 """
                 SELECT s.id, s.target_type, s.target_path, s.started_at,

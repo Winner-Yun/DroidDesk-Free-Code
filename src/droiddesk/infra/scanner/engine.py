@@ -1,14 +1,4 @@
-"""Scanner engine: rule loading, Aho-Corasick pre-filter, compiled regex matching,
-entropy scoring, dedup. See Section 6.5 (mechanism) and Section 8.2 (performance).
-
-Performance rules that keep 200+ patterns fast over a project tree:
-  - Pre-filter with Aho-Corasick over each rule's fixed literal prefix; only files
-    with a literal hit proceed to full regex evaluation.
-  - Skip build/, .git/, node_modules/, .gradle/, .dart_tool/, and binary content
-    (null byte in the first 8 KB) by default.
-  - Cap file size at 10 MB by default; skip larger files with a note.
-  - Compile all patterns once at construction, never inside the per-file loop.
-"""
+"""Scanner engine: rule loading, Aho-Corasick pre-filter, regex matching, and entropy scoring."""
 
 from __future__ import annotations
 
@@ -140,8 +130,7 @@ class ScannerEngine:
         filename = path.name
         file_ext = path.suffix.lower()
 
-        # 2. Evaluate file extension rules (e.g. .jks, .keystore, .p12)
-        # Extension rules can match binary keystore files!
+        # Extension-based rules (keystores and certificates)
         for rule in self._rules:
             if (
                 rule.match_ext
@@ -173,7 +162,7 @@ class ScannerEngine:
         except Exception:
             return findings
 
-        # 3. Evaluate filename-based rules (match_name)
+        # Filename-based rules
         for rule in self._rules:
             if rule.match_name and fnmatch.fnmatch(filename, rule.match_name):
                 # If rule has literal_prefixes, require a prefix match in content
@@ -208,7 +197,7 @@ class ScannerEngine:
                         )
                     )
 
-        # 4. Literal prefix and pattern matching via Aho-Corasick
+        # Literal prefix and pattern matching via Aho-Corasick
         matched_rule_ids = {rule_id for _, (_, rule_id) in self._automaton.iter(text)}
 
         # Evaluate AIzaSy Google / Firebase API Key Disambiguation if AIzaSy matched
@@ -341,7 +330,7 @@ class ScannerEngine:
                         )
                     )
 
-        # 5. Evaluate remaining compiled pattern rules
+        # Compiled pattern rules
         for rule in self._rules:
             if rule.pattern is None:
                 continue
@@ -362,7 +351,7 @@ class ScannerEngine:
                     )
                 )
 
-        # 6. Evaluate entropy detection (high-entropy-credential-string)
+        # Entropy heuristic checks
         entropy_rule = next(
             (r for r in self._rules if r.id == "high-entropy-credential-string"), None
         )

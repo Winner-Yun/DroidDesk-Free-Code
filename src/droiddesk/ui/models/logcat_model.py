@@ -1,11 +1,4 @@
-"""LogcatModel - Section 8.4, verbatim. A logcat stream can produce thousands of
-lines per second during app startup; calling beginInsertRows/endInsertRows per line
-would make the interface unresponsive. Batching model signals to a fixed 100ms
-interval decouples interface responsiveness from log volume entirely.
-
-Lines are parsed into structured columns (threadtime format) rather than displayed
-raw, which is what makes filtering and colouring possible (Section 6.4).
-"""
+"""High-throughput table model for streaming, parsing, and filtering Android logcat entries."""
 
 from __future__ import annotations
 

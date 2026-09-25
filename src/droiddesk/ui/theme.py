@@ -1,11 +1,4 @@
-"""QSS stylesheet, palette, and fonts for the application shell.
-
-Colours are picked to match the approved mockups (`ui/*.png` at the repo root):
-a near-black shell, a maroon active-environment bar, and the severity palette
-below is shared verbatim with `widgets/severity_badge.py` and
-`ENVIRONMENT_RISK_COLORS` so status colour always means the same thing
-everywhere in the app (Section 1.3, "classify, do not alarm").
-"""
+"""Theme, palette, stylesheet definitions, and icon management for DroidDesk."""
 
 from __future__ import annotations
 
@@ -44,9 +37,7 @@ HEADER_BG_START = "#2a1418"
 HEADER_BG_END = "#1c1719"
 HEADER_BORDER = "#4a2226"
 
-# Risk colours for the persistently-visible active-environment indicator
-# (Section 6.8) - the single piece of always-visible state that prevents most of
-# the mistakes the tool exists to catch.
+# Environment risk colors
 ENVIRONMENT_RISK_COLORS = {
     "production": ACCENT_RED,
     "staging": ACCENT_ORANGE,
@@ -54,7 +45,7 @@ ENVIRONMENT_RISK_COLORS = {
     "dev": ACCENT_GREEN,
 }
 
-# Verdict / status colours shared across Dashboard, Test runner, Release gate.
+# Verdict and status colors
 STATUS_COLORS = {
     "pass": ACCENT_GREEN,
     "warn": ACCENT_YELLOW,

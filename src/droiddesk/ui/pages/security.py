@@ -1,8 +1,4 @@
-"""Security page - Section 6.5/6.6. Severity summary chips, a findings table,
-and a detail panel with the recommended action, code view with line highlighting,
-and quick action to reveal leaked file locations in File Explorer. Backed by
-`FindingsModel` and `ScanService`.
-"""
+"""Security page displaying secret scan findings, severity counts, and code details."""
 
 from __future__ import annotations
 
@@ -489,7 +485,7 @@ class SecurityPage(QWidget):
         key_lbl.setToolTip(f"Rule ID: {finding.rule_id}")
         layout.addWidget(key_lbl)
 
-        # Section 1: Location & Environment
+        # Location and environment details
         layout.addWidget(self._section_label("LOCATION & ENVIRONMENT"))
 
         meta_box = QFrame()
@@ -594,11 +590,11 @@ class SecurityPage(QWidget):
         meta_layout.addLayout(path_row)
         layout.addWidget(meta_box)
 
-        # Section 2: Key / Token value (Full View)
+        # Key/token display
         layout.addWidget(self._section_label("KEY / TOKEN VALUE (FULL VIEW)"))
         self._add_fallback_content_box(layout, finding.redacted)
 
-        # Section 3: Code Context
+        # Code context view
         if resolved_path.is_file() and finding.line_number is not None:
             try:
                 code_header_row = QHBoxLayout()
@@ -665,7 +661,7 @@ class SecurityPage(QWidget):
 
                 layout.addWidget(line_box)
 
-        # Section 4: Recommended Action
+        # Recommended action
         layout.addWidget(self._section_label("RECOMMENDED ACTION"))
         rec_box = QFrame()
         rec_box.setObjectName("recBox")

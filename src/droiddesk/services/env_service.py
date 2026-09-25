@@ -1,9 +1,4 @@
-"""EnvService - Section 6.8. Reads .droiddesk/environments.toml, switches the
-active environment (copying env/Firebase files into place after backing up what
-was there), and publishes the active environment so it can be shown persistently
-in the status bar, coloured by risk. That always-visible state is what prevents
-most of the mistakes the tool exists to catch.
-"""
+"""Environment management service handling configuration profiles, file deployment, and backups."""
 
 from __future__ import annotations
 
@@ -53,7 +48,7 @@ class EnvService(QObject):
         path = self._project_root / _ENVIRONMENTS_FILE
         path.parent.mkdir(parents=True, exist_ok=True)
         lines = [
-            "# DroidDesk Environment Configuration (Section 6.8)",
+            "# DroidDesk Environment Configuration",
             "# Managed dynamically by DroidDesk.",
             "",
         ]
@@ -142,7 +137,7 @@ class EnvService(QObject):
         return self._project_root / "google-services.json"
 
     def switch_to(self, environment: Environment) -> None:
-        """Switch active environment according to Section 6.8.
+        """Switch active environment.
 
         Backs up current configurations first, deploys new .env and optional
         Firebase config, and rolls back atomically if a required file is missing
@@ -154,13 +149,13 @@ class EnvService(QObject):
         src_env = self._project_root / environment.env_file
         src_firebase = self._project_root / environment.firebase if environment.firebase else None
 
-        # 1. Validation before touching anything
+        # Validation before file modifications
         if not src_env.is_file():
             raise FileNotFoundError(f"Environment source file not found: {src_env}")
         if src_firebase and not src_firebase.is_file():
             raise FileNotFoundError(f"Firebase source file not found: {src_firebase}")
 
-        # 2. Backup current files
+        # Backup current files
         env_backed_up = False
         firebase_backed_up = False
         backup_env = self._project_root / ".env.backup"
@@ -176,7 +171,7 @@ class EnvService(QObject):
                 shutil.copyfile(dest_firebase, backup_firebase)
                 firebase_backed_up = True
 
-            # 3. Copy new files into place
+            # Copy new files into place
             dest_env.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(src_env, dest_env)
 
@@ -198,6 +193,6 @@ class EnvService(QObject):
 
             raise RuntimeError(f"Failed to switch environment: {err}") from err
 
-        # 4. State transition and signal emission
+        # State transition and signal emission
         self._active = environment
         self.active_environment_changed.emit(environment)

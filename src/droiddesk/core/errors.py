@@ -1,9 +1,4 @@
-"""Exception hierarchy shared across layers.
-
-Every feature that depends on an external binary must check availability first and
-raise ToolNotFoundError rather than letting a raw FileNotFoundError traceback reach
-the user. See Section 3.1.
-"""
+"""Exception hierarchy shared across application layers."""
 
 from __future__ import annotations
 
@@ -37,11 +32,7 @@ class ApkParseError(DroidDeskError):
 
 
 class UnexpectedToolOutputError(DroidDeskError):
-    """Parsed output from an external tool did not match the expected format.
-
-    Raised instead of silently returning wrong data when a tool's output format
-    drifts after an SDK update. See Section 12, "External tool versions drift".
-    """
+    """Parsed output from an external tool did not match the expected format."""
 
 
 class MigrationError(DroidDeskError):

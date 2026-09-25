@@ -1,9 +1,4 @@
-"""Commands page — Section 6.9. Safe Command Runner & Defensive Security Audit.
-
-Provides 50 system-supplied commands across security audits, Gradle builds,
-unit/connected tests, ADB device operations, and APK inspection tools.
-Includes real-time keyword search to shorten and filter the command list.
-"""
+"""Command execution and defensive security audit page."""
 
 from __future__ import annotations
 
@@ -65,7 +60,7 @@ _CATEGORY_COLORS: dict[str, str] = {
 }
 
 PRESET_COMMANDS: list[CommandPreset] = [
-    # 1-12: Security & Key Harvesting Defensive Audits
+    # Security & Key Harvesting Defensive Audits
     CommandPreset(
         id="audit_apk_keys",
         name="[Audit] APK API Keys & Secrets",
@@ -150,7 +145,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         description="Executes Gitleaks detection across git history to detect committed secrets.",
         category="security",
     ),
-    # 13-22: Gradle Builds & Assembly
+    # Gradle Builds & Assembly
     CommandPreset(
         id="assemble_debug",
         name="[Build] Assemble Debug APK",
@@ -231,7 +226,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         category="build",
         is_release=False,
     ),
-    # 23-30: Testing, Linting & Verification
+    # Testing, Linting & Verification
     CommandPreset(
         id="gradle_test",
         name="[Test] Run All Unit Tests",
@@ -296,7 +291,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         category="build",
         is_release=False,
     ),
-    # 31-41: ADB & Device Management
+    # ADB & Device Management
     CommandPreset(
         id="adb_devices",
         name="[ADB] List Connected Devices",
@@ -374,7 +369,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         description="Kills ADB daemon server to recover from connection drops.",
         category="adb",
     ),
-    # 42-49: APK Inspection & Signing Analysis
+    # APK Inspection & Signing Analysis
     CommandPreset(
         id="apksigner_verify",
         name="[APK] Verify Signature Schemes",
@@ -431,7 +426,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         description="Analyzes DEX classes and method counts to inspect 64k multidex limits.",
         category="apk",
     ),
-    # 50: Custom Command
+    # Custom Command
     CommandPreset(
         id="custom",
         name="[Custom] Custom Command...",
@@ -724,7 +719,7 @@ class CommandsPage(QWidget):
         cmd_card = Card("Command Selection & Search")
         cmd_layout = cmd_card.body_layout()
 
-        # Row 1: Search / Filter input
+        # Search filter bar
         filter_row = QHBoxLayout()
         filter_row.setSpacing(10)
 
@@ -749,7 +744,7 @@ class CommandsPage(QWidget):
 
         cmd_layout.addLayout(filter_row)
 
-        # Row 2: Command selector, command input, run and stop buttons
+        # Command selection and action buttons
         row2 = QHBoxLayout()
         row2.setSpacing(10)
 

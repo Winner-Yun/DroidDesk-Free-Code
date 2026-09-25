@@ -1,8 +1,4 @@
-"""User-editable structured data: test profiles, environments, command guards.
-
-Pydantic, per Section 2.1 - these are edited by the user (directly as TOML, or via a
-form), so schema validation with readable errors matters more here than elsewhere.
-"""
+"""Structured configuration models for test profiles, environments, and commands."""
 
 from __future__ import annotations
 
@@ -10,7 +6,7 @@ from pydantic import BaseModel
 
 
 class TestProfile(BaseModel):
-    """Which steps of the APK Tester state machine (Section 6.3) run."""
+    """Test runner execution profile and step configuration."""
 
     __test__ = False
 
@@ -27,7 +23,7 @@ class TestProfile(BaseModel):
 
 
 class Environment(BaseModel):
-    """One entry from .droiddesk/environments.toml. See Section 6.8."""
+    """Environment configuration profile."""
 
     key: str
     label: str
@@ -48,7 +44,7 @@ class GuardResult(BaseModel):
 
 
 class CommandProfile(BaseModel):
-    """A build command plus the guards evaluated before it runs. See Section 6.9."""
+    """Build command definition and associated safety guards."""
 
     name: str
     command: list[str]

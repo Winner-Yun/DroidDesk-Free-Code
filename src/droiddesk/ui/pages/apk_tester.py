@@ -1,7 +1,4 @@
-"""APK Tester page - Section 6.3. Artifact-under-test panel, the run
-sequence checklist, and the verdict panel. Wired to ApkService.step_started,
-step_finished, and test_complete.
-"""
+"""APK Tester page providing automated test runner steps, logs, and crash analysis."""
 
 from __future__ import annotations
 

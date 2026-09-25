@@ -1,6 +1,4 @@
-"""Finding classification. See Section 6.5 - classification is the product: a
-scanner that reports every match at the same severity trains the user to ignore it.
-"""
+"""Severity classifications and test verdict definitions."""
 
 from __future__ import annotations
 
@@ -18,9 +16,3 @@ class Verdict(StrEnum):
     PASS = "PASS"
     PASS_WITH_WARNINGS = "PASS WITH WARNINGS"
     FAIL = "FAIL"
-
-
-class GateVerdict(StrEnum):
-    GO = "GO"
-    BLOCKED = "BLOCKED"
-    OVERRIDDEN = "OVERRIDDEN"

@@ -1,9 +1,4 @@
-"""ScanService - Section 6.5 and 6.6. Two-stage secret scanning: gitleaks (stage
-one, subprocess, JSON report) merged with DroidDesk's own engine (stage two, Android
-rules + entropy). Also drives the APK Privacy Scanner (archive enumeration, resource
-string extraction, opt-in DEX deep scan). CPU-bound work runs off the UI thread via
-QThreadPool; every long scan must be cancellable (Section 4.2).
-"""
+"""Secret scanning service combining Gitleaks and native Android rule analysis."""
 
 from __future__ import annotations
 
@@ -82,20 +77,20 @@ class ScanService(QObject):
         t0 = time.perf_counter()
         self._cancel_requested = False
 
-        # 1. Run Gitleaks (if available)
+        # Run Gitleaks if available
         gitleaks_findings: list[Finding] = []
         if not self._cancel_requested:
             gitleaks_findings = self._run_gitleaks(project_root)
 
-        # 2. Run ScannerEngine tree walk with cancellation check
+        # Run scanner engine tree walk
         engine_findings = self._engine.scan_tree(
             project_root, is_cancelled=lambda: self._cancel_requested
         )
 
-        # 3. Merge & deduplicate
+        # Merge and deduplicate
         merged = _merge_and_dedup(gitleaks_findings, engine_findings)
 
-        # 4. Apply suppressions from .droiddesk/suppressions.toml
+        # Apply suppressions
         supp_manager = SuppressionManager(project_root)
         supp_manager.apply_suppressions(merged)
 
@@ -147,7 +142,7 @@ class ScanService(QObject):
             extract_dir = Path(tempfile.gettempdir()) / "droiddesk_extracted" / apk_path.stem
             extract_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. Extract assets/ and res/raw/ to the extraction directory
+        # Extract assets and raw resources
         with zipfile.ZipFile(apk_path, "r") as z:
             for name in z.namelist():
                 if self._cancel_requested:
@@ -156,8 +151,7 @@ class ScanService(QObject):
                     z.extract(name, extract_dir)
                     files_scanned += 1
 
-        # 2. Extract string resources from resources.arsc into res/values/strings.xml
-        # (This is the original file that contains string tokens in Android projects)
+        # Extract string resources from resources.arsc into res/values/strings.xml
         if not self._cancel_requested:
             try:
                 named_strings = self._apk_reader.extract_named_string_resources(apk_path)
@@ -190,7 +184,7 @@ class ScanService(QObject):
             except Exception:
                 pass
 
-        # 3. Scan the extracted tree (assets, res/raw, and res/values/strings.xml)
+        # Scan extracted files
         if not self._cancel_requested:
             findings = self._engine.scan_tree(
                 extract_dir, is_cancelled=lambda: self._cancel_requested

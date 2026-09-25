@@ -1,9 +1,4 @@
-"""Application shell - Section 5. A brand block and active-environment bar
-across the top, a grouped sidebar over a `QStackedWidget` below it, and a
-persistent status bar for the idle/tool-availability strip. This module
-contains no business logic and reacts only to service signals, per the
-Presentation layer constraint in Section 4.1.
-"""
+"""Main application window managing top navigation, sidebar, and page views."""
 
 from __future__ import annotations
 
@@ -127,8 +122,7 @@ class MainWindow(QMainWindow):
         initial_apk = self._environment_bar.selected_apk()
         self._on_active_apk_changed(initial_apk)
 
-        # TODO(Phase 5): drive the environment bar from
-        # EnvService.active_environment_changed instead of static_data.
+
 
     def _build_pages(self) -> None:
         for key, page_cls in _PAGES:

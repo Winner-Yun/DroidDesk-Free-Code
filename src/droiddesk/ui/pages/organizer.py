@@ -1,7 +1,4 @@
-"""Smart Organizer & Renamer page - Section 6.12.
-Reads all files from ANY folder, generates smart rename suggestions across ALL file
-extensions, provides inline editing, one-by-one and batch acceptance, and full 1-click undo.
-"""
+"""File organizer and renamer page for batch file hygiene and pattern standardization."""
 
 from __future__ import annotations
 
@@ -381,24 +378,24 @@ class OrganizerPage(QWidget):
         uncompleted_count = 0
 
         for row, move in enumerate(self._planned_moves):
-            # Col 0: Original Name
+            # Original filename
             orig_item = QTableWidgetItem(move.source.name)
             orig_item.setFlags(orig_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self._moves_table.setItem(row, 0, orig_item)
 
-            # Col 1: Suggested Rename (Editable!)
+            # Suggested rename (editable)
             sugg_item = QTableWidgetItem(move.suggested_name)
             if move.source.name != move.suggested_name:
                 sugg_item.setForeground(Qt.GlobalColor.cyan)
             self._moves_table.setItem(row, 1, sugg_item)
 
-            # Col 2: What Changed
+            # Rule applied
             reason_item = QTableWidgetItem(move.rule_name)
             reason_item.setFlags(reason_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             reason_item.setForeground(Qt.GlobalColor.gray)
             self._moves_table.setItem(row, 2, reason_item)
 
-            # Col 3: Action (Accept button or Renamed pill)
+            # Row action button or status
             is_done = self._row_completed.get(row, False)
             if is_done:
                 pill_widget = QWidget()

@@ -109,7 +109,7 @@ class SettingsPage(QWidget):
         body.setContentsMargins(16, 14, 16, 14)
         body.setSpacing(10)
 
-        # 1. Action Toolbar (Verify All Tools + Run Setup Wizard) matching screenshot
+        # Action toolbar
         action_bar = QHBoxLayout()
         action_bar.setSpacing(10)
 
@@ -168,7 +168,7 @@ class SettingsPage(QWidget):
 
         body.addLayout(action_bar)
 
-        # 2. Sleek compact explanation banner
+        # Overview explanation banner
         info_bar = QFrame()
         info_bar.setObjectName("infoBanner")
         info_bar.setStyleSheet(
@@ -199,7 +199,7 @@ class SettingsPage(QWidget):
 
         body.addWidget(info_bar)
 
-        # 3. Tool Status Table (exact 5 columns matching user screenshot)
+        # Tool status table
         self._tool_table = QTableWidget(0, 5)
         self._tool_table.setHorizontalHeaderLabels(
             ["Tool", "Status", "Version", "Path", "Actions"]
@@ -248,7 +248,7 @@ class SettingsPage(QWidget):
         self._tool_table.cellClicked.connect(self._on_cell_clicked)
         body.addWidget(self._tool_table)
 
-        # 4. Interactive tool explanation footer
+        # Interactive tool explanation footer
         detail_bar = QFrame()
         detail_bar.setObjectName("detailBar")
         detail_bar.setStyleSheet(
@@ -326,7 +326,7 @@ class SettingsPage(QWidget):
         for row_idx, (name, info) in enumerate(tool_infos.items()):
             self._tool_table.setRowHeight(row_idx, 35)
 
-            # Col 0: Tool Name with informative tooltip
+            # Tool name
             name_item = QTableWidgetItem(name)
             name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             name_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
@@ -335,7 +335,7 @@ class SettingsPage(QWidget):
                 name_item.setToolTip(f"{name} ({t_title})\n{t_desc}")
             self._tool_table.setItem(row_idx, 0, name_item)
 
-            # Col 1: Status Pill (FOUND / MISSING / BUNDLED)
+            # Status indicator
             pill_widget = QWidget()
             pill_layout = QHBoxLayout(pill_widget)
             pill_layout.setContentsMargins(6, 3, 6, 3)
@@ -351,7 +351,7 @@ class SettingsPage(QWidget):
             pill_layout.addWidget(pill)
             self._tool_table.setCellWidget(row_idx, 1, pill_widget)
 
-            # Col 2: Version
+            # Version info
             ver_text = info.version or "-"
             if not info.is_valid and info.error_message and "Java runtime" in info.error_message:
                 ver_text = "Java Required"
@@ -362,7 +362,7 @@ class SettingsPage(QWidget):
                 ver_item.setToolTip(info.error_message)
             self._tool_table.setItem(row_idx, 2, ver_item)
 
-            # Col 3: Path (Stretches across available space)
+            # Executable path
             path_str = str(info.path) if info.path else "(not found)"
             path_item = QTableWidgetItem(path_str)
             path_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
@@ -372,7 +372,7 @@ class SettingsPage(QWidget):
                 path_item.setForeground(Qt.GlobalColor.darkGray)
             self._tool_table.setItem(row_idx, 3, path_item)
 
-            # Col 4: Actions (Browse... / Reset)
+            # Row actions
             act_widget = QWidget()
             act_layout = QHBoxLayout(act_widget)
             act_layout.setContentsMargins(4, 2, 4, 2)

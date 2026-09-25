@@ -1,8 +1,4 @@
-"""Application shell navigation - Section 5. A grouped, badge-aware sidebar
-(Overview / Connect / Inspect / Protect / Ship, with Settings pinned to the
-bottom) replaces the flat `QListWidget` the scaffold started with, matching
-the approved mockups.
-"""
+"""Grouped navigation sidebar with notification badges and section groupings."""
 
 from __future__ import annotations
 

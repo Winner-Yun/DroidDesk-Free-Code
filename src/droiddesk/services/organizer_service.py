@@ -1,8 +1,4 @@
-"""OrganizerService (Smart File Organizer & Renamer) - Section 6.12.
-Reads all files from ANY folder, generates smart rename suggestions across ALL file
-extensions, previews planned changes, and executes renames with full 1-click undo.
-Supports both single-file and batch-wide renames.
-"""
+"""File organization and batch renaming service with preview and undo journal."""
 
 from __future__ import annotations
 
@@ -75,13 +71,13 @@ class OrganizerService(QObject):
         ext = file_path.suffix
         reasons: list[str] = []
 
-        # 1. URL decode
+        # URL decode
         decoded = urllib.parse.unquote(stem)
         if decoded != stem:
             reasons.append("Decoded URL")
             stem = decoded
 
-        # 2. Strip duplicate/copy artifacts: " (1)", " - Copy", " (Copy 2)", "_copy"
+        # Strip duplicate and copy artifacts
         prev_copy = ""
         s_copy = stem
         while s_copy != prev_copy:
@@ -94,7 +90,7 @@ class OrganizerService(QObject):
             reasons.append("Trimmed copy suffix")
             stem = s_copy
 
-        # 3. Clean media quality/scene tags: e.g. 1080p, 720p, bluray, webrip, x264
+        # Clean media quality and scene tags
         media_clean = re.sub(
             r"[\.\[\(_-](1080p|720p|4k|2160p|bluray|web-?dl|webrip|hdtv|x264|x265|hevc)[\.\]\)_-]?",
             "",
@@ -105,14 +101,14 @@ class OrganizerService(QObject):
             reasons.append("Stripped media tags")
             stem = media_clean
 
-        # 4. Clean common APK build markers
+        # Clean common APK build markers
         if ext.lower() in (".apk", ".aab", ".xapk"):
             apk_clean = re.sub(r"[-_](unsigned|aligned|signed)", "", stem, flags=re.IGNORECASE)
             if apk_clean != stem:
                 reasons.append("Cleaned APK tags")
                 stem = apk_clean
 
-        # 5. Standardize screenshot / camera date-time strings
+        # Standardize screenshot and camera timestamp patterns
         m_shot = re.match(
             r"^(Screenshot|IMG|PXL|VID)[_-](\d{4})[-_]?(\d{2})[-_]?(\d{2})[\s_-]+(\d{2})[-_\s]?(\d{2})[-_\s]?(\d{2})(.*)$",
             stem,
@@ -123,7 +119,7 @@ class OrganizerService(QObject):
             stem = f"{prefix.lower()}_{y}-{mo}-{d}_{h}{mi}{s}{rest}"
             reasons.append("Standardized date")
 
-        # 6. Apply selected formatting style
+        # Apply selected formatting style
         if style == "kebab":
             stem = re.sub(r"[_\s.]+", "-", stem)
             stem = re.sub(r"[^a-zA-Z0-9-]", "", stem)

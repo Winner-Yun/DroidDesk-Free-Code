@@ -1,7 +1,4 @@
-"""Devices page - Section 6.1. Live polling list, explicit unauthorized/offline
-states (pairing instruction and reconnect action, not a raw error), wireless
-debugging entry, and the Test Device Profile toggle.
-"""
+"""Devices page displaying connected Android devices, authorization status, and network pairing."""
 
 from __future__ import annotations
 

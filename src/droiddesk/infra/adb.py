@@ -18,6 +18,13 @@ class AdbClient:
         self._adb_path = adb_path
         self._runner = runner or ProcessRunner()
 
+    @property
+    def adb_path(self) -> Path:
+        return self._adb_path
+
+    def set_adb_path(self, path: Path) -> None:
+        self._adb_path = path
+
     def list_devices(self) -> list[Device]:
         result = self._runner.run(self._adb_path, ["devices", "-l"])
         devices: list[Device] = []

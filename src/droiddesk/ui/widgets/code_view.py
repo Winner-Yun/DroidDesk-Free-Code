@@ -165,14 +165,14 @@ class CodeView(QPlainTextEdit):
             line_number - 1,
         )
 
-        # 1. Full-width selection for the first visual line
+        # Visual line selection
         line_selection = QTextEdit.ExtraSelection()
         line_selection.format.setBackground(QColor("#3d1418"))
         line_selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
         line_selection.cursor = cursor
         extra_selections.append(line_selection)
 
-        # 2. Block text background covering all wrapped characters in this source line
+        # Block text background covering wrapped characters
         block_cursor = QTextCursor(cursor)
         block_cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
         block_cursor.movePosition(
@@ -183,7 +183,7 @@ class CodeView(QPlainTextEdit):
         block_selection.cursor = block_cursor
         extra_selections.append(block_selection)
 
-        # 3. Specific token highlight within the line
+        # Token match highlight within the line
         block = cursor.block()
         line_text = block.text()
         if token and token in line_text:

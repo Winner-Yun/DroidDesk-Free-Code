@@ -1,7 +1,4 @@
-"""ApkService — Section 6.2 and Section 4.3 (the APK Test Run data flow). Orchestrates
-ApkReader, AdbClient, and the test state machine (TestService). Owns no widgets;
-progress and completion surface via Qt signals.
-"""
+"""Service orchestrating APK parsing, caching, testing workflows, and device operations."""
 
 from __future__ import annotations
 
@@ -52,6 +49,9 @@ class ApkService(QObject):
         self._storage_dir = storage_dir
         if self._storage_dir:
             self._storage_dir.mkdir(parents=True, exist_ok=True)
+
+    def set_apkanalyzer_path(self, path: Path) -> None:
+        self._apkanalyzer_path = path
 
     def import_apk(self, source_path: Path) -> ApkInfo:
         """Import an APK into project storage and persist its metadata to the database.

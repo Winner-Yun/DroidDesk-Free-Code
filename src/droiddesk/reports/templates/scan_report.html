@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>DroidDesk Secret Scan Report - {{ result.target_path.name }}</title>
+</head>
+<body>
+  <header>
+    <h1>Secret Scan Report</h1>
+    <p>Target: {{ result.target_path }} ({{ result.target_type }})</p>
+    <p>Started: {{ result.started_at }} · Duration: {{ result.duration_ms }} ms · Files scanned: {{ result.files_scanned }}</p>
+    {% set blocking_count = result.findings | selectattr("severity.name", "equalto", "CRITICAL") | list | length %}
+    {% if blocking_count > 0 %}
+    <p class="verdict verdict-fail">BLOCKING FINDINGS: {{ blocking_count }} critical issue(s)</p>
+    {% elif result.findings | length > 0 %}
+    <p class="verdict verdict-warn">WARNINGS: {{ result.findings | length }} finding(s)</p>
+    {% else %}
+    <p class="verdict verdict-pass">CLEAN: 0 secrets detected</p>
+    {% endif %}
+  </header>
+
+  <section>
+    <h2>Findings ({{ result.findings | length }})</h2>
+    {% if result.findings %}
+    <table>
+      <thead>
+        <tr>
+          <th>Rule ID</th>
+          <th>Severity</th>
+          <th>File</th>
+          <th>Line</th>
+          <th>Redacted Secret</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for finding in result.findings %}
+        <tr>
+          <td>{{ finding.rule_id }}</td>
+          <td class="severity-{{ finding.severity.name.lower() }}">{{ finding.severity.name }}</td>
+          <td>{{ finding.file_path.name }}</td>
+          <td>{{ finding.line_number if finding.line_number is not none else "-" }}</td>
+          <td><code>{{ finding.redacted }}</code></td>
+          <td>{{ "Suppressed" if finding.suppressed else "Active" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>No secrets or sensitive credentials discovered during scan.</p>
+    {% endif %}
+  </section>
+
+  <footer>
+    <p>DroidDesk performs automated checks for commonly misplaced configuration and
+    credential files. It detects accidental exposure, not deliberate concealment.
+    A clean result indicates that no issues were found by the checks performed; it
+    is not a guarantee that an application is secure, and it does not substitute
+    for security review. All findings should be assessed by a person before
+    acting on them.</p>
+  </footer>
+</body>
+</html>

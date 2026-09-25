@@ -328,7 +328,7 @@ class SetupDialog(QDialog):
 
         pass_style = f"font-size: 11px; font-weight: 600; color: {STATUS_COLORS['pass']};"
 
-        # 1. Platform tools
+        # Platform tools
         pt_lbl = self._comp_labels["platform-tools"][1]
         adb_found = False
         if valid_sdk_dir and sdk_path is not None:
@@ -344,7 +344,7 @@ class SetupDialog(QDialog):
             pt_lbl.setText("Specify a valid SDK directory")
             pt_lbl.setStyleSheet("font-size: 11px; color: #8b8e94;")
 
-        # 2. Build tools
+        # Build tools
         bt_lbl = self._comp_labels["build-tools"][1]
         if valid_sdk_dir and sdk_path is not None:
             bt_dir = sdk_path / "build-tools"
@@ -363,7 +363,7 @@ class SetupDialog(QDialog):
             bt_lbl.setText("Waiting for SDK directory...")
             bt_lbl.setStyleSheet("font-size: 11px; color: #8b8e94;")
 
-        # 3. Cmdline tools
+        # Cmdline tools
         cmd_lbl = self._comp_labels["cmdline-tools"][1]
         if valid_sdk_dir and sdk_path is not None:
             cmd_dir = sdk_path / "cmdline-tools"
@@ -388,7 +388,7 @@ class SetupDialog(QDialog):
             cmd_lbl.setText("Waiting for SDK directory...")
             cmd_lbl.setStyleSheet("font-size: 11px; color: #8b8e94;")
 
-        # 4. Java runtime
+        # Java runtime
         java_lbl = self._comp_labels["java"][1]
         java_home = self._tool_locator.find_java_home()
         if java_home:

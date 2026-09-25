@@ -1,17 +1,4 @@
-"""ToolLocator: resolve adb, aapt2, apksigner, apkanalyzer, bundletool, gitleaks,
-scrcpy, and git. See Section 3.1 for the discovery order, which every method here
-must follow:
-
-  1. Explicit path stored in the user's configuration file.
-  2. ANDROID_HOME / ANDROID_SDK_ROOT, walking into platform-tools, build-tools
-     (highest version), and cmdline-tools.
-  3. Default Windows install location: %LOCALAPPDATA%\\Android\\Sdk.
-  4. System PATH.
-  5. Bundled gitleaks.exe (or bundled tools).
-  6. If unresolved: caller shows a blocking setup dialog with a folder picker.
-
-Results are cached and re-verified only on cache miss, settings change, or manual invalidation.
-"""
+"""ToolLocator: resolves Android SDK tools, Git, Gitleaks, and device utilities."""
 
 from __future__ import annotations
 

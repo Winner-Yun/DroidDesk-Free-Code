@@ -29,7 +29,7 @@ def detect_environment_info(file_path: Path, rule_id: str | None = None) -> tupl
     posix = file_path.as_posix().lower()
     ext = file_path.suffix.lower()
 
-    # 1. Environment files (.env)
+    # Environment files (.env)
     if name.startswith(".env"):
         if "prod" in name:
             return ("Production Env", "Production Environment Config")
@@ -41,7 +41,7 @@ def detect_environment_info(file_path: Path, rule_id: str | None = None) -> tupl
     if name in ("local.properties", "gradle.properties"):
         return ("Properties Config", "Project Properties File")
 
-    # 2. Android Manifest & XML Resources
+    # Android Manifest and XML resources
     if name == "androidmanifest.xml":
         return ("Android Manifest", "Android Application Manifest")
     if name == "resources.arsc":
@@ -53,19 +53,19 @@ def detect_environment_info(file_path: Path, rule_id: str | None = None) -> tupl
             return ("Android Resource", "Android Resource File")
         return ("XML Config", "XML Configuration")
 
-    # 3. Google & Cloud Service Configs
+    # Google and cloud service configurations
     if name == "google-services.json":
         return ("Google Services", "Firebase / Google Cloud Client Config")
     if "service-account" in name or "service_account" in name:
         return ("Service Account", "GCP Service Account Credentials")
 
-    # 4. Keystores & Certificates
+    # Keystores and certificates
     if ext in (".jks", ".keystore", ".p12", ".pkcs12", ".bks"):
         return ("Signing Keystore", "Android Signing Keystore")
     if ext in (".pem", ".key", ".crt", ".der"):
         return ("Certificate / Key", "Cryptographic Key / Certificate")
 
-    # 5. Build Configuration & CI/CD
+    # Build configuration and CI/CD pipelines
     if name in ("build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"):
         return ("Build Script", "Gradle Build Script")
     if name == "pom.xml":
@@ -73,7 +73,7 @@ def detect_environment_info(file_path: Path, rule_id: str | None = None) -> tupl
     if ".github" in posix or ".gitlab-ci" in posix or "jenkins" in name:
         return ("CI/CD Pipeline", "CI/CD Workflow Pipeline")
 
-    # 6. Source Code
+    # Source code
     if ext == ".java":
         return ("Java Source", "Java Application Source Code")
     if ext in (".kt", ".kts"):
@@ -89,7 +89,7 @@ def detect_environment_info(file_path: Path, rule_id: str | None = None) -> tupl
     if ext == ".json":
         return ("JSON Config", "JSON Configuration File")
 
-    # 7. APK Archive
+    # APK archive contents
     if ".apk" in posix or posix.startswith("assets/") or posix.startswith("res/"):
         return ("APK Archive", "Compiled APK Asset / Resource")
 

@@ -21,12 +21,16 @@ class StatusPill(QLabel):
 
     def __init__(self, text: str, status: str) -> None:
         super().__init__(text.upper())
+        self.set_status(text, status)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def set_status(self, text: str, status: str) -> None:
+        self.setText(text.upper())
         color = STATUS_COLORS.get(status, STATUS_COLORS["info"])
         self.setStyleSheet(
             f"background: {color}; color: white; border-radius: 3px; "
             f"padding: 2px 8px; font-weight: 700; font-size: 11px;"
         )
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
 
 class StatusIcon(QLabel):
@@ -50,13 +54,16 @@ class StatusDot(QLabel):
 
     def __init__(self, status: str) -> None:
         super().__init__()
+        from droiddesk.ui.theme import is_light
+
+        ready_color = "#9ca3af" if is_light() else "#c7c9cc"
         colors = {
-            "ready": "#c7c9cc",
+            "ready": ready_color,
             "active": STATUS_COLORS["pass"],
             "unauthorized": STATUS_COLORS["warn"],
             "offline": STATUS_COLORS["fail"],
         }
-        color = colors.get(status, "#5c5f66")
+        color = colors.get(status, "#6b7280" if is_light() else "#5c5f66")
         self.setFixedSize(9, 9)
         self.setStyleSheet(f"background: {color}; border-radius: 4px;")
 
@@ -66,7 +73,4 @@ class TagPill(QLabel):
 
     def __init__(self, text: str) -> None:
         super().__init__(text)
-        self.setStyleSheet(
-            "background: transparent; color: #8b8e94; border: 1px solid #35373e; "
-            "border-radius: 3px; padding: 1px 7px; font-size: 10px;"
-        )
+        self.setProperty("role", "tagPill")

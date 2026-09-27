@@ -17,3 +17,4 @@ sqlalchemy>=2.0
 pyahocorasick>=2.1
 tkinter-icons[lucide]>=5.1
 pytest>=8.2
+pyinstaller>=6.5.0

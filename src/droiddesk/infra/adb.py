@@ -17,6 +17,7 @@ class AdbClient:
     def __init__(self, adb_path: Path, runner: ProcessRunner | None = None) -> None:
         self._adb_path = adb_path
         self._runner = runner or ProcessRunner()
+        self._device_props_cache: dict[str, dict[str, str]] = {}
 
     @property
     def adb_path(self) -> Path:
@@ -25,9 +26,30 @@ class AdbClient:
     def set_adb_path(self, path: Path) -> None:
         self._adb_path = path
 
+    def get_all_props(self, serial: str) -> dict[str, str]:
+        """Fetch and cache all getprop properties for a device in a single fast call."""
+        if serial in self._device_props_cache:
+            return self._device_props_cache[serial]
+
+        result = self._runner.run(
+            self._adb_path, ["-s", serial, "shell", "getprop"], timeout=3.0
+        )
+        props: dict[str, str] = {}
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("[") and "]: [" in line:
+                key, val = line[1:].split("]: [", 1)
+                props[key] = val.rstrip("]")
+
+        if props:
+            self._device_props_cache[serial] = props
+        return props
+
     def list_devices(self) -> list[Device]:
-        result = self._runner.run(self._adb_path, ["devices", "-l"])
+        result = self._runner.run(self._adb_path, ["devices", "-l"], timeout=3.0)
         devices: list[Device] = []
+        active_serials: set[str] = set()
+
         for line in result.stdout.splitlines():
             line = line.strip()
             if not line or line.startswith("List of devices"):
@@ -38,22 +60,34 @@ class AdbClient:
             serial, state = parts[0], parts[1]
             if state not in ("device", "unauthorized", "offline"):
                 continue
+
+            active_serials.add(serial)
             tokens = {k: v for k, v in (t.split(":", 1) for t in parts[2:] if ":" in t)}
             device = Device(serial=serial, state=state, model=tokens.get("model"))
             if state == "device":
-                device.model = self.getprop(serial, "ro.product.model") or tokens.get("model")
-                device.android_version = self.getprop(serial, "ro.build.version.release") or None
-                sdk = self.getprop(serial, "ro.build.version.sdk")
-                device.api_level = int(sdk) if sdk.isdigit() else None
-                device.abi = self.getprop(serial, "ro.product.cpu.abi") or None
-                density = self.getprop(serial, "ro.sf.lcd_density")
-                device.density = int(density) if density.isdigit() else None
+                props = self.get_all_props(serial)
+                device.model = props.get("ro.product.model") or tokens.get("model")
+                device.android_version = props.get("ro.build.version.release") or None
+                sdk = props.get("ro.build.version.sdk")
+                device.api_level = int(sdk) if sdk and sdk.isdigit() else None
+                device.abi = props.get("ro.product.cpu.abi") or None
+                density = props.get("ro.sf.lcd_density")
+                device.density = int(density) if density and density.isdigit() else None
             devices.append(device)
+
+        # Evict disconnected serials from the property cache
+        for cached_serial in list(self._device_props_cache.keys()):
+            if cached_serial not in active_serials:
+                self._device_props_cache.pop(cached_serial, None)
+
         return devices
 
     def getprop(self, serial: str, prop: str) -> str:
+        if serial in self._device_props_cache:
+            return self._device_props_cache[serial].get(prop, "")
         result = self._runner.run(self._adb_path, ["-s", serial, "shell", "getprop", prop])
         return result.stdout.strip()
+
 
     def pair(self, host_port: str, pairing_code: str) -> bool:
         result = self._runner.run(self._adb_path, ["pair", host_port, pairing_code])

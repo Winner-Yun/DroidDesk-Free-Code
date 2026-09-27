@@ -62,13 +62,40 @@ SEVERITY_COLORS = {
 
 FONT_FAMILY = "Segoe UI"
 MONO_FAMILY = "Cascadia Mono"
-
 _ICON_CACHE: dict[tuple[str, int, str, str | None], QIcon] = {}
 _PIXMAP_CACHE: dict[tuple[str, int, str], QPixmap] = {}
+_CURRENT_THEME: str = "dark"
 
 
-def get_pixmap(name: str, size: int = 16, color: str = TEXT_MUTED) -> QPixmap:
-    """Render a Lucide icon by name as a QPixmap with caching."""
+def get_current_theme() -> str:
+    """Return the currently active theme mode ('dark' or 'light')."""
+    return _CURRENT_THEME
+
+
+def set_current_theme(mode: str) -> None:
+    """Set the currently active theme mode ('dark' or 'light')."""
+    global _CURRENT_THEME
+    _CURRENT_THEME = mode.lower()
+
+
+def is_light() -> bool:
+    """Check if the currently active theme is light mode."""
+    return _CURRENT_THEME == "light"
+
+
+def is_dark() -> bool:
+    """Check if the currently active theme is dark mode."""
+    return _CURRENT_THEME == "dark"
+
+
+def get_pixmap(name: str, size: int = 16, color: str | None = None) -> QPixmap:
+    """Render a Lucide icon by name as a QPixmap with caching.
+
+    If color is None, defaults to theme-appropriate muted text color.
+    """
+    if color is None:
+        color = "#6b7280" if is_light() else TEXT_MUTED
+
     cache_key = (name, size, color)
     if cache_key in _PIXMAP_CACHE:
         return _PIXMAP_CACHE[cache_key]
@@ -89,13 +116,19 @@ def get_pixmap(name: str, size: int = 16, color: str = TEXT_MUTED) -> QPixmap:
 def get_icon(
     name: str,
     size: int = 16,
-    color: str = TEXT_MUTED,
+    color: str | None = None,
     active_color: str | None = None,
 ) -> QIcon:
     """Render a Lucide icon by name as a QIcon.
 
     Supports an optional active_color for checked/selected widget states.
+    If color is None, dynamically defaults to theme-appropriate muted text color.
     """
+    if color is None:
+        color = "#6b7280" if is_light() else TEXT_MUTED
+    if active_color is None:
+        active_color = "#111827" if is_light() else TEXT
+
     cache_key = (name, size, color, active_color)
     if cache_key in _ICON_CACHE:
         return _ICON_CACHE[cache_key]
@@ -164,16 +197,75 @@ def get_app_logo_icon() -> QIcon:
     # Fallback to vector icon
     return get_icon("smartphone", size=32, color=ACCENT_BLUE)
 
-STYLESHEET = f"""
+def get_stylesheet(mode: str = "dark") -> str:
+    is_light = mode.lower() == "light"
+
+    bg_app = "#f3f4f6" if is_light else BG_APP
+    bg_sidebar = "#e5e7eb" if is_light else BG_SIDEBAR
+    bg_panel = "#ffffff" if is_light else BG_PANEL
+    bg_panel_alt = "#f9fafb" if is_light else BG_PANEL_ALT
+    bg_input = "#ffffff" if is_light else BG_INPUT
+    bg_hover = "#e5e7eb" if is_light else BG_HOVER
+    bg_selected = "#d1d5db" if is_light else BG_SELECTED
+
+    border = "#d1d5db" if is_light else BORDER
+    border_light = "#e5e7eb" if is_light else BORDER_LIGHT
+
+    text = "#111827" if is_light else TEXT
+    text_muted = "#4b5563" if is_light else TEXT_MUTED
+    text_dim = "#6b7280" if is_light else TEXT_DIM
+
+    header_bg_start = "#fee2e2" if is_light else HEADER_BG_START
+    header_bg_end = "#fef2f2" if is_light else HEADER_BG_END
+    header_border = "#fecaca" if is_light else HEADER_BORDER
+    bottom_sheet_bg = (
+        "qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #eff6ff, stop:1 #f0fdf4)"
+        if is_light
+        else "qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1a1e27, stop:1 #1e2430)"
+    )
+    bottom_sheet_border = "#bfdbfe" if is_light else "#2e3a4e"
+
+    danger_bg = "#fef2f2" if is_light else "#2a1418"
+    danger_border = "#fecaca" if is_light else "#7f1d1d"
+    danger_hover = "#fee2e2" if is_light else "#3b171c"
+
+    primary_bg = "#2563eb"
+    primary_hover = "#1d4ed8"
+    primary_pressed = "#1e40af"
+    primary_border = "#1d4ed8" if is_light else "#3b82f6"
+
+    apk_remove_bg = "#fee2e2" if is_light else "rgba(224, 87, 74, 0.08)"
+    apk_remove_border = "#fca5a5" if is_light else "rgba(224, 87, 74, 0.4)"
+    apk_remove_text = "#dc2626" if is_light else "#e0574a"
+
+    env_badge_bg = "#f3e8ff" if is_light else "rgba(167, 139, 250, 0.15)"
+    env_badge_color = "#7e22ce" if is_light else "#c4b5fd"
+    env_badge_border = "#d8b4fe" if is_light else "rgba(167, 139, 250, 0.35)"
+
+    line_warn_bg = "#fef3c7" if is_light else "#3b2816"
+    line_warn_color = "#b45309" if is_light else "#fbbf24"
+    line_warn_border = "#fde68a" if is_light else "#78350f"
+
+    line_neutral_bg = "#f3f4f6" if is_light else "#23252a"
+    line_neutral_color = "#4b5563" if is_light else "#9ca3af"
+    line_neutral_border = "#d1d5db" if is_light else "#35373e"
+
+    rec_box_bg = "rgba(59, 130, 246, 0.07)" if is_light else "rgba(91, 155, 213, 0.08)"
+    rec_box_border = "rgba(59, 130, 246, 0.25)" if is_light else "rgba(91, 155, 213, 0.25)"
+
+    keystore_bg = "#fefce8" if is_light else "rgba(241, 196, 15, 0.1)"
+    keystore_border = "#fef08a" if is_light else "rgba(241, 196, 15, 0.4)"
+    keystore_title = "#ca8a04" if is_light else "#f1c40f"
+
+    bottom_sheet_title_color = "#0284c7" if is_light else "#38bdf8"
+
+    return f"""
 * {{
     font-family: "{FONT_FAMILY}";
-    color: {TEXT};
+    color: {text};
 }}
-QMainWindow, QWidget#appRoot, QWidget#bodyRow {{
-    background: {BG_APP};
-}}
-QWidget#page {{
-    background: {BG_APP};
+QMainWindow, QDialog, QWidget#appRoot, QWidget#bodyRow, QWidget#page, QWidget[role="page"] {{
+    background: {bg_app};
 }}
 QLabel {{
     background: transparent;
@@ -181,21 +273,23 @@ QLabel {{
 QLabel[role="pageTitle"] {{
     font-size: 20px;
     font-weight: 600;
+    color: {text};
 }}
 QLabel[role="pageSubtitle"] {{
-    color: {TEXT_MUTED};
+    color: {text_muted};
     font-size: 12px;
 }}
 QLabel[role="sectionTitle"] {{
     font-size: 13px;
     font-weight: 600;
+    color: {text};
 }}
 QLabel[role="muted"] {{
-    color: {TEXT_MUTED};
+    color: {text_muted};
     font-size: 12px;
 }}
 QLabel[role="dim"] {{
-    color: {TEXT_DIM};
+    color: {text_dim};
     font-size: 11px;
 }}
 QLabel[role="mono"] {{
@@ -210,24 +304,24 @@ QLabel[role="statNumber"] {{
 
 /* -- Brand block (top-left, above the sidebar) -------------------- */
 QWidget#brandBlock {{
-    background: {BG_SIDEBAR};
-    border-bottom: 1px solid {BORDER};
-    border-right: 1px solid {BORDER};
+    background: {bg_sidebar};
+    border-bottom: 1px solid {border};
+    border-right: 1px solid {border};
 }}
 QLabel#brandTitle {{
     font-size: 15px;
     font-weight: 700;
 }}
 QLabel#brandSubtitle {{
-    color: {TEXT_DIM};
+    color: {text_dim};
     font-size: 11px;
 }}
 
 /* -- Environment bar (top-right) ------------------------------------ */
 QWidget#environmentBar {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 {HEADER_BG_START}, stop:1 {HEADER_BG_END});
-    border-bottom: 1px solid {HEADER_BORDER};
+        stop:0 {header_bg_start}, stop:1 {header_bg_end});
+    border-bottom: 1px solid {header_border};
 }}
 QLabel#envIcon {{
     color: {ACCENT_RED_BRIGHT};
@@ -240,22 +334,22 @@ QLabel#envLabel {{
     letter-spacing: 1px;
 }}
 QLabel#envValue {{
-    color: {TEXT};
+    color: {text};
     font-weight: 600;
     font-size: 13px;
 }}
 QLabel#envDetail {{
-    color: {TEXT_MUTED};
+    color: {text_muted};
     font-size: 12px;
 }}
 
 /* -- Sidebar --------------------------------------------------------- */
 QWidget#sidebar {{
-    background: {BG_SIDEBAR};
-    border-right: 1px solid {BORDER};
+    background: {bg_sidebar};
+    border-right: 1px solid {border};
 }}
 QLabel[role="navSection"] {{
-    color: {TEXT_DIM};
+    color: {text_dim};
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 1px;
@@ -268,16 +362,16 @@ QPushButton[role="navItem"] {{
     border-radius: 5px;
     border: none;
     background: transparent;
-    color: {TEXT_MUTED};
+    color: {text_muted};
     font-size: 13px;
 }}
 QPushButton[role="navItem"]:hover {{
-    background: {BG_HOVER};
-    color: {TEXT};
+    background: {bg_hover};
+    color: {text};
 }}
 QPushButton[role="navItem"]:checked {{
-    background: {BG_SELECTED};
-    color: {TEXT};
+    background: {bg_selected};
+    color: {text};
     font-weight: 600;
 }}
 QLabel[role="navBadge"] {{
@@ -291,73 +385,259 @@ QLabel[role="navBadge"] {{
 
 /* -- Cards / panels ---------------------------------------------------*/
 QFrame[role="card"] {{
-    background: {BG_PANEL};
-    border: 1px solid {BORDER};
+    background: {bg_panel};
+    border: 1px solid {border};
     border-radius: 8px;
 }}
 QFrame[role="statCard"] {{
-    background: {BG_PANEL};
-    border: 1px solid {BORDER};
+    background: {bg_panel};
+    border: 1px solid {border};
+    border-radius: 8px;
+}}
+QFrame#emptyStateWidget {{
+    background: {bg_panel};
+    border: 1px solid {border};
+    border-radius: 8px;
+}}
+QFrame#emptyStateWidget[frameless="true"] {{
+    background: transparent;
+    border: none;
+}}
+
+/* -- Detail & Container boxes across pages --------------------------- */
+#locBox, #lineBox, #tokenBox, #recBox, #detailScroll, QFrame#pathCard {{
+    background: {bg_panel};
+    border: 1px solid {border};
+    border-radius: 6px;
+}}
+#locBox QLabel, #tokenBox QLabel, #recBox QLabel, #lineBox QLabel {{
+    background: transparent;
+    border: none;
+}}
+#lineBox {{
+    background: {danger_bg};
+    border: 1px solid {danger_border};
+    border-left: 3px solid #ef4444;
+    border-radius: 4px;
+}}
+#recBox {{
+    background: {rec_box_bg};
+    border: 1px solid {rec_box_border};
+    border-left: 3px solid #3b82f6;
+    border-radius: 4px;
+}}
+QLabel#securityEnvBadge {{
+    background: {env_badge_bg};
+    color: {env_badge_color};
+    border: 1px solid {env_badge_border};
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+}}
+QLabel[role="lineBadgeWarn"] {{
+    background: {line_warn_bg};
+    color: {line_warn_color};
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid {line_warn_border};
+    border-radius: 4px;
+    padding: 1px 8px;
+}}
+QLabel[role="lineBadgeNeutral"] {{
+    background: {line_neutral_bg};
+    color: {line_neutral_color};
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid {line_neutral_border};
+    border-radius: 4px;
+    padding: 1px 8px;
+}}
+QWidget[role="divider"], QFrame[role="divider"] {{
+    background: {border};
+}}
+QFrame#keystoreBanner {{
+    background: {keystore_bg};
+    border: 1px solid {keystore_border};
+    border-radius: 6px;
+    padding: 10px;
+}}
+QLabel#keystoreTitle {{
+    color: {keystore_title};
+    font-weight: 700;
+    font-size: 12px;
+}}
+QLabel#bottomSheetTitle {{
+    color: {bottom_sheet_title_color};
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}}
+
+/* -- Bottom Sheet Note ------------------------------------------------*/
+QFrame#bottomSheet {{
+    background: {bottom_sheet_bg};
+    border: 1px solid {bottom_sheet_border};
     border-radius: 8px;
 }}
 
 /* -- Buttons ----------------------------------------------------------*/
 QPushButton {{
-    background: {BG_PANEL_ALT};
-    border: 1px solid {BORDER_LIGHT};
+    background: {bg_panel_alt};
+    border: 1px solid {border_light};
     border-radius: 5px;
     padding: 6px 14px;
     font-size: 12px;
-    color: {TEXT};
+    color: {text};
 }}
 QPushButton:hover {{
-    background: {BG_HOVER};
+    background: {bg_hover};
 }}
 QPushButton:pressed {{
-    background: {BG_SELECTED};
+    background: {bg_selected};
 }}
 QPushButton:disabled {{
-    color: {TEXT_DIM};
+    color: {text_dim};
+    border-color: {border_light};
 }}
 QPushButton[role="primary"] {{
-    background: #39424e;
-    border: 1px solid #47515f;
+    background: {primary_bg};
+    border: 1px solid {primary_border};
+    border-radius: 6px;
+    color: #ffffff;
     font-weight: 600;
 }}
 QPushButton[role="primary"]:hover {{
-    background: #434e5c;
+    background: {primary_hover};
+    color: #ffffff;
 }}
-QPushButton[role="outlineRed"] {{
-    background: transparent;
-    border: 1px solid {ACCENT_RED};
-    color: {ACCENT_RED_BRIGHT};
+QPushButton[role="primary"]:pressed {{
+    background: {primary_pressed};
+    color: #ffffff;
+}}
+QPushButton[role="primary"]:disabled {{
+    background: {bg_selected};
+    border: 1px solid {border_light};
+    color: {text_dim};
+}}
+QPushButton[role="outlineRed"], QPushButton[role="danger"] {{
+    background: {danger_bg};
+    border: 1px solid {danger_border};
+    border-radius: 5px;
+    color: #ef4444;
     font-weight: 600;
 }}
-QPushButton[role="outlineRed"]:hover {{
-    background: rgba(192, 57, 43, 0.12);
+QPushButton[role="outlineRed"]:hover, QPushButton[role="danger"]:hover {{
+    background: {danger_hover};
+    color: #dc2626;
 }}
 QPushButton[role="link"] {{
     background: transparent;
     border: none;
-    color: {TEXT_MUTED};
+    color: {text_muted};
     text-align: left;
     padding: 2px;
 }}
 QPushButton[role="link"]:hover {{
-    color: {TEXT};
+    color: {text};
+}}
+QPushButton[role="secondary"] {{
+    background: {bg_panel_alt};
+    border: 1px solid {border_light};
+    border-radius: 5px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: {text};
+}}
+QPushButton[role="secondary"]:hover {{
+    background: {bg_hover};
+}}
+QPushButton[role="secondary"]:pressed {{
+    background: {bg_selected};
+}}
+QPushButton[role="tableActionDanger"] {{
+    background: {danger_bg};
+    border: 1px solid {danger_border};
+    border-radius: 4px;
+    color: #ef4444;
+    font-weight: 600;
+    padding: 3px 8px;
+    font-size: 11px;
+}}
+QPushButton[role="tableActionDanger"]:hover {{
+    background: {danger_hover};
+    color: #dc2626;
+}}
+QPushButton[role="tableAction"] {{
+    background: {bg_panel_alt};
+    border: 1px solid {border_light};
+    border-radius: 4px;
+    color: {text};
+    padding: 3px 8px;
+    font-size: 11px;
+}}
+QPushButton[role="tableAction"]:hover {{
+    background: {bg_hover};
+}}
+
+/* -- Appbar APK remove button ----------------------------------------- */
+QPushButton#apkRemoveButton {{
+    background-color: {apk_remove_bg};
+    border: 1px solid {apk_remove_border};
+    border-radius: 5px;
+    color: {apk_remove_text};
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+}}
+QPushButton#apkRemoveButton:hover {{
+    background-color: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+}}
+QPushButton#apkRemoveButton:disabled {{
+    background-color: transparent;
+    border-color: {border_light};
+    color: {text_dim};
+}}
+
+/* -- Tag Pill -------------------------------------------------------- */
+QLabel[role="tagPill"] {{
+    background: transparent;
+    color: {text_muted};
+    border: 1px solid {border_light};
+    border-radius: 3px;
+    padding: 1px 7px;
+    font-size: 10px;
 }}
 
 /* -- Inputs -------------------------------------------------------- */
-QLineEdit, QComboBox {{
-    background: {BG_INPUT};
-    border: 1px solid {BORDER_LIGHT};
+QLineEdit, QComboBox, QPlainTextEdit, QTextEdit {{
+    background: {bg_input};
+    border: 1px solid {border_light};
     border-radius: 5px;
     padding: 5px 8px;
     font-size: 12px;
-    color: {TEXT};
+    color: {text};
 }}
 QLineEdit:focus, QComboBox:focus {{
     border: 1px solid {ACCENT_BLUE};
+}}
+QLineEdit:read-only {{
+    background: {bg_hover};
+    color: {text_muted};
+}}
+QLineEdit#findingPathEdit {{
+    background: {bg_input};
+    border: 1px solid {border};
+    border-radius: 4px;
+    color: {ACCENT_BLUE};
+    font-family: "{MONO_FAMILY}";
+    font-size: 11px;
+    padding: 4px 8px;
+}}
+QLineEdit#findingPathEdit:focus {{
+    border-color: {ACCENT_BLUE};
 }}
 QComboBox::drop-down {{
     border: none;
@@ -365,64 +645,97 @@ QComboBox::drop-down {{
 }}
 QCheckBox {{
     font-size: 12px;
-    color: {TEXT_MUTED};
+    color: {text_muted};
 }}
 
 /* -- Tables ---------------------------------------------------------- */
 QTableWidget, QTableView {{
-    background: {BG_APP};
-    alternate-background-color: {BG_APP};
+    background: {bg_panel};
+    alternate-background-color: {bg_panel};
     gridline-color: transparent;
-    border: none;
-    selection-background-color: {BG_SELECTED};
-    selection-color: {TEXT};
+    border: 1px solid {border};
+    border-radius: 6px;
+    selection-background-color: {bg_selected};
+    selection-color: {text};
     font-size: 12px;
 }}
 QTableWidget::item, QTableView::item {{
     padding: 6px 4px;
-    border-bottom: 1px solid {BORDER};
+    border-bottom: 1px solid {border_light};
+    color: {text};
 }}
 QHeaderView::section {{
-    background: {BG_APP};
-    color: {TEXT_DIM};
+    background: {bg_panel_alt};
+    color: {text_dim};
     border: none;
-    border-bottom: 1px solid {BORDER_LIGHT};
-    padding: 6px 4px;
+    border-bottom: 1px solid {border_light};
+    padding: 6px 6px;
     font-size: 11px;
     font-weight: 600;
     text-align: left;
 }}
 QTableCornerButton::section {{
-    background: {BG_APP};
+    background: {bg_panel_alt};
     border: none;
 }}
 
+/* -- Lists ----------------------------------------------------------- */
+QListWidget, QListView {{
+    background: {bg_panel};
+    border: 1px solid {border};
+    border-radius: 6px;
+    color: {text};
+    outline: none;
+}}
+QListWidget::item, QListView::item {{
+    background: transparent;
+    border-bottom: 1px solid {border_light};
+    color: {text};
+}}
+QListWidget::item:hover, QListView::item:hover {{
+    background: {bg_hover};
+}}
+QListWidget::item:selected, QListView::item:selected {{
+    background: {bg_selected};
+    color: {text};
+}}
+
 /* -- Tabs -------------------------------------------------------------*/
+QTabWidget {{
+    background: transparent;
+}}
 QTabWidget::pane {{
     border: none;
-    border-top: 1px solid {BORDER};
+    border-top: 1px solid {border};
+    background: transparent;
+}}
+QTabWidget > QStackedWidget, QTabWidget > QWidget {{
+    background: transparent;
+}}
+QTabBar {{
+    background: transparent;
 }}
 QTabBar::tab {{
     background: transparent;
-    color: {TEXT_MUTED};
-    padding: 8px 4px;
-    margin-right: 20px;
+    color: {text_muted};
+    padding: 8px 12px;
+    margin-right: 12px;
     border-bottom: 2px solid transparent;
     font-size: 13px;
 }}
 QTabBar::tab:selected {{
-    color: {TEXT};
+    color: {text};
     border-bottom: 2px solid {ACCENT_BLUE};
     font-weight: 600;
 }}
 QTabBar::tab:hover {{
-    color: {TEXT};
+    color: {text};
 }}
 
 /* -- Progress bar ------------------------------------------------------*/
 QProgressBar {{
-    background: {BG_INPUT};
-    border: 1px solid {BORDER_LIGHT};
+    background: {bg_input};
+    border: 1px solid {border_light};
     border-radius: 4px;
     height: 8px;
     text-align: center;
@@ -434,29 +747,29 @@ QProgressBar::chunk {{
 }}
 
 /* -- Scroll area / plain text ------------------------------------------*/
-QScrollArea {{
+QScrollArea, QScrollArea > QWidget, QScrollArea > QWidget > QWidget {{
     border: none;
     background: transparent;
 }}
 QPlainTextEdit {{
-    background: {BG_INPUT};
-    border: 1px solid {BORDER};
+    background: {bg_input};
+    border: 1px solid {border};
     border-radius: 6px;
     font-family: "{MONO_FAMILY}";
     font-size: 12px;
-    color: {TEXT};
+    color: {text};
 }}
 QSplitter::handle {{
-    background: {BORDER};
+    background: {border};
     width: 1px;
 }}
 
 /* -- Status bar ---------------------------------------------------------*/
 QStatusBar {{
-    background: {BG_SIDEBAR};
-    border-top: 1px solid {BORDER};
+    background: {bg_sidebar};
+    border-top: 1px solid {border};
     font-size: 11px;
-    color: {TEXT_DIM};
+    color: {text_dim};
 }}
 QStatusBar::item {{
     border: none;
@@ -474,3 +787,36 @@ QLabel[role="toolChipWarn"] {{
     padding-right: 10px;
 }}
 """
+
+
+def apply_theme(mode: str = "dark", widget: object | None = None) -> None:
+    """Apply the stylesheet for dark or light mode to the active QApplication and all top-level windows."""
+    global _CURRENT_THEME
+    _CURRENT_THEME = mode.lower()
+    from PySide6.QtWidgets import QApplication, QWidget
+
+    _ICON_CACHE.clear()
+    _PIXMAP_CACHE.clear()
+
+    css = get_stylesheet(mode)
+    app = QApplication.instance()
+    applied_windows: set[object] = set()
+    if app:
+        app.setStyleSheet(css)
+        for top in app.topLevelWidgets():
+            applied_windows.add(top)
+            if hasattr(top, "set_theme"):
+                top.set_theme(mode)
+            else:
+                top.setStyleSheet(css)
+    if isinstance(widget, QWidget):
+        win = widget.window()
+        if win and win not in applied_windows:
+            if hasattr(win, "set_theme"):
+                win.set_theme(mode)
+            else:
+                win.setStyleSheet(css)
+
+
+
+STYLESHEET = get_stylesheet("dark")

@@ -39,7 +39,7 @@ def build_application(settings: Settings) -> MainWindow:
         adb_path = Path("adb.exe")
 
     adb_client = AdbClient(adb_path)
-    device_service = DeviceService(adb_client)
+    device_service = DeviceService(adb_client, repository=repository)
     device_service.start_polling()
 
     try:

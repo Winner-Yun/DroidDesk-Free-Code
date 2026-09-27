@@ -51,7 +51,8 @@ class EnvironmentBar(QWidget):
 
         # Active APK selector dropdown
         apk_tag = QLabel("APK:")
-        apk_tag.setStyleSheet("font-weight: 700; font-size: 11px; color: #8b8e94;")
+        apk_tag.setProperty("role", "dim")
+        apk_tag.setStyleSheet("font-weight: 700; font-size: 11px;")
         layout.addWidget(apk_tag)
 
         self._apk_selector = QComboBox()
@@ -65,36 +66,16 @@ class EnvironmentBar(QWidget):
         layout.addWidget(self._apk_selector)
 
         # Remove APK button
+        from droiddesk.ui.theme import get_current_theme, is_light
+
+        remove_icon_color = "#dc2626" if is_light() else "#e0574a"
         self._remove_button = QPushButton("Remove")
         self._remove_button.setObjectName("apkRemoveButton")
-        self._remove_button.setIcon(get_icon("trash-2", size=12, color="#e0574a"))
+        self._remove_button.setIcon(get_icon("trash-2", size=12, color=remove_icon_color))
         self._remove_button.setIconSize(QSize(12, 12))
         self._remove_button.setToolTip("Remove active APK from project")
         self._remove_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._remove_button.setEnabled(False)
-        self._remove_button.setStyleSheet(
-            """
-            QPushButton#apkRemoveButton {
-                background-color: rgba(224, 87, 74, 0.08);
-                border: 1px solid rgba(224, 87, 74, 0.4);
-                border-radius: 5px;
-                color: #e0574a;
-                font-size: 12px;
-                font-weight: 600;
-                padding: 5px 12px;
-            }
-            QPushButton#apkRemoveButton:hover {
-                background-color: #e0574a;
-                border-color: #e0574a;
-                color: #ffffff;
-            }
-            QPushButton#apkRemoveButton:disabled {
-                background-color: transparent;
-                border-color: #27282d;
-                color: #4a2828;
-            }
-            """
-        )
         self._remove_button.clicked.connect(self._on_remove_clicked)
         layout.addWidget(self._remove_button)
 
@@ -122,6 +103,12 @@ class EnvironmentBar(QWidget):
         self.set_environment(None)
 
         self._load_apks_from_db()
+
+    def set_theme(self, mode: str) -> None:
+        """Update button icon colors on theme switch."""
+        is_light = mode.lower() == "light"
+        icon_color = "#dc2626" if is_light else "#e0574a"
+        self._remove_button.setIcon(get_icon("trash-2", size=12, color=icon_color))
 
     def _load_apks_from_db(self) -> None:
         """Populate selector from the database and restore active setting."""
@@ -171,9 +158,6 @@ class EnvironmentBar(QWidget):
             host = env_or_key.api_host or ""
             note = "Release permitted" if env_or_key.allow_release_build else "Release blocked"
             color = ENVIRONMENT_RISK_COLORS.get(key, "#8b8e94")
-            alpha_color = f"#55{color.lstrip('#')}"
-            self.setStyleSheet(f"#environmentBar {{ border-bottom: 1px solid {alpha_color}; }}")
-
             host_part = f" · {host}" if host else ""
             note_part = f" [{note}]" if note else ""
             btn_text = f"● {label.upper()} ({key}){host_part}{note_part}"
@@ -199,8 +183,6 @@ class EnvironmentBar(QWidget):
             key = env_or_key
             label = key.capitalize()
             color = ENVIRONMENT_RISK_COLORS.get(key, "#8b8e94")
-            alpha_color = f"#55{color.lstrip('#')}"
-            self.setStyleSheet(f"#environmentBar {{ border-bottom: 1px solid {alpha_color}; }}")
             btn_text = f"● {label.upper()} ({key})"
             self._env_button.setText(btn_text)
             self._env_button.setStyleSheet(
@@ -221,7 +203,6 @@ class EnvironmentBar(QWidget):
                 """
             )
         else:
-            self.setStyleSheet("#environmentBar { border-bottom: 1px solid #27282d; }")
             self._env_button.setText("● No Environment  [Configure]")
             self._env_button.setStyleSheet(
                 """

@@ -17,9 +17,10 @@ _POLL_INTERVAL_HIDDEN_MS = 5000
 class DeviceService(QObject):
     devices_changed = Signal(list)  # list[Device]
 
-    def __init__(self, adb_client: AdbClient) -> None:
+    def __init__(self, adb_client: AdbClient, repository: object | None = None) -> None:
         super().__init__()
         self._adb = adb_client
+        self._repo = repository
         self._devices: list[Device] = []
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
@@ -32,8 +33,11 @@ class DeviceService(QObject):
         self._timer.setInterval(
             _POLL_INTERVAL_VISIBLE_MS if page_visible else _POLL_INTERVAL_HIDDEN_MS
         )
-        self._poll()
-        self._timer.start()
+        if not self._timer.isActive():
+            self._timer.start()
+        # Schedule the poll asynchronously so page transitions are instant
+        QTimer.singleShot(0, self._poll)
+
 
     def stop_polling(self) -> None:
         self._timer.stop()
@@ -108,6 +112,11 @@ class DeviceService(QObject):
         test_profile_by_serial = {d.serial: d.is_test_profile for d in self._devices}
         for device in fresh:
             device.is_test_profile = test_profile_by_serial.get(device.serial, False)
+            if self._repo is not None and hasattr(self._repo, "record_device"):
+                try:
+                    self._repo.record_device(device)
+                except Exception:
+                    pass
         if fresh != self._devices:
             self._devices = fresh
             self.devices_changed.emit(list(self._devices))

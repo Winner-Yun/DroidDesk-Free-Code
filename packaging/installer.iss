@@ -27,7 +27,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 
 [Files]
-Source: "..\dist\__main__.dist\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+Source: "..\dist\droiddesk\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 Source: "..\src\droiddesk\resources\bin\gitleaks.exe"; DestDir: "{app}\resources\bin"; Flags: ignoreversion
 
 [Icons]

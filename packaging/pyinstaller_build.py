@@ -18,6 +18,8 @@ ICON_PATH = ROOT / "src" / "droiddesk" / "resources" / "icons" / "droiddesk.ico"
 RESOURCES_DIR = ROOT / "src" / "droiddesk" / "resources"
 TEMPLATES_DIR = ROOT / "src" / "droiddesk" / "reports" / "templates"
 
+SCANNER_DIR = ROOT / "src" / "droiddesk" / "infra" / "scanner"
+
 PYINSTALLER_ARGS = [
     sys.executable,
     "-m",
@@ -31,7 +33,13 @@ PYINSTALLER_ARGS = [
     f"--add-data={RESOURCES_DIR};resources",
     f"--add-data={RESOURCES_DIR};droiddesk/resources",
     f"--add-data={TEMPLATES_DIR};droiddesk/reports/templates",
-    "--collect-all=androguard",
+    f"--add-data={SCANNER_DIR / 'rules.toml'};droiddesk/infra/scanner",
+    f"--add-data={SCANNER_DIR / 'android.toml'};droiddesk/infra/scanner",
+    "--collect-data=androguard",
+    "--collect-submodules=androguard.core",
+    "--collect-submodules=androguard.decompiler",
+    "--exclude-module=androguard.pentest",
+    "--copy-metadata=androguard",
     "--collect-all=pyaxmlparser",
     "--collect-all=PySide6",
     "--collect-all=jinja2",

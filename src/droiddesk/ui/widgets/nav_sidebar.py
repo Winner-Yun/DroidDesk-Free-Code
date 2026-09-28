@@ -83,12 +83,12 @@ class BrandBlock(QWidget):
 
 
 class _NavButton(QPushButton):
-    def __init__(self, entry: NavEntry) -> None:
+    def __init__(self, entry: NavEntry, theme_mode: str = "dark") -> None:
         super().__init__(f"  {entry.label}")
+        self._entry = entry
         self.setProperty("role", "navItem")
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setIcon(get_icon(entry.icon, size=16, color=TEXT_MUTED, active_color=TEXT))
         self.setIconSize(QSize(16, 16))
         self.key = entry.key
 
@@ -106,6 +106,14 @@ class _NavButton(QPushButton):
         if entry.badge is not None and entry.badge > 0:
             self.set_badge(entry.badge)
 
+        self.update_theme(theme_mode)
+
+    def update_theme(self, theme_mode: str) -> None:
+        is_light = theme_mode.lower() == "light"
+        normal_color = "#6b7280" if is_light else TEXT_MUTED
+        active_color = "#111827" if is_light else TEXT
+        self.setIcon(get_icon(self._entry.icon, size=16, color=normal_color, active_color=active_color))
+
     def set_badge(self, count: int | None) -> None:
         if count is not None and count > 0:
             self._badge.setText(str(count))
@@ -117,8 +125,9 @@ class _NavButton(QPushButton):
 class NavSidebar(QWidget):
     page_selected = Signal(str)
 
-    def __init__(self) -> None:
+    def __init__(self, theme_mode: str = "dark") -> None:
         super().__init__()
+        self._theme_mode = theme_mode
         self.setObjectName("sidebar")
         self.setFixedWidth(SIDEBAR_WIDTH)
 
@@ -145,12 +154,19 @@ class NavSidebar(QWidget):
         self._group.buttonClicked.connect(self._on_clicked)
 
     def _build_row(self, entry: NavEntry) -> QWidget:
-        button = _NavButton(entry)
+        button = _NavButton(entry, theme_mode=self._theme_mode)
         self._group.addButton(button)
         self._buttons[entry.key] = button
         return button
 
+    def update_theme(self, mode: str) -> None:
+        self._theme_mode = mode
+        for button in self._buttons.values():
+            button.update_theme(mode)
+
     def set_badge(self, key: str, count: int | None) -> None:
+        if key == "security":
+            return
         button = self._buttons.get(key)
         if button is not None:
             button.set_badge(count)

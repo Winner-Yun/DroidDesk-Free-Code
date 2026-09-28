@@ -110,7 +110,7 @@ class ApkUploadDialog(QDialog):
 
         # Title & instruction
         title_label = QLabel("Upload & Install APKs")
-        title_label.setStyleSheet("font-size: 16px; font-weight: 700;")
+        title_label.setProperty("role", "pageTitle")
         layout.addWidget(title_label)
 
         sub_label = QLabel(
@@ -125,7 +125,7 @@ class ApkUploadDialog(QDialog):
         dev_row = QHBoxLayout()
         dev_row.setSpacing(10)
         dev_label = QLabel("Target Device:")
-        dev_label.setStyleSheet("font-weight: 600;")
+        dev_label.setProperty("role", "sectionTitle")
         self._dev_selector = DeviceSelector()
         self._dev_selector.set_devices(device_service.devices())
         if initial_device:
@@ -166,13 +166,13 @@ class ApkUploadDialog(QDialog):
         btn_row.setSpacing(10)
 
         self._add_btn = QPushButton("Add Files...")
-        self._add_btn.setIcon(get_icon("folder-open", size=14, color=TEXT_MUTED))
+        self._add_btn.setIcon(get_icon("folder-open", size=14))
         self._add_btn.setIconSize(QSize(14, 14))
         self._add_btn.clicked.connect(self._on_add_files_clicked)
         btn_row.addWidget(self._add_btn)
 
         self._clear_btn = QPushButton("Clear")
-        self._clear_btn.setIcon(get_icon("trash-2", size=14, color=TEXT_MUTED))
+        self._clear_btn.setIcon(get_icon("trash-2", size=14))
         self._clear_btn.setIconSize(QSize(14, 14))
         self._clear_btn.clicked.connect(self._on_clear_clicked)
         btn_row.addWidget(self._clear_btn)
@@ -388,6 +388,7 @@ class DeviceBar(QWidget):
         layout.setSpacing(8)
 
         self._device_label = QLabel("TARGET DEVICE:")
+        self._device_label.setProperty("role", "dim")
         self._device_selector = DeviceSelector()
 
         layout.addWidget(self._device_label)

@@ -173,6 +173,13 @@ class ApkService(QObject):
     def inspect_full(self, apk_path: Path) -> ApkInfo:
         return self._reader.inspect_full(apk_path)
 
+    def get_manifest_xml(self, apk_path: Path) -> str:
+        return self._reader.get_manifest_xml(apk_path)
+
+    def get_archive_entries(self, apk_path: Path) -> list[dict[str, object]]:
+        return self._reader.get_archive_entries(apk_path)
+
+
     def compare(self, apk_a: Path, apk_b: Path) -> dict[str, object]:
         from droiddesk.infra.process import ProcessRunner
 

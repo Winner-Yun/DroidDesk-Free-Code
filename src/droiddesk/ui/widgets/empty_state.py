@@ -47,137 +47,56 @@ class EmptyStateWidget(QFrame):
         self._upload_btn.clicked.connect(self.upload_requested.emit)
         self._upload_btn.setVisible(show_button)
 
+        self.setProperty("frameless", frameless)
+        self.setProperty("compact", compact)
+
         if frameless:
             # Embedded directly inside another Card or panel - no outer frame/border
-            self.setStyleSheet("#emptyStateWidget { background: transparent; border: none; }")
+            self._title_label.setProperty("role", "sectionTitle")
+            self._title_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            self._message_label.setProperty("role", "muted")
+            self._message_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            self._message_label.setWordWrap(True)
+
             layout = QVBoxLayout(self)
             layout.setContentsMargins(0, 4, 0, 4)
             layout.setSpacing(10)
-
-            self._title_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            self._title_label.setStyleSheet("font-size: 14px; font-weight: 700; color: #f0f2f5;")
             layout.addWidget(self._title_label)
-
-            self._message_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            self._message_label.setWordWrap(True)
-            self._message_label.setStyleSheet("font-size: 12px; color: #8b8e94;")
             layout.addWidget(self._message_label)
-
-            self._upload_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background: #3b82f6;
-                    color: #ffffff;
-                    font-weight: 600;
-                    font-size: 12px;
-                    padding: 7px 18px;
-                    border-radius: 6px;
-                    border: none;
-                    margin-top: 4px;
-                }
-                QPushButton:hover {
-                    background: #2563eb;
-                }
-                QPushButton:pressed {
-                    background: #1d4ed8;
-                }
-                """
-            )
             layout.addWidget(self._upload_btn, 0, Qt.AlignmentFlag.AlignLeft)
 
         elif compact:
             # Banner layout (used across Dashboard, Security, Commands, Organizer)
-            self.setStyleSheet(
-                """
-                #emptyStateWidget {
-                    background: #1c1d22;
-                    border: 1px solid #2d3039;
-                    border-radius: 8px;
-                }
-                """
-            )
+            self._title_label.setProperty("role", "sectionTitle")
+            self._message_label.setProperty("role", "muted")
+            self._message_label.setWordWrap(True)
+
             h_layout = QHBoxLayout(self)
             h_layout.setContentsMargins(18, 12, 18, 12)
             h_layout.setSpacing(16)
 
             text_col = QVBoxLayout()
             text_col.setSpacing(3)
-
-            self._title_label.setStyleSheet("font-size: 13px; font-weight: 700; color: #f0f2f5;")
             text_col.addWidget(self._title_label)
-
-            self._message_label.setWordWrap(True)
-            self._message_label.setStyleSheet("font-size: 12px; color: #8b8e94;")
             text_col.addWidget(self._message_label)
             h_layout.addLayout(text_col, 1)
-
-            self._upload_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background: #3b82f6;
-                    color: #ffffff;
-                    font-weight: 600;
-                    font-size: 12px;
-                    padding: 7px 18px;
-                    border-radius: 6px;
-                    border: none;
-                }
-                QPushButton:hover {
-                    background: #2563eb;
-                }
-                QPushButton:pressed {
-                    background: #1d4ed8;
-                }
-                """
-            )
             h_layout.addWidget(self._upload_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
         else:
             # Standalone full page empty state (Analyzer, Gate, Reports, Screenshots)
-            self.setStyleSheet(
-                """
-                #emptyStateWidget {
-                    background: #18191c;
-                    border: 1px solid #28292d;
-                    border-radius: 10px;
-                }
-                """
-            )
+            self._title_label.setProperty("role", "pageTitle")
+            self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._message_label.setProperty("role", "muted")
+            self._message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._message_label.setWordWrap(True)
+            self._message_label.setFixedWidth(520)
+
             layout = QVBoxLayout(self)
             layout.setContentsMargins(36, 44, 36, 44)
             layout.setSpacing(12)
             layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-            self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._title_label.setStyleSheet("font-size: 17px; font-weight: 700; color: #f0f2f5;")
             layout.addWidget(self._title_label, 0, Qt.AlignmentFlag.AlignCenter)
-
-            self._message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._message_label.setWordWrap(True)
-            self._message_label.setFixedWidth(520)
-            self._message_label.setStyleSheet("font-size: 13px; color: #8b8e94;")
             layout.addWidget(self._message_label, 0, Qt.AlignmentFlag.AlignCenter)
-
-            self._upload_btn.setStyleSheet(
-                """
-                QPushButton {
-                    background: #3b82f6;
-                    color: #ffffff;
-                    font-weight: 600;
-                    font-size: 13px;
-                    padding: 8px 24px;
-                    border-radius: 6px;
-                    border: none;
-                    margin-top: 6px;
-                }
-                QPushButton:hover {
-                    background: #2563eb;
-                }
-                QPushButton:pressed {
-                    background: #1d4ed8;
-                }
-                """
-            )
             layout.addWidget(self._upload_btn, 0, Qt.AlignmentFlag.AlignCenter)
 
     def set_title(self, title: str) -> None:
@@ -192,3 +111,7 @@ class EmptyStateWidget(QFrame):
 
     def set_button_visible(self, visible: bool) -> None:
         self._upload_btn.setVisible(visible)
+
+    def set_theme(self, mode: str) -> None:
+        self._upload_btn.setIcon(get_icon("upload", size=14, color="#ffffff"))
+

@@ -27,10 +27,9 @@ from droiddesk.ui.pages.organizer import OrganizerPage
 from droiddesk.ui.pages.screenshots import ScreenshotsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
-from droiddesk.ui.theme import STYLESHEET, get_app_logo_icon
+from droiddesk.ui.theme import STYLESHEET, get_app_logo_icon, get_stylesheet
 from droiddesk.ui.widgets.device_bar import DeviceBar
 from droiddesk.ui.widgets.environment_bar import EnvironmentBar
-from droiddesk.ui.widgets.loading_spinner import LoadingPage
 from droiddesk.ui.widgets.nav_sidebar import BrandBlock, NavSidebar
 
 _PAGES: tuple[tuple[str, Callable[[AppContext], QWidget]], ...] = (
@@ -59,7 +58,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("DroidDesk")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(1440, 900)
-        self.setStyleSheet(STYLESHEET)
+        self.setStyleSheet(get_stylesheet(self._settings.theme_mode))
 
         root = QWidget()
         root.setObjectName("appRoot")
@@ -101,7 +100,7 @@ class MainWindow(QMainWindow):
         body_layout.setContentsMargins(0, 0, 0, 0)
         body_layout.setSpacing(0)
 
-        self._sidebar = NavSidebar()
+        self._sidebar = NavSidebar(theme_mode=self._settings.theme_mode)
         self._stack = QStackedWidget()
         self._page_index: dict[str, int] = {}
         self._build_pages()
@@ -109,8 +108,6 @@ class MainWindow(QMainWindow):
         self._sidebar.page_selected.connect(self._on_page_selected)
         self._sidebar.set_current("dashboard")
         self._stack.setCurrentIndex(self._page_index["dashboard"])
-
-        self._loading_page = LoadingPage(parent=self)
 
         body_layout.addWidget(self._sidebar)
         body_layout.addWidget(self._stack, 1)
@@ -121,6 +118,17 @@ class MainWindow(QMainWindow):
         # Synchronize initially selected APK with pages
         initial_apk = self._environment_bar.selected_apk()
         self._on_active_apk_changed(initial_apk)
+
+    def set_theme(self, mode: str) -> None:
+        self.setStyleSheet(get_stylesheet(mode))
+        if hasattr(self, "_sidebar") and hasattr(self._sidebar, "update_theme"):
+            self._sidebar.update_theme(mode)
+        if hasattr(self, "_environment_bar") and hasattr(self._environment_bar, "set_theme"):
+            self._environment_bar.set_theme(mode)
+        for i in range(self._stack.count()):
+            page = self._stack.widget(i)
+            if page is not None and hasattr(page, "set_theme"):
+                page.set_theme(mode)
 
 
 
@@ -137,10 +145,6 @@ class MainWindow(QMainWindow):
                     page.upload_requested.connect(self._environment_bar._on_upload_clicked)
                 if hasattr(page, "navigate_requested"):
                     page.navigate_requested.connect(self._on_navigate_requested)
-                if hasattr(page, "findings_changed"):
-                    page.findings_changed.connect(
-                        lambda c: self._sidebar.set_badge("security", c if c > 0 else None)
-                    )
 
         devices_idx = self._page_index.get("devices")
         if devices_idx is not None:
@@ -165,15 +169,9 @@ class MainWindow(QMainWindow):
             bar.addPermanentWidget(chip)
 
     def _on_page_selected(self, key: str) -> None:
-        # Show the loading screen to create a visual transition
-        self.show_loading(f"Loading {key}...")
-
-        def finish_switch() -> None:
+        if key in self._page_index:
             self._stack.setCurrentIndex(self._page_index[key])
-            self.hide_loading()
 
-        # Delay the actual switch by a fraction of a second so the animation paints
-        QTimer.singleShot(150, finish_switch)
 
     def _on_open_logcat_requested(self, serial: str) -> None:
         self._sidebar.set_current("logcat")
@@ -193,14 +191,13 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def show_loading(self, message: str = "Loading...") -> None:
-        """Display the loading popup."""
-        self._loading_page.set_message(message)
-        self._loading_page.show()
-        QApplication.processEvents()
+        """Disabled - loading spinner removed."""
+        pass
 
     def hide_loading(self) -> None:
-        """Hide the loading popup."""
-        self._loading_page.hide()
+        """Disabled - loading spinner removed."""
+        pass
+
 
     def _on_active_apk_changed(self, apk_path: Path | None) -> None:
         if apk_path is None:

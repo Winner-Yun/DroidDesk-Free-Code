@@ -25,13 +25,16 @@ Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+InfoBeforeFile=README.txt
 
 [Files]
 Source: "..\dist\droiddesk\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 Source: "..\src\droiddesk\resources\bin\gitleaks.exe"; DestDir: "{app}\resources\bin"; Flags: ignoreversion
+Source: "README.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\Readme"; Filename: "{app}\README.txt"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Tasks]

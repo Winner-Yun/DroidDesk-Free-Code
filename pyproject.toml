@@ -35,7 +35,7 @@ dev = [
     "types-regex",
     "ruff>=0.4",
     "pre-commit>=3.7",
-    "nuitka>=2.2",
+    "pyinstaller>=6.5.0",
 ]
 
 [project.scripts]

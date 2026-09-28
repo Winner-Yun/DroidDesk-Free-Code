@@ -146,10 +146,7 @@ class DashboardPage(QWidget):
         self._badge_size = QLabel("-")
 
         for badge in (self._badge_version, self._badge_min, self._badge_target, self._badge_size):
-            badge.setStyleSheet(
-                "border: 1px solid #35373e; color: #8b8e94; border-radius: 3px; "
-                "padding: 2px 8px; font-size: 11px;"
-            )
+            badge.setProperty("role", "tagPill")
             tags_row.addWidget(badge)
         tags_row.addStretch(1)
         info_col.addLayout(tags_row)

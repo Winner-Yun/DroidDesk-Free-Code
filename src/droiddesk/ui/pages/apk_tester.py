@@ -47,7 +47,7 @@ class StepRowWidget(QWidget):
         self.icon_label = QLabel()
         self.icon_label.setFixedSize(18, 18)
         self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.icon_label.setPixmap(get_pixmap("circle", size=14, color="#5c5f66"))
+        self.icon_label.setPixmap(get_pixmap("circle", size=14))
         row.addWidget(self.icon_label)
 
         text_col = QVBoxLayout()
@@ -60,16 +60,14 @@ class StepRowWidget(QWidget):
         headline_row.addWidget(self.name_label)
 
         self.headline_label = QLabel("Pending")
-        self.headline_label.setStyleSheet("color: #5c5f66;")
+        self.headline_label.setProperty("role", "muted")
         headline_row.addWidget(self.headline_label)
         headline_row.addStretch(1)
         text_col.addLayout(headline_row)
 
         self.command_label = QLabel(command)
         self.command_label.setProperty("role", "mono")
-        self.command_label.setStyleSheet(
-            "color: #5c5f66; font-family: 'Cascadia Mono'; font-size: 11px;"
-        )
+        self.command_label.setStyleSheet("font-size: 11px;")
         text_col.addWidget(self.command_label)
         row.addLayout(text_col, 1)
 
@@ -98,9 +96,9 @@ class StepRowWidget(QWidget):
             self.duration_label.setText(f"{duration_ms} ms")
 
     def reset(self) -> None:
-        self.icon_label.setPixmap(get_pixmap("circle", size=14, color="#5c5f66"))
+        self.icon_label.setPixmap(get_pixmap("circle", size=14))
         self.headline_label.setText("Pending")
-        self.headline_label.setStyleSheet("color: #5c5f66;")
+        self.headline_label.setStyleSheet("")
         self.duration_label.setText("-")
 
 
@@ -255,10 +253,7 @@ class ApkTesterPage(QWidget):
         self._tag_min = QLabel("-")
         self._tag_target = QLabel("-")
         for tag in (self._tag_version, self._tag_min, self._tag_target):
-            tag.setStyleSheet(
-                "border: 1px solid #35373e; color: #8b8e94; border-radius: 3px; "
-                "padding: 2px 8px; font-size: 11px;"
-            )
+            tag.setProperty("role", "tagPill")
             self._tags_layout.addWidget(tag)
         self._tags_layout.addStretch(1)
         details_layout.addLayout(self._tags_layout)
@@ -369,14 +364,11 @@ class ApkTesterPage(QWidget):
         self._log_excerpt_view = QPlainTextEdit()
         self._log_excerpt_view.setReadOnly(True)
         self._log_excerpt_view.setFixedHeight(90)
-        self._log_excerpt_view.setProperty("role", "mono")
-        self._log_excerpt_view.setStyleSheet(
-            "font-family: 'Cascadia Mono'; font-size: 11px; background: #151618;"
-        )
         self._log_excerpt_view.hide()
         layout.addWidget(self._log_excerpt_view)
 
-        self._open_report = QPushButton("▤  Open report")
+        self._open_report = QPushButton("Open report")
+        self._open_report.setIcon(get_icon("file-text", size=13))
         self._open_report.setProperty("role", "link")
         self._open_report.clicked.connect(self._on_open_report)
         self._open_report.setEnabled(False)
@@ -535,7 +527,7 @@ class ApkTesterPage(QWidget):
             detail_text = f"Completed all steps in {run.duration_ms} ms."
 
         self._verdict_detail.setText(detail_text)
-        self._verdict_detail.setStyleSheet("color: #eef0f2;")
+        self._verdict_detail.setStyleSheet("")
 
         if run.screenshot_path and run.screenshot_path.is_file():
             pix = QPixmap(str(run.screenshot_path))

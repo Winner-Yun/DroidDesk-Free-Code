@@ -32,7 +32,7 @@ class AdbClient:
             return self._device_props_cache[serial]
 
         result = self._runner.run(
-            self._adb_path, ["-s", serial, "shell", "getprop"], timeout=3.0
+            self._adb_path, ["-s", serial, "shell", "getprop"], timeout=10.0
         )
         props: dict[str, str] = {}
         for line in result.stdout.splitlines():
@@ -46,7 +46,7 @@ class AdbClient:
         return props
 
     def list_devices(self) -> list[Device]:
-        result = self._runner.run(self._adb_path, ["devices", "-l"], timeout=3.0)
+        result = self._runner.run(self._adb_path, ["devices", "-l"], timeout=10.0)
         devices: list[Device] = []
         active_serials: set[str] = set()
 

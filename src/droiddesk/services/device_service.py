@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 from droiddesk.core.errors import DroidDeskError
 from droiddesk.core.models import Device
@@ -14,13 +15,32 @@ _POLL_INTERVAL_VISIBLE_MS = 2000
 _POLL_INTERVAL_HIDDEN_MS = 5000
 
 
+class _DevicePollThread(QThread):
+    devices_ready = Signal(list)
+
+    def __init__(self, adb: AdbClient, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self._adb = adb
+
+    def run(self) -> None:
+        try:
+            devices = self._adb.list_devices()
+        except (DroidDeskError, OSError):
+            devices = []
+        except Exception:
+            devices = []
+        self.devices_ready.emit(devices)
+
+
 class DeviceService(QObject):
     devices_changed = Signal(list)  # list[Device]
 
-    def __init__(self, adb_client: AdbClient) -> None:
+    def __init__(self, adb_client: AdbClient, repository: object | None = None) -> None:
         super().__init__()
         self._adb = adb_client
+        self._repo = repository
         self._devices: list[Device] = []
+        self._poll_thread: _DevicePollThread | None = None
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
 
@@ -32,8 +52,11 @@ class DeviceService(QObject):
         self._timer.setInterval(
             _POLL_INTERVAL_VISIBLE_MS if page_visible else _POLL_INTERVAL_HIDDEN_MS
         )
-        self._poll()
-        self._timer.start()
+        if not self._timer.isActive():
+            self._timer.start()
+        # Schedule the poll asynchronously so page transitions are instant
+        QTimer.singleShot(0, self._poll)
+
 
     def stop_polling(self) -> None:
         self._timer.stop()
@@ -100,14 +123,20 @@ class DeviceService(QObject):
         return self._adb.install(serial, apk_path, replace=replace, test_ok=test_ok)
 
     def _poll(self) -> None:
-        try:
-            fresh = self._adb.list_devices()
-        except (DroidDeskError, OSError):
-            fresh = []
+        if self._poll_thread is not None and self._poll_thread.isRunning():
+            return
+        self._poll_thread = _DevicePollThread(self._adb, self)
+        self._poll_thread.devices_ready.connect(self._on_poll_finished)
+        self._poll_thread.start()
+
+    def _on_poll_finished(self, fresh: list[Device]) -> None:
         # restore in-memory test-profile flags that ADB does not know about
         test_profile_by_serial = {d.serial: d.is_test_profile for d in self._devices}
         for device in fresh:
             device.is_test_profile = test_profile_by_serial.get(device.serial, False)
+            if self._repo is not None and hasattr(self._repo, "record_device"):
+                with contextlib.suppress(Exception):
+                    self._repo.record_device(device)
         if fresh != self._devices:
             self._devices = fresh
             self.devices_changed.emit(list(self._devices))

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import sys
 import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -80,6 +81,20 @@ def _load_rules_file(path: Path) -> list[Rule]:
     return rules
 
 
+def _default_rule_files() -> list[Path]:
+    candidates: list[Path] = [Path(__file__).resolve().parent]
+    if hasattr(sys, "_MEIPASS"):
+        candidates.append(Path(sys._MEIPASS) / "droiddesk" / "infra" / "scanner")
+        candidates.append(Path(sys._MEIPASS) / "infra" / "scanner")
+
+    for base in candidates:
+        r = base / "rules.toml"
+        a = base / "android.toml"
+        if r.is_file() and a.is_file():
+            return [r, a]
+    return [Path(__file__).parent / "rules.toml", Path(__file__).parent / "android.toml"]
+
+
 class ScannerEngine:
     def __init__(
         self,
@@ -87,10 +102,7 @@ class ScannerEngine:
         excluded_dirs: set[str] | None = None,
         max_file_size: int = _DEFAULT_MAX_FILE_SIZE,
     ) -> None:
-        rule_files = rule_files or [
-            Path(__file__).parent / "rules.toml",
-            Path(__file__).parent / "android.toml",
-        ]
+        rule_files = rule_files or _default_rule_files()
         self._rules: list[Rule] = []
         for rule_file in rule_files:
             self._rules.extend(_load_rules_file(rule_file))

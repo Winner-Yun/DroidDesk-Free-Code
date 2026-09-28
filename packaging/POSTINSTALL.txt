@@ -1,0 +1,17 @@
+
+DROIDDESK INSTALLATION COMPLETE!
+
+DroidDesk has been successfully installed on your computer.
+
+QUICK START:
+1. Connect your Android device via USB and ensure USB Debugging is turned on.
+2. Launch DroidDesk from your Desktop or Start Menu shortcut.
+3. Open "Settings" -> "Tool Locator" to verify that ADB and Android SDK tools
+   are detected with green indicators.
+4. Drag and drop any .apk file onto DroidDesk to begin instant analysis!
+
+SUPPORT & DATA STORAGE:
+- Settings: %APPDATA%\DroidDesk\config.toml
+- Database: %LOCALAPPDATA%\DroidDesk\droiddesk.db
+
+Happy developing with DroidDesk!

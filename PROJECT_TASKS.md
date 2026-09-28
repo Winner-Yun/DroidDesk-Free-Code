@@ -214,9 +214,9 @@ Goal: point the organizer at a messy folder, preview a plan, apply it, undo it.
   duplicate-group view (backed by `find_duplicates`, already written), Undo
   button.
 
-- [ ] **`packaging/nuitka_build.py` - run it**
-  `python packaging/nuitka_build.py` and confirm you get a working `.exe` in
-  `dist/`. Expect 90-140 MB - that's normal (spec §10.1).
+- [ ] **`packaging/pyinstaller_build.py` - run it**
+  `python packaging/pyinstaller_build.py` and confirm you get a working `.exe` in
+  `dist/droiddesk/`.
 
 - [ ] **`packaging/installer.iss` - build the installer**
   Needs Inno Setup installed. Fill in the SDK-detection `[Code]` section

@@ -274,6 +274,14 @@ class Repository:
             self._connection.commit()
             return True
 
+    def clear_apks(self) -> int:
+        """Remove all APK records and their associated test runs."""
+        with self._lock:
+            self._connection.execute("DELETE FROM test_run")
+            cursor = self._connection.execute("DELETE FROM apk")
+            self._connection.commit()
+            return cursor.rowcount
+
     def record_device(self, device: Device) -> None:
         """Persist or update an emulator / device in connection history."""
         from datetime import UTC, datetime
@@ -307,6 +315,22 @@ class Repository:
                 ),
             )
             self._connection.commit()
+
+    def delete_device_history(self, serial: str) -> bool:
+        """Remove a single device entry from connection history."""
+        with self._lock:
+            cursor = self._connection.execute(
+                "DELETE FROM device_history WHERE serial = ?", (serial,)
+            )
+            self._connection.commit()
+            return cursor.rowcount > 0
+
+    def clear_device_history(self) -> int:
+        """Remove all device entries from connection history."""
+        with self._lock:
+            cursor = self._connection.execute("DELETE FROM device_history")
+            self._connection.commit()
+            return cursor.rowcount
 
     def list_device_history(self) -> list[dict[str, object]]:
         """List all historically connected emulators and physical devices."""

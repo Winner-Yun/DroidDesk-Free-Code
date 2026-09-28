@@ -1,21 +1,20 @@
-"""Settings page: Developer toolchain discovery, executable overrides, and diagnostics.
+"""Settings page: Device & APK history, theme configuration, and application info.
 
-Provides dynamic verification and custom path overrides for required Android SDK
-and CLI tools, along with concise explanations of how each tool works and its purpose.
+Provides device and APK history management with individual/bulk deletion,
+light/dark mode toggling, application developer details, and contributor recognition.
 """
 
 from __future__ import annotations
 
-import datetime
-from pathlib import Path
-
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QFileDialog,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QTableWidget,
@@ -25,45 +24,19 @@ from PySide6.QtWidgets import (
 )
 
 from droiddesk.context import AppContext
-from droiddesk.ui.dialogs.setup_dialog import SetupDialog
-from droiddesk.ui.theme import BORDER, BORDER_LIGHT, get_icon
+from droiddesk.ui.theme import apply_theme, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.status_pill import StatusPill
 
-_TOOL_INFO: dict[str, tuple[str, str]] = {
-    "adb": (
-        "Android Debug Bridge",
-        "Communicates with connected Android devices and emulators over USB/Wi-Fi to execute shell commands, capture live logcat streams, and install APKs.",
-    ),
-    "aapt2": (
-        "Android Asset Packaging Tool",
-        "Parses AndroidManifest.xml, inspects package identifiers and permissions, and extracts application icons and badge resources.",
-    ),
-    "apksigner": (
-        "APK Signature Verifier",
-        "Verifies APK cryptographic signing schemes (v1, v2, v3, v4), checks signing certificate validity, and confirms package integrity.",
-    ),
-    "apkanalyzer": (
-        "APK Composition Analyzer",
-        "Breaks down APK file composition, counts DEX bytecode methods, and analyzes application architecture overhead.",
-    ),
-    "bundletool": (
-        "App Bundle Tool",
-        "Inspects Android App Bundles (.aab), converts bundles into device-specific APK sets, and validates bundle configurations.",
-    ),
-    "gitleaks": (
-        "Static Secret Scanner",
-        "Scans project files and git repository commits to detect accidentally committed API keys, tokens, and hardcoded credentials.",
-    ),
-    "scrcpy": (
-        "Device Screen Mirror",
-        "Streams low-latency, real-time video display of connected Android devices and provides remote touch control over USB or Wi-Fi.",
-    ),
-    "git": (
-        "Version Control Client",
-        "Tracks repository changes, branch differences, and commit history used for automated secret leak scanning and file auditing.",
-    ),
-}
+
+def _format_size(size_bytes: int) -> str:
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
 
 class SettingsPage(QWidget):
@@ -83,337 +56,522 @@ class SettingsPage(QWidget):
 
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(24, 16, 24, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(24, 16, 24, 24)
+        layout.setSpacing(16)
 
         layout.addWidget(
             PageHeader(
-                "Settings",
-                "Verify and configure developer tools powering Android device control, APK analysis, and security scanning.",
+                "Settings & Preferences",
+                "Configure display theme, manage device & APK history, and view application information.",
             )
         )
 
-        # Single unified Card containing toolbar, explanation, and table
-        layout.addWidget(self._build_toolchain_card())
+        # 1. Appearance & Theme Card (Light / Dark mode)
+        layout.addWidget(self._build_theme_card())
+
+        # 2. Device History Card
+        layout.addWidget(self._build_device_history_card())
+
+        # 3. APK History Card
+        layout.addWidget(self._build_apk_history_card())
+
+        # 4. Application Information Card
+        layout.addWidget(self._build_about_card())
+
+        # 5. Bottom Sheet / Contributor note
+        layout.addWidget(self._build_bottom_sheet_note())
 
         layout.addStretch(1)
         scroll.setWidget(container)
         page_layout.addWidget(scroll)
 
-        # Initial tool discovery
-        self._refresh_tools()
+        # Initial dynamic data load
+        self._refresh_device_history()
+        self._refresh_apk_history()
 
-    def _build_toolchain_card(self) -> Card:
+    # -------------------------------------------------------------------------
+    # Appearance & Theme Card
+    # -------------------------------------------------------------------------
+    def _build_theme_card(self) -> Card:
+        card = Card()
+        body = card.body_layout()
+        body.setContentsMargins(16, 14, 16, 14)
+        body.setSpacing(12)
+
+        header_row = QHBoxLayout()
+        icon_lbl = QLabel()
+        icon_lbl.setPixmap(get_icon("sun-moon", size=18, color="#3b82f6").pixmap(18, 18))
+        header_row.addWidget(icon_lbl)
+
+        title_lbl = QLabel("Appearance & Theme")
+        title_lbl.setStyleSheet("font-size: 14px; font-weight: 700;")
+        header_row.addWidget(title_lbl)
+
+        self._theme_pill = StatusPill(
+            f"{self._ctx.settings.theme_mode.upper()} MODE",
+            "info" if self._ctx.settings.theme_mode == "dark" else "warn",
+        )
+        header_row.addWidget(self._theme_pill)
+        header_row.addStretch(1)
+        body.addLayout(header_row)
+
+        desc_lbl = QLabel(
+            "Configure your UI display theme preference. Changes apply instantly across the entire application and persist on restart."
+        )
+        desc_lbl.setStyleSheet("font-size: 12px; color: #6b7280;")
+        body.addWidget(desc_lbl)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(12)
+
+        self._dark_btn = QPushButton("Dark Mode")
+        self._dark_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._dark_btn.setIconSize(QSize(15, 15))
+        self._dark_btn.clicked.connect(lambda: self._set_theme("dark"))
+
+        self._light_btn = QPushButton("Light Mode")
+        self._light_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._light_btn.setIconSize(QSize(15, 15))
+        self._light_btn.clicked.connect(lambda: self._set_theme("light"))
+
+        self._update_theme_buttons_style()
+
+        btn_row.addWidget(self._dark_btn)
+        btn_row.addWidget(self._light_btn)
+        btn_row.addStretch(1)
+        body.addLayout(btn_row)
+
+        return card
+
+    def _update_theme_buttons_style(self) -> None:
+        active = self._ctx.settings.theme_mode.lower()
+        is_dark = active == "dark"
+
+        if is_dark:
+            self._dark_btn.setIcon(get_icon("moon", size=15, color="#ffffff"))
+            self._dark_btn.setStyleSheet(
+                "QPushButton {"
+                "   background-color: #1d4ed8; border: 2px solid #3b82f6; border-radius: 6px; "
+                "   color: #ffffff; font-weight: 700; padding: 8px 20px; font-size: 12px;"
+                "}"
+            )
+            self._light_btn.setIcon(get_icon("sun", size=15, color="#8b8e94"))
+            self._light_btn.setStyleSheet(
+                "QPushButton {"
+                "   background-color: #212226; border: 1px solid #35373e; border-radius: 6px; "
+                "   color: #9ca3af; font-weight: 500; padding: 8px 20px; font-size: 12px;"
+                "}"
+                "QPushButton:hover {"
+                "   background-color: #2a2c31; color: #ffffff;"
+                "}"
+            )
+            self._theme_pill.set_status("DARK MODE", "info")
+        else:
+            self._light_btn.setIcon(get_icon("sun", size=15, color="#ffffff"))
+            self._light_btn.setStyleSheet(
+                "QPushButton {"
+                "   background-color: #2563eb; border: 2px solid #3b82f6; border-radius: 6px; "
+                "   color: #ffffff; font-weight: 700; padding: 8px 20px; font-size: 12px;"
+                "}"
+            )
+            self._dark_btn.setIcon(get_icon("moon", size=15, color="#6b7280"))
+            self._dark_btn.setStyleSheet(
+                "QPushButton {"
+                "   background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; "
+                "   color: #374151; font-weight: 500; padding: 8px 20px; font-size: 12px;"
+                "}"
+                "QPushButton:hover {"
+                "   background-color: #f3f4f6; color: #111827;"
+                "}"
+            )
+            self._theme_pill.set_status("LIGHT MODE", "warn")
+
+    def _set_theme(self, mode: str) -> None:
+        if self._ctx.settings.theme_mode == mode:
+            return
+        self._ctx.settings.theme_mode = mode
+        self._ctx.settings.save()
+        apply_theme(mode, widget=self)
+        self._update_theme_buttons_style()
+
+    # -------------------------------------------------------------------------
+    # Device Connection History Card
+    # -------------------------------------------------------------------------
+    def _build_device_history_card(self) -> Card:
         card = Card()
         body = card.body_layout()
         body.setContentsMargins(16, 14, 16, 14)
         body.setSpacing(10)
 
-        # Action toolbar
-        action_bar = QHBoxLayout()
-        action_bar.setSpacing(10)
+        toolbar = QHBoxLayout()
+        toolbar.setSpacing(10)
 
-        verify_btn = QPushButton("Verify All Tools")
-        verify_btn.setIcon(get_icon("refresh-cw", size=13, color="#60a5fa"))
-        verify_btn.setIconSize(QSize(13, 13))
-        verify_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        verify_btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #1e293b;
-                border: 1px solid #3b82f6;
-                border-radius: 4px;
-                color: #60a5fa;
-                font-weight: 600;
-                padding: 6px 14px;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #3b82f6;
-                color: #ffffff;
-            }
-            """
+        title_icon = QLabel()
+        title_icon.setPixmap(get_icon("smartphone", size=18, color="#3b82f6").pixmap(18, 18))
+        toolbar.addWidget(title_icon)
+
+        title_lbl = QLabel("Device Connection History")
+        title_lbl.setStyleSheet("font-size: 14px; font-weight: 700;")
+        toolbar.addWidget(title_lbl)
+
+        self._device_count_lbl = QLabel("")
+        self._device_count_lbl.setStyleSheet("color: #8b8e94; font-size: 11px;")
+        toolbar.addWidget(self._device_count_lbl)
+        toolbar.addStretch(1)
+
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.setIcon(get_icon("refresh-cw", size=12, color="#9ca3af"))
+        refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        refresh_btn.clicked.connect(self._refresh_device_history)
+        toolbar.addWidget(refresh_btn)
+
+        clear_all_btn = QPushButton("Clear All Devices")
+        clear_all_btn.setIcon(get_icon("trash-2", size=12, color="#ef4444"))
+        clear_all_btn.setProperty("role", "danger")
+        clear_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        clear_all_btn.clicked.connect(self._on_clear_all_devices)
+        toolbar.addWidget(clear_all_btn)
+
+        body.addLayout(toolbar)
+
+        self._device_table = QTableWidget(0, 8)
+        self._device_table.setHorizontalHeaderLabels(
+            ["Model / Device", "Serial Number", "State", "Android", "API", "ABI", "Last Connected", "Action"]
         )
-        verify_btn.clicked.connect(self._on_verify_all_tools)
-        action_bar.addWidget(verify_btn)
+        d_hdr = self._device_table.horizontalHeader()
+        d_hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        d_hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        d_hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        d_hdr.resizeSection(2, 80)
+        d_hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        d_hdr.resizeSection(3, 75)
+        d_hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        d_hdr.resizeSection(4, 55)
+        d_hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
+        d_hdr.resizeSection(5, 75)
+        d_hdr.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+        d_hdr.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
+        d_hdr.resizeSection(7, 85)
 
-        wizard_btn = QPushButton("Run Setup Wizard")
-        wizard_btn.setIcon(get_icon("wrench", size=13, color="#e5e7eb"))
-        wizard_btn.setIconSize(QSize(13, 13))
-        wizard_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        wizard_btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #2a2c31;
-                border: 1px solid #35373e;
-                border-radius: 4px;
-                color: #e5e7eb;
-                padding: 6px 14px;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #35373e;
-            }
-            """
-        )
-        wizard_btn.clicked.connect(self._on_run_setup_wizard)
-        action_bar.addWidget(wizard_btn)
-
-        action_bar.addSpacing(10)
-
-        self._tool_status_feedback = QLabel("")
-        self._tool_status_feedback.setStyleSheet("color: #8b8e94; font-size: 11px;")
-        action_bar.addWidget(self._tool_status_feedback)
-        action_bar.addStretch(1)
-
-        body.addLayout(action_bar)
-
-        # Overview explanation banner
-        info_bar = QFrame()
-        info_bar.setObjectName("infoBanner")
-        info_bar.setStyleSheet(
-            f"""
-            QFrame#infoBanner {{
-                background-color: #191b20;
-                border: 1px solid {BORDER_LIGHT};
-                border-radius: 5px;
-            }}
-            """
-        )
-        info_layout = QHBoxLayout(info_bar)
-        info_layout.setContentsMargins(12, 7, 12, 7)
-        info_layout.setSpacing(8)
-
-        info_icon = QLabel()
-        info_icon.setPixmap(get_icon("info", size=14, color="#60a5fa").pixmap(14, 14))
-        info_layout.addWidget(info_icon)
-
-        info_text = QLabel(
-            "<b>How it works & Purpose:</b> DroidDesk auto-detects required developer tools from your system "
-            "<code>PATH</code>, Android SDK (<code>ANDROID_HOME</code>), and bundled binaries to power device control, "
-            "APK analysis, and security scanning. Click <b>Browse...</b> to configure a custom path for any binary."
-        )
-        info_text.setWordWrap(True)
-        info_text.setStyleSheet("color: #9ca3af; font-size: 11px; line-height: 1.3;")
-        info_layout.addWidget(info_text, 1)
-
-        body.addWidget(info_bar)
-
-        # Tool status table
-        self._tool_table = QTableWidget(0, 5)
-        self._tool_table.setHorizontalHeaderLabels(
-            ["Tool", "Status", "Version", "Path", "Actions"]
-        )
-        tbl_hdr = self._tool_table.horizontalHeader()
-        tbl_hdr.setStretchLastSection(False)
-        tbl_hdr.setDefaultSectionSize(100)
-        tbl_hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        tbl_hdr.resizeSection(0, 110)
-        tbl_hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
-        tbl_hdr.resizeSection(1, 95)
-        tbl_hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
-        tbl_hdr.resizeSection(2, 175)
-        tbl_hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        tbl_hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
-        tbl_hdr.resizeSection(4, 95)
-
-        self._tool_table.verticalHeader().setVisible(False)
-        self._tool_table.setShowGrid(False)
-        self._tool_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self._tool_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._tool_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._tool_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._tool_table.setFixedHeight(315)
-        self._tool_table.setStyleSheet(
-            """
-            QTableWidget {
-                background-color: #1a1b1e;
-                border: 1px solid #2c2d33;
-                border-radius: 6px;
-            }
-            QHeaderView::section {
-                background-color: #212226;
-                color: #8b8e94;
-                font-size: 11px;
-                font-weight: 600;
-                border: none;
-                border-bottom: 1px solid #2c2d33;
-                padding: 7px 10px;
-            }
-            QTableWidget::item:selected {
-                background-color: #262930;
-            }
-            """
-        )
-        self._tool_table.cellClicked.connect(self._on_cell_clicked)
-        body.addWidget(self._tool_table)
-
-        # Interactive tool explanation footer
-        detail_bar = QFrame()
-        detail_bar.setObjectName("detailBar")
-        detail_bar.setStyleSheet(
-            f"""
-            QFrame#detailBar {{
-                background-color: #191a1e;
-                border: 1px solid {BORDER};
-                border-radius: 5px;
-            }}
-            """
-        )
-        detail_layout = QHBoxLayout(detail_bar)
-        detail_layout.setContentsMargins(12, 7, 12, 7)
-        detail_layout.setSpacing(8)
-
-        detail_icon = QLabel()
-        detail_icon.setPixmap(get_icon("help-circle", size=14, color="#27ae60").pixmap(14, 14))
-        detail_layout.addWidget(detail_icon)
-
-        self._tool_detail_lbl = QLabel(
-            "💡 <b>Tip:</b> Click any tool row above to see what it does and how DroidDesk uses it."
-        )
-        self._tool_detail_lbl.setWordWrap(True)
-        self._tool_detail_lbl.setStyleSheet("color: #d1d5db; font-size: 11px;")
-        detail_layout.addWidget(self._tool_detail_lbl, 1)
-
-        body.addWidget(detail_bar)
+        self._device_table.verticalHeader().setVisible(False)
+        self._device_table.setShowGrid(False)
+        self._device_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._device_table.setFixedHeight(220)
+        body.addWidget(self._device_table)
 
         return card
 
-    def _on_cell_clicked(self, row: int, _col: int) -> None:
-        tool_item = self._tool_table.item(row, 0)
-        if tool_item:
-            name = tool_item.text()
-            if name in _TOOL_INFO:
-                title, desc = _TOOL_INFO[name]
-                self._tool_detail_lbl.setText(
-                    f"<b>{name}</b> <span style='color:#8b8e94;'>({title}):</span> {desc}"
-                )
+    def _refresh_device_history(self) -> None:
+        records = self._ctx.repository.list_device_history()
+        self._device_count_lbl.setText(f"({len(records)} devices recorded)")
+        self._device_table.setRowCount(len(records))
 
-    def _on_verify_all_tools(self) -> None:
-        self._notify_services_and_refresh()
-        now = datetime.datetime.now().strftime("%H:%M:%S")
-        self._tool_status_feedback.setText(f"All tools verified actively at {now}.")
+        for row_idx, dev in enumerate(records):
+            self._device_table.setRowHeight(row_idx, 38)
 
-    def _on_run_setup_wizard(self) -> None:
-        dlg = SetupDialog(self._ctx.settings, self._ctx.tool_locator, parent=self)
-        if dlg.exec():
-            self._notify_services_and_refresh()
+            m_item = QTableWidgetItem(str(dev["model"]))
+            m_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._device_table.setItem(row_idx, 0, m_item)
 
-    def _notify_services_and_refresh(self) -> None:
-        self._ctx.tool_locator.invalidate_cache()
+            serial_str = str(dev["serial"])
+            s_item = QTableWidgetItem(serial_str)
+            s_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._device_table.setItem(row_idx, 1, s_item)
 
-        # Update adb client in DeviceService
-        try:
-            new_adb = self._ctx.tool_locator.resolve("adb")
-            self._ctx.device_service.adb_client.set_adb_path(new_adb)
-            self._ctx.device_service.refresh()
-        except Exception:
-            pass
+            state_widget = QWidget()
+            s_layout = QHBoxLayout(state_widget)
+            s_layout.setContentsMargins(4, 2, 4, 2)
+            s_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            state_str = str(dev["state"])
+            pill = StatusPill(state_str.upper(), "pass" if state_str == "device" else "warn")
+            s_layout.addWidget(pill)
+            self._device_table.setCellWidget(row_idx, 2, state_widget)
 
-        # Update apkanalyzer in ApkService
-        try:
-            new_apkanalyzer = self._ctx.tool_locator.resolve("apkanalyzer")
-            self._ctx.apk_service.set_apkanalyzer_path(new_apkanalyzer)
-        except Exception:
-            pass
-
-        self._refresh_tools()
-
-    def _refresh_tools(self) -> None:
-        tool_infos = self._ctx.tool_locator.verify_all()
-        self._tool_table.setRowCount(len(tool_infos))
-
-        for row_idx, (name, info) in enumerate(tool_infos.items()):
-            self._tool_table.setRowHeight(row_idx, 35)
-
-            # Tool name
-            name_item = QTableWidgetItem(name)
-            name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            name_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-            if name in _TOOL_INFO:
-                t_title, t_desc = _TOOL_INFO[name]
-                name_item.setToolTip(f"{name} ({t_title})\n{t_desc}")
-            self._tool_table.setItem(row_idx, 0, name_item)
-
-            # Status indicator
-            pill_widget = QWidget()
-            pill_layout = QHBoxLayout(pill_widget)
-            pill_layout.setContentsMargins(6, 3, 6, 3)
-            pill_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-
-            if info.is_bundled:
-                pill = StatusPill("BUNDLED", "info")
-            elif info.is_valid:
-                pill = StatusPill("FOUND", "pass")
-            else:
-                pill = StatusPill("MISSING", "fail")
-
-            pill_layout.addWidget(pill)
-            self._tool_table.setCellWidget(row_idx, 1, pill_widget)
-
-            # Version info
-            ver_text = info.version or "-"
-            if not info.is_valid and info.error_message and "Java runtime" in info.error_message:
-                ver_text = "Java Required"
-            ver_item = QTableWidgetItem(ver_text)
+            ver_item = QTableWidgetItem(str(dev["android_version"]))
             ver_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            ver_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-            if not info.is_valid and info.error_message and "Java runtime" in info.error_message:
-                ver_item.setToolTip(info.error_message)
-            self._tool_table.setItem(row_idx, 2, ver_item)
+            self._device_table.setItem(row_idx, 3, ver_item)
 
-            # Executable path
-            path_str = str(info.path) if info.path else "(not found)"
-            path_item = QTableWidgetItem(path_str)
-            path_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            path_item.setToolTip(path_str)
-            path_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-            if not info.path:
-                path_item.setForeground(Qt.GlobalColor.darkGray)
-            self._tool_table.setItem(row_idx, 3, path_item)
+            api_item = QTableWidgetItem(str(dev["api_level"]))
+            api_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._device_table.setItem(row_idx, 4, api_item)
 
-            # Row actions
+            abi_item = QTableWidgetItem(str(dev["abi"]))
+            abi_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._device_table.setItem(row_idx, 5, abi_item)
+
+            conn_item = QTableWidgetItem(str(dev["last_connected"]))
+            conn_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._device_table.setItem(row_idx, 6, conn_item)
+
             act_widget = QWidget()
-            act_layout = QHBoxLayout(act_widget)
-            act_layout.setContentsMargins(4, 2, 4, 2)
-            act_layout.setSpacing(6)
+            a_layout = QHBoxLayout(act_widget)
+            a_layout.setContentsMargins(2, 2, 2, 2)
+            del_btn = QPushButton("Remove")
+            del_btn.setProperty("role", "tableActionDanger")
+            del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            del_btn.clicked.connect(lambda _=None, s=serial_str: self._on_remove_device(s))
+            a_layout.addWidget(del_btn)
+            self._device_table.setCellWidget(row_idx, 7, act_widget)
 
-            browse_btn = QPushButton("Browse...")
-            browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            browse_btn.setStyleSheet(
-                "padding: 2px 10px; font-size: 11px; background-color: #212226; "
-                "border: 1px solid #35373e; border-radius: 3px; color: #e5e7eb;"
-            )
-            browse_btn.clicked.connect(lambda _=None, t=name: self._on_override_tool(t))
-            act_layout.addWidget(browse_btn)
+    def _on_remove_device(self, serial: str) -> None:
+        self._ctx.repository.delete_device_history(serial)
+        self._refresh_device_history()
 
-            has_override = getattr(self._ctx.settings, f"{name}_path", None) is not None
-            if has_override:
-                reset_btn = QPushButton("Reset")
-                reset_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-                reset_btn.setStyleSheet(
-                    "padding: 2px 10px; font-size: 11px; background-color: #2a1418; "
-                    "color: #e0574a; border: 1px solid #4a2226; border-radius: 3px;"
-                )
-                reset_btn.clicked.connect(lambda _=None, t=name: self._on_reset_tool(t))
-                act_layout.addWidget(reset_btn)
-
-            act_layout.addStretch(1)
-            self._tool_table.setCellWidget(row_idx, 4, act_widget)
-
-    def _on_override_tool(self, tool_name: str) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(
+    def _on_clear_all_devices(self) -> None:
+        reply = QMessageBox.question(
             self,
-            f"Select Executable for {tool_name}",
-            str(Path.home()),
-            "Executables (*.exe *.bat *.cmd *.jar);;All Files (*.*)",
+            "Clear Device History",
+            "Are you sure you want to remove all historically recorded devices?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
-        if file_path:
-            setattr(self._ctx.settings, f"{tool_name}_path", Path(file_path))
-            self._ctx.settings.save()
-            self._notify_services_and_refresh()
+        if reply == QMessageBox.StandardButton.Yes:
+            self._ctx.repository.clear_device_history()
+            self._refresh_device_history()
 
-    def _on_reset_tool(self, tool_name: str) -> None:
-        setattr(self._ctx.settings, f"{tool_name}_path", None)
-        self._ctx.settings.save()
-        self._notify_services_and_refresh()
+    # -------------------------------------------------------------------------
+    # APK Inspection History Card
+    # -------------------------------------------------------------------------
+    def _build_apk_history_card(self) -> Card:
+        card = Card()
+        body = card.body_layout()
+        body.setContentsMargins(16, 14, 16, 14)
+        body.setSpacing(10)
+
+        toolbar = QHBoxLayout()
+        toolbar.setSpacing(10)
+
+        title_icon = QLabel()
+        title_icon.setPixmap(get_icon("box", size=18, color="#10b981").pixmap(18, 18))
+        toolbar.addWidget(title_icon)
+
+        title_lbl = QLabel("APK Inspection History")
+        title_lbl.setStyleSheet("font-size: 14px; font-weight: 700;")
+        toolbar.addWidget(title_lbl)
+
+        self._apk_count_lbl = QLabel("")
+        self._apk_count_lbl.setStyleSheet("color: #8b8e94; font-size: 11px;")
+        toolbar.addWidget(self._apk_count_lbl)
+        toolbar.addStretch(1)
+
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.setIcon(get_icon("refresh-cw", size=12, color="#9ca3af"))
+        refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        refresh_btn.clicked.connect(self._refresh_apk_history)
+        toolbar.addWidget(refresh_btn)
+
+        clear_all_btn = QPushButton("Clear All APKs")
+        clear_all_btn.setIcon(get_icon("trash-2", size=12, color="#ef4444"))
+        clear_all_btn.setProperty("role", "danger")
+        clear_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        clear_all_btn.clicked.connect(self._on_clear_all_apks)
+        toolbar.addWidget(clear_all_btn)
+
+        body.addLayout(toolbar)
+
+        self._apk_table = QTableWidget(0, 7)
+        self._apk_table.setHorizontalHeaderLabels(
+            ["Package Name", "File Name", "Version", "Target SDK", "Size", "Analyzed At", "Action"]
+        )
+        a_hdr = self._apk_table.horizontalHeader()
+        a_hdr.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        a_hdr.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        a_hdr.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        a_hdr.resizeSection(2, 85)
+        a_hdr.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        a_hdr.resizeSection(3, 85)
+        a_hdr.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        a_hdr.resizeSection(4, 75)
+        a_hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        a_hdr.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)
+        a_hdr.resizeSection(6, 85)
+
+        self._apk_table.verticalHeader().setVisible(False)
+        self._apk_table.setShowGrid(False)
+        self._apk_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._apk_table.setFixedHeight(220)
+        body.addWidget(self._apk_table)
+
+        return card
+
+    def _refresh_apk_history(self) -> None:
+        apks = self._ctx.repository.list_apks()
+        self._apk_count_lbl.setText(f"({len(apks)} APKs recorded)")
+        self._apk_table.setRowCount(len(apks))
+
+        for row_idx, apk in enumerate(apks):
+            self._apk_table.setRowHeight(row_idx, 38)
+
+            pkg_item = QTableWidgetItem(apk.package_name)
+            pkg_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._apk_table.setItem(row_idx, 0, pkg_item)
+
+            fn_item = QTableWidgetItem(apk.file_path.name if apk.file_path else "-")
+            fn_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._apk_table.setItem(row_idx, 1, fn_item)
+
+            v_str = f"{apk.version_name or '-'} ({apk.version_code or '-'})"
+            v_item = QTableWidgetItem(v_str)
+            v_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._apk_table.setItem(row_idx, 2, v_item)
+
+            sdk_str = f"API {apk.target_sdk}" if apk.target_sdk else "-"
+            sdk_item = QTableWidgetItem(sdk_str)
+            sdk_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._apk_table.setItem(row_idx, 3, sdk_item)
+
+            size_str = _format_size(apk.size_bytes)
+            size_item = QTableWidgetItem(size_str)
+            size_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._apk_table.setItem(row_idx, 4, size_item)
+
+            time_str = apk.analyzed_at.strftime("%Y-%m-%d %H:%M:%S") if apk.analyzed_at else "-"
+            t_item = QTableWidgetItem(time_str)
+            t_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._apk_table.setItem(row_idx, 5, t_item)
+
+            act_widget = QWidget()
+            a_layout = QHBoxLayout(act_widget)
+            a_layout.setContentsMargins(2, 2, 2, 2)
+            del_btn = QPushButton("Remove")
+            del_btn.setProperty("role", "tableActionDanger")
+            del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            f_hash = apk.file_hash
+            del_btn.clicked.connect(lambda _=None, h=f_hash: self._on_remove_apk(h))
+            a_layout.addWidget(del_btn)
+            self._apk_table.setCellWidget(row_idx, 6, act_widget)
+
+    def _on_remove_apk(self, file_hash: str) -> None:
+        self._ctx.repository.delete_apk(file_hash)
+        if self._ctx.settings.active_apk_hash == file_hash:
+            self._ctx.settings.active_apk_hash = None
+            self._ctx.settings.save()
+        self._refresh_apk_history()
+
+    def _on_clear_all_apks(self) -> None:
+        reply = QMessageBox.question(
+            self,
+            "Clear APK History",
+            "Are you sure you want to remove all APK history and their associated test records?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self._ctx.repository.clear_apks()
+            self._ctx.settings.active_apk_hash = None
+            self._ctx.settings.save()
+            self._refresh_apk_history()
+
+    # -------------------------------------------------------------------------
+    #  Application Information Card
+    # -------------------------------------------------------------------------
+    def _build_about_card(self) -> Card:
+        card = Card()
+        body = card.body_layout()
+        body.setContentsMargins(18, 16, 18, 16)
+        body.setSpacing(12)
+
+        hdr_row = QHBoxLayout()
+        icon_lbl = QLabel()
+        icon_lbl.setPixmap(get_icon("info", size=18, color="#3b82f6").pixmap(18, 18))
+        hdr_row.addWidget(icon_lbl)
+
+        title = QLabel("About DroidDesk")
+        title.setStyleSheet("font-size: 15px; font-weight: 700;")
+        hdr_row.addWidget(title)
+        hdr_row.addStretch(1)
+        body.addLayout(hdr_row)
+
+        desc_lbl = QLabel(
+            "<b>DroidDesk</b> is a local Android development companion for Windows. "
+            "It consolidates device control, APK inspection, automated testing, static secret scanning, "
+            "and pre-release verification into a single desktop application without relying on external cloud services."
+        )
+        desc_lbl.setWordWrap(True)
+        desc_lbl.setStyleSheet("font-size: 12px; line-height: 1.4;")
+        body.addWidget(desc_lbl)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(24)
+        grid.setVerticalSpacing(8)
+
+        # Developer
+        dev_label = QLabel("Developer:")
+        dev_label.setProperty("role", "dim")
+        dev_label.setStyleSheet("font-size: 12px; font-weight: 600;")
+        dev_val = QLabel("Winner Yun")
+        dev_val.setStyleSheet("font-size: 12px; font-weight: 700; color: #3b82f6;")
+        grid.addWidget(dev_label, 0, 0)
+        grid.addWidget(dev_val, 0, 1)
+
+        # Team
+        team_label = QLabel("Team:")
+        team_label.setProperty("role", "dim")
+        team_label.setStyleSheet("font-size: 12px; font-weight: 600;")
+        team_val = QLabel("Khansha Team")
+        team_val.setStyleSheet("font-size: 12px; font-weight: 700; color: #10b981;")
+        grid.addWidget(team_label, 1, 0)
+        grid.addWidget(team_val, 1, 1)
+
+        # Date Created
+        date_label = QLabel("Date Created:")
+        date_label.setProperty("role", "dim")
+        date_label.setStyleSheet("font-size: 12px; font-weight: 600;")
+        date_val = QLabel("30/9/2026")
+        date_val.setStyleSheet("font-size: 12px; font-weight: 600;")
+        grid.addWidget(date_label, 2, 0)
+        grid.addWidget(date_val, 2, 1)
+
+        # Repository Link
+        repo_label = QLabel("Repository:")
+        repo_label.setProperty("role", "dim")
+        repo_label.setStyleSheet("font-size: 12px; font-weight: 600;")
+
+        repo_layout = QHBoxLayout()
+        repo_link = QLabel(
+            '<a href="https://github.com/Winner-Yun" style="color: #3b82f6; text-decoration: underline;">'
+            'https://github.com/Winner-Yun</a>'
+        )
+        repo_link.setOpenExternalLinks(True)
+        repo_link.setStyleSheet("font-size: 12px;")
+        repo_layout.addWidget(repo_link)
+        repo_layout.addStretch(1)
+
+        grid.addWidget(repo_label, 3, 0)
+        grid.addLayout(repo_layout, 3, 1)
+
+        body.addLayout(grid)
+        return card
+
+    # -------------------------------------------------------------------------
+    #  Bottom Sheet / Contributor note
+    # -------------------------------------------------------------------------
+    def _build_bottom_sheet_note(self) -> QFrame:
+        sheet = QFrame()
+        sheet.setObjectName("bottomSheet")
+
+        s_layout = QHBoxLayout(sheet)
+        s_layout.setContentsMargins(14, 12, 14, 12)
+        s_layout.setSpacing(12)
+
+        from droiddesk.ui.theme import is_light
+
+        avatar_color = "#0284c7" if is_light() else "#38bdf8"
+        avatar_lbl = QLabel()
+        avatar_lbl.setPixmap(get_icon("user-check", size=24, color=avatar_color).pixmap(24, 24))
+        s_layout.addWidget(avatar_lbl)
+
+        text_col = QVBoxLayout()
+        text_col.setSpacing(3)
+
+        note_title = QLabel("Special Contributor Recognition")
+        note_title.setObjectName("bottomSheetTitle")
+        text_col.addWidget(note_title)
+
+        note_content = QLabel(
+            "<b>Leave Sovatnak</b> - He also work on the device functional."
+        )
+        note_content.setWordWrap(True)
+        note_content.setStyleSheet("font-size: 12px; line-height: 1.3;")
+        text_col.addWidget(note_content)
+
+        s_layout.addLayout(text_col, 1)
+        return sheet

@@ -4,7 +4,7 @@ from PyInstaller.utils.hooks import collect_submodules
 from PyInstaller.utils.hooks import collect_all
 from PyInstaller.utils.hooks import copy_metadata
 
-datas = [('E:/WorkSmart/DroidDesk/src/droiddesk/resources', 'resources'), ('E:/WorkSmart/DroidDesk/src/droiddesk/resources', 'droiddesk/resources'), ('E:/WorkSmart/DroidDesk/src/droiddesk/reports/templates', 'droiddesk/reports/templates')]
+datas = [('E:/WorkSmart/DroidDesk/src/droiddesk/resources', 'resources'), ('E:/WorkSmart/DroidDesk/src/droiddesk/resources', 'droiddesk/resources'), ('E:/WorkSmart/DroidDesk/src/droiddesk/reports/templates', 'droiddesk/reports/templates'), ('E:/WorkSmart/DroidDesk/src/droiddesk/infra/scanner/rules.toml', 'droiddesk/infra/scanner'), ('E:/WorkSmart/DroidDesk/src/droiddesk/infra/scanner/android.toml', 'droiddesk/infra/scanner')]
 binaries = []
 hiddenimports = []
 datas += collect_data_files('androguard')
@@ -28,7 +28,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['androguard.pentest'],
+    excludes=['androguard.pentest', 'PySide6.QtWebEngineCore', 'PySide6.QtWebEngineWidgets', 'PySide6.QtWebEngineQuick', 'PySide6.QtDesigner', 'PySide6.Qt3DCore', 'PySide6.Qt3DRender', 'PySide6.QtQuick3D'],
     noarchive=False,
     optimize=0,
 )

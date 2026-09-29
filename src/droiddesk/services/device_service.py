@@ -67,13 +67,6 @@ class DeviceService(QObject):
     def devices(self) -> list[Device]:
         return list(self._devices)
 
-    def mark_test_profile(self, serial: str, enabled: bool) -> None:
-        for device in self._devices:
-            if device.serial == serial:
-                device.is_test_profile = enabled
-                self.devices_changed.emit(list(self._devices))
-                return
-
     def refresh(self) -> None:
         self._poll()
 
@@ -130,11 +123,8 @@ class DeviceService(QObject):
         self._poll_thread.start()
 
     def _on_poll_finished(self, fresh: list[Device]) -> None:
-        # restore in-memory test-profile flags that ADB does not know about
-        test_profile_by_serial = {d.serial: d.is_test_profile for d in self._devices}
-        for device in fresh:
-            device.is_test_profile = test_profile_by_serial.get(device.serial, False)
-            if self._repo is not None and hasattr(self._repo, "record_device"):
+        if self._repo is not None and hasattr(self._repo, "record_device"):
+            for device in fresh:
                 with contextlib.suppress(Exception):
                     self._repo.record_device(device)
         if fresh != self._devices:

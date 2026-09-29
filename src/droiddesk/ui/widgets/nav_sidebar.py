@@ -26,8 +26,10 @@ NAV_SECTIONS: tuple[tuple[str, tuple[NavEntry, ...]], ...] = (
         "Connect",
         (
             NavEntry("devices", "smartphone", "Devices"),
+            NavEntry("screen", "cast", "Screen mirror"),
             NavEntry("logcat", "scroll-text", "Logcat"),
             NavEntry("screenshots", "image", "Screenshots"),
+            NavEntry("recordings", "video", "Recordings"),
         ),
     ),
     (
@@ -112,7 +114,9 @@ class _NavButton(QPushButton):
         is_light = theme_mode.lower() == "light"
         normal_color = "#6b7280" if is_light else TEXT_MUTED
         active_color = "#111827" if is_light else TEXT
-        self.setIcon(get_icon(self._entry.icon, size=16, color=normal_color, active_color=active_color))
+        self.setIcon(
+            get_icon(self._entry.icon, size=16, color=normal_color, active_color=active_color)
+        )
 
     def set_badge(self, count: int | None) -> None:
         if count is not None and count > 0:

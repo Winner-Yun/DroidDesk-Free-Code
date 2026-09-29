@@ -19,6 +19,7 @@ from droiddesk.services.env_service import EnvService
 from droiddesk.services.organizer_service import OrganizerService
 from droiddesk.services.report_service import ReportService
 from droiddesk.services.scan_service import ScanService
+from droiddesk.services.screen_service import ScreenService
 from droiddesk.services.test_service import CrashDetector, TestStateMachine
 from droiddesk.ui.main_window import MainWindow
 
@@ -80,6 +81,11 @@ def build_application(settings: Settings) -> MainWindow:
     )
     organizer_service = OrganizerService(journal_dir=settings.data_dir / "journals")
     report_service = ReportService()
+    screen_service = ScreenService(
+        tool_locator=tool_locator,
+        adb_client=adb_client,
+        settings=settings,
+    )
 
     ctx = AppContext(
         settings=settings,
@@ -93,6 +99,7 @@ def build_application(settings: Settings) -> MainWindow:
         build_service=build_service,
         organizer_service=organizer_service,
         report_service=report_service,
+        screen_service=screen_service,
     )
 
     return MainWindow(ctx)

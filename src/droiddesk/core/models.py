@@ -118,3 +118,19 @@ class BuildRecord:
     override_note: str | None = None
     exit_code: int | None = None
     id: int | None = None
+
+
+@dataclass(slots=True)
+class ScreenConfig:
+    max_size: int = 1080
+    bit_rate: int = 8
+    max_fps: int = 60
+    stay_awake: bool = True
+    turn_screen_off: bool = False
+    forward_audio: bool = False
+    show_touches: bool = False
+    always_on_top: bool = True
+    fullscreen: bool = False
+    embedded: bool = False
+    record_file: Path | None = None
+

@@ -258,16 +258,6 @@ class DevicesPage(QWidget):
             )
             layout.addWidget(reconnect_btn)
 
-        test_label = "Unmark test device" if device.is_test_profile else "Mark as test device"
-        mark_btn = QPushButton(test_label)
-        mark_btn.setIcon(get_icon("bookmark", size=13, color=TEXT_MUTED))
-        mark_btn.setIconSize(QSize(13, 13))
-        mark_btn.clicked.connect(
-            lambda checked=False, d=device: self._ctx.device_service.mark_test_profile(
-                d.serial, not d.is_test_profile
-            )
-        )
-        layout.addWidget(mark_btn)
         screen_btn = QPushButton("Share screen")
         screen_btn.setIcon(get_icon("cast", size=13, color=TEXT_MUTED))
         screen_btn.setIconSize(QSize(13, 13))

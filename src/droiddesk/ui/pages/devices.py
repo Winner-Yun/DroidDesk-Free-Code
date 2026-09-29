@@ -38,6 +38,7 @@ def _link_type(serial: str) -> str:
 
 class DevicesPage(QWidget):
     open_logcat_requested = Signal(str)
+    open_screen_requested = Signal(str)
 
     def __init__(self, ctx: AppContext) -> None:
         super().__init__()
@@ -267,6 +268,13 @@ class DevicesPage(QWidget):
             )
         )
         layout.addWidget(mark_btn)
+        screen_btn = QPushButton("Share screen")
+        screen_btn.setIcon(get_icon("cast", size=13, color=TEXT_MUTED))
+        screen_btn.setIconSize(QSize(13, 13))
+        screen_btn.clicked.connect(
+            lambda checked=False, s=device.serial: self.open_screen_requested.emit(s)
+        )
+        layout.addWidget(screen_btn)
         logcat_btn = QPushButton("Open logcat")
         logcat_btn.setIcon(get_icon("scroll-text", size=13, color=TEXT_MUTED))
         logcat_btn.setIconSize(QSize(13, 13))

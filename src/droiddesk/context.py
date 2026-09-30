@@ -13,6 +13,7 @@ from droiddesk.services.env_service import EnvService
 from droiddesk.services.organizer_service import OrganizerService
 from droiddesk.services.report_service import ReportService
 from droiddesk.services.scan_service import ScanService
+from droiddesk.services.screen_service import ScreenService
 
 
 @dataclass
@@ -28,3 +29,4 @@ class AppContext:
     build_service: BuildService | None = None
     organizer_service: OrganizerService | None = None
     report_service: ReportService | None = None
+    screen_service: ScreenService | None = None

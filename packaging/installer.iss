@@ -30,6 +30,7 @@ InfoBeforeFile=README.txt
 [Files]
 Source: "..\dist\droiddesk\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 Source: "..\src\droiddesk\resources\bin\gitleaks.exe"; DestDir: "{app}\resources\bin"; Flags: ignoreversion
+Source: "..\src\droiddesk\resources\bin\scrcpy\*"; DestDir: "{app}\resources\bin\scrcpy"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "README.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

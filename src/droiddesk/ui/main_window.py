@@ -5,9 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
-    QApplication,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -24,10 +22,12 @@ from droiddesk.ui.pages.dashboard import DashboardPage
 from droiddesk.ui.pages.devices import DevicesPage
 from droiddesk.ui.pages.logcat import LogcatPage
 from droiddesk.ui.pages.organizer import OrganizerPage
+from droiddesk.ui.pages.recordings import RecordingsPage
+from droiddesk.ui.pages.screen import ScreenMirrorPage
 from droiddesk.ui.pages.screenshots import ScreenshotsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
-from droiddesk.ui.theme import STYLESHEET, get_app_logo_icon, get_stylesheet
+from droiddesk.ui.theme import get_app_logo_icon, get_stylesheet
 from droiddesk.ui.widgets.device_bar import DeviceBar
 from droiddesk.ui.widgets.environment_bar import EnvironmentBar
 from droiddesk.ui.widgets.nav_sidebar import BrandBlock, NavSidebar
@@ -35,8 +35,10 @@ from droiddesk.ui.widgets.nav_sidebar import BrandBlock, NavSidebar
 _PAGES: tuple[tuple[str, Callable[[AppContext], QWidget]], ...] = (
     ("dashboard", DashboardPage),
     ("devices", DevicesPage),
+    ("screen", ScreenMirrorPage),
     ("logcat", LogcatPage),
     ("screenshots", ScreenshotsPage),
+    ("recordings", RecordingsPage),
     ("analyzer", AnalyzerPage),
     ("tester", ApkTesterPage),
     ("security", SecurityPage),
@@ -66,7 +68,8 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        top_row = QHBoxLayout()
+        self._top_bar = QWidget()
+        top_row = QHBoxLayout(self._top_bar)
         top_row.setContentsMargins(0, 0, 0, 0)
         top_row.setSpacing(0)
         top_row.addWidget(BrandBlock())
@@ -92,7 +95,7 @@ class MainWindow(QMainWindow):
         top_row.addSpacing(20)
         top_row.addWidget(self._device_bar)
         top_row.addSpacing(20)
-        root_layout.addLayout(top_row)
+        root_layout.addWidget(self._top_bar)
 
         body_row = QWidget()
         body_row.setObjectName("bodyRow")
@@ -132,6 +135,18 @@ class MainWindow(QMainWindow):
 
 
 
+    def enter_mirror_fullscreen(self) -> None:
+        self._top_bar.setVisible(False)
+        self._sidebar.setVisible(False)
+        self.statusBar().setVisible(False)
+        self.showFullScreen()
+
+    def exit_mirror_fullscreen(self) -> None:
+        self._top_bar.setVisible(True)
+        self._sidebar.setVisible(True)
+        self.statusBar().setVisible(True)
+        self.showNormal()
+
     def _build_pages(self) -> None:
         for key, page_cls in _PAGES:
             self._page_index[key] = self._stack.addWidget(page_cls(self._ctx))
@@ -151,6 +166,17 @@ class MainWindow(QMainWindow):
             devices_widget = self._stack.widget(devices_idx)
             if isinstance(devices_widget, DevicesPage):
                 devices_widget.open_logcat_requested.connect(self._on_open_logcat_requested)
+                devices_widget.open_screen_requested.connect(self._on_open_screen_requested)
+
+        screen_idx = self._page_index.get("screen")
+        if screen_idx is not None:
+            screen_widget = self._stack.widget(screen_idx)
+            if screen_widget is not None and hasattr(screen_widget, "fullscreen_requested"):
+                screen_widget.fullscreen_requested.connect(
+                    lambda fs: (
+                        self.enter_mirror_fullscreen() if fs else self.exit_mirror_fullscreen()
+                    )
+                )
 
     def _on_navigate_requested(self, key: str) -> None:
         if key in self._page_index:
@@ -172,6 +198,14 @@ class MainWindow(QMainWindow):
         if key in self._page_index:
             self._stack.setCurrentIndex(self._page_index[key])
 
+    def _on_open_screen_requested(self, serial: str) -> None:
+        self._sidebar.set_current("screen")
+        self._on_page_selected("screen")
+        screen_idx = self._page_index.get("screen")
+        if screen_idx is not None:
+            screen_widget = self._stack.widget(screen_idx)
+            if isinstance(screen_widget, ScreenMirrorPage):
+                screen_widget.select_device(serial)
 
     def _on_open_logcat_requested(self, serial: str) -> None:
         self._sidebar.set_current("logcat")

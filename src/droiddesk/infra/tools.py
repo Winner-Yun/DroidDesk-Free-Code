@@ -265,8 +265,11 @@ class ToolLocator:
         pkg_root = Path(__file__).resolve().parent.parent
         candidates = [
             pkg_root / "resources" / "bin" / exe,
+            pkg_root / "resources" / "bin" / tool_name / exe,
             Path(sys.executable).parent / "resources" / "bin" / exe,
+            Path(sys.executable).parent / "resources" / "bin" / tool_name / exe,
             Path(sys.executable).parent / "droiddesk" / "resources" / "bin" / exe,
+            Path(sys.executable).parent / "droiddesk" / "resources" / "bin" / tool_name / exe,
             Path(sys.executable).parent / exe,
         ]
         for cand in candidates:

@@ -1,4 +1,4 @@
-﻿"""Screenshots Page: Gallery, preview, and management interface for device captures."""
+"""Screenshots Page: Gallery, preview, and management interface for device captures."""
 
 from __future__ import annotations
 
@@ -67,21 +67,9 @@ class ScreenshotsPage(QWidget):
         )
 
         self._capture_btn = QPushButton("Take Screenshot")
+        self._capture_btn.setProperty("role", "primary")
         self._capture_btn.setIcon(get_icon("camera", size=13, color="#ffffff"))
         self._capture_btn.setIconSize(QSize(13, 13))
-        self._capture_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2563eb;
-                color: #ffffff;
-                border: 1px solid #3b82f6;
-                border-radius: 6px;
-                padding: 6px 14px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #1d4ed8;
-            }
-        """)
         self._capture_btn.clicked.connect(self._on_take_screenshot_clicked)
 
         self._open_folder_btn = QPushButton("Open Folder")
@@ -144,24 +132,20 @@ class ScreenshotsPage(QWidget):
 
         # Metadata Label
         self._meta_lbl = QLabel("No screenshot selected")
-        self._meta_lbl.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED}; font-weight: 500;")
+        self._meta_lbl.setProperty("role", "muted")
+        self._meta_lbl.setStyleSheet("font-size: 11px; font-weight: 500;")
         right_layout.addWidget(self._meta_lbl)
 
         # Path display card
         path_card = QFrame()
-        path_card.setStyleSheet(f"""
-            QFrame {{
-                background-color: #1a1b1f;
-                border: 1px solid {BORDER};
-                border-radius: 8px;
-            }}
-        """)
+        path_card.setProperty("role", "card")
         path_row = QHBoxLayout(path_card)
         path_row.setContentsMargins(10, 8, 10, 8)
         path_row.setSpacing(8)
 
         path_tag = QLabel("Path:")
-        path_tag.setStyleSheet(f"font-size: 11px; font-weight: 700; color: {TEXT_MUTED};")
+        path_tag.setProperty("role", "dim")
+        path_tag.setStyleSheet("font-size: 11px; font-weight: 700;")
         path_row.addWidget(path_tag)
 
         self._path_input = QLineEdit()
@@ -169,7 +153,7 @@ class ScreenshotsPage(QWidget):
         path_row.addWidget(self._path_input, 1)
 
         self._copy_path_btn = QPushButton("Copy Path")
-        self._copy_path_btn.setIcon(get_icon("copy", size=13, color=TEXT_MUTED))
+        self._copy_path_btn.setIcon(get_icon("copy", size=13))
         self._copy_path_btn.setIconSize(QSize(13, 13))
         self._copy_path_btn.clicked.connect(self._on_copy_path_clicked)
         path_row.addWidget(self._copy_path_btn)
@@ -181,58 +165,32 @@ class ScreenshotsPage(QWidget):
         actions_row.setSpacing(10)
 
         self._copy_img_btn = QPushButton("Copy Image")
+        self._copy_img_btn.setProperty("role", "primary")
         self._copy_img_btn.setIcon(get_icon("copy", size=14, color="#ffffff"))
         self._copy_img_btn.setIconSize(QSize(14, 14))
         self._copy_img_btn.setToolTip("Copy image to clipboard to paste in any app")
-        self._copy_img_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2563eb;
-                color: #ffffff;
-                border: 1px solid #3b82f6;
-                border-radius: 6px;
-                padding: 6px 14px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #1d4ed8;
-            }
-        """)
         self._copy_img_btn.clicked.connect(self._on_copy_image_clicked)
         actions_row.addWidget(self._copy_img_btn)
 
         self._view_dialog_btn = QPushButton("Open in Window")
-        self._view_dialog_btn.setIcon(get_icon("maximize-2", size=13, color=TEXT_MUTED))
+        self._view_dialog_btn.setIcon(get_icon("maximize-2", size=13))
         self._view_dialog_btn.setIconSize(QSize(13, 13))
         self._view_dialog_btn.setToolTip("Open full-size screenshot viewer dialog")
         self._view_dialog_btn.clicked.connect(self._on_open_dialog_clicked)
         actions_row.addWidget(self._view_dialog_btn)
 
         self._reveal_btn = QPushButton("Show in Folder")
-        self._reveal_btn.setIcon(get_icon("folder", size=13, color=TEXT_MUTED))
+        self._reveal_btn.setIcon(get_icon("folder", size=13))
         self._reveal_btn.setIconSize(QSize(13, 13))
         self._reveal_btn.setToolTip("Locate file in Windows Explorer")
         self._reveal_btn.clicked.connect(self._on_show_in_folder_clicked)
         actions_row.addWidget(self._reveal_btn)
 
         self._delete_btn = QPushButton("Delete")
+        self._delete_btn.setProperty("role", "danger")
         self._delete_btn.setIcon(get_icon("trash-2", size=13, color="#ef4444"))
         self._delete_btn.setIconSize(QSize(13, 13))
         self._delete_btn.setToolTip("Delete this screenshot")
-        self._delete_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #201315;
-                color: #f87171;
-                border: 1px solid #4a2226;
-                border-radius: 6px;
-                padding: 6px 12px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #3b171c;
-                border-color: #ef4444;
-                color: #ffffff;
-            }
-        """)
         self._delete_btn.clicked.connect(self._on_delete_clicked)
         actions_row.addWidget(self._delete_btn)
 

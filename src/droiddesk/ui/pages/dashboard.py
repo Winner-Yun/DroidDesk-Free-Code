@@ -85,12 +85,10 @@ class DashboardPage(QWidget):
 
         self._stat_devices = StatCard("0", "Devices connected")
         self._stat_findings = StatCard("1", "Critical findings")
-        self._stat_gate = StatCard("72", "Last gate score")
         self._stat_runs = StatCard("4", "Test runs today")
 
         stats_row.addWidget(self._stat_devices)
         stats_row.addWidget(self._stat_findings)
-        stats_row.addWidget(self._stat_gate)
         stats_row.addWidget(self._stat_runs)
         self._stats_container.hide()
 
@@ -148,10 +146,7 @@ class DashboardPage(QWidget):
         self._badge_size = QLabel("-")
 
         for badge in (self._badge_version, self._badge_min, self._badge_target, self._badge_size):
-            badge.setStyleSheet(
-                "border: 1px solid #35373e; color: #8b8e94; border-radius: 3px; "
-                "padding: 2px 8px; font-size: 11px;"
-            )
+            badge.setProperty("role", "tagPill")
             tags_row.addWidget(badge)
         tags_row.addStretch(1)
         info_col.addLayout(tags_row)
@@ -174,10 +169,6 @@ class DashboardPage(QWidget):
         btn_security = QPushButton("Scan secrets")
         btn_security.clicked.connect(lambda: self.navigate_requested.emit("security"))
         actions_row.addWidget(btn_security)
-
-        btn_gate = QPushButton("Release gate")
-        btn_gate.clicked.connect(self._on_run_gate_clicked)
-        actions_row.addWidget(btn_gate)
 
         actions_col.addLayout(actions_row)
         row.addLayout(actions_col)
@@ -559,17 +550,6 @@ class DashboardPage(QWidget):
 
             self._apk_card.show()
 
-    def _on_run_gate_clicked(self) -> None:
-        if not self._apk_path:
-            QMessageBox.warning(
-                self,
-                "No APK Selected",
-                "No APK file selected.\n\n"
-                "Please select an APK from the app bar or upload an APK file before "
-                "running the release gate.",
-            )
-            return
-        self.navigate_requested.emit("gate")
 
     def _on_run_tests_clicked(self) -> None:
         if hasattr(self._ctx.device_service, "devices") and callable(

@@ -1,8 +1,4 @@
-"""Security page - Section 6.5/6.6. Severity summary chips, a findings table,
-and a detail panel with the recommended action, code view with line highlighting,
-and quick action to reveal leaked file locations in File Explorer. Backed by
-`FindingsModel` and `ScanService`.
-"""
+"""Security page displaying secret scan findings, severity counts, and code details."""
 
 from __future__ import annotations
 
@@ -196,7 +192,6 @@ class SecurityPage(QWidget):
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self._splitter.setObjectName("securitySplitter")
-        self._splitter.setStyleSheet("QSplitter::handle {    background: #23252a;    width: 3px;}")
 
         self._table = self._build_table()
         self._splitter.addWidget(self._table)
@@ -283,32 +278,6 @@ class SecurityPage(QWidget):
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)
         table.setColumnWidth(4, 40)
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
-
-        table.setStyleSheet(
-            "QTableView {"
-            "    outline: 0;"
-            "    border: 1px solid #26282f;"
-            "    border-radius: 8px;"
-            "    background: #18191c;"
-            "}"
-            "QTableView::item {"
-            "    padding: 8px 6px;"
-            "    border-bottom: 1px solid #22242a;"
-            "}"
-            "QTableView::item:selected {"
-            "    background: #2a313d;"
-            "    color: #ffffff;"
-            "}"
-            "QHeaderView::section {"
-            "    background: #1e1f24;"
-            "    color: #8b8e94;"
-            "    padding: 9px 6px;"
-            "    border: none;"
-            "    border-bottom: 1px solid #2d3038;"
-            "    font-weight: 700;"
-            "    font-size: 11px;"
-            "}"
-        )
 
         table.selectionModel().selectionChanged.connect(self._on_table_selection_changed)
         table.doubleClicked.connect(self._on_table_double_clicked)
@@ -412,17 +381,6 @@ class SecurityPage(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setMinimumWidth(390)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setStyleSheet(
-            "#detailScroll {"
-            "    background: #18191c;"
-            "    border: 1px solid #282a30;"
-            "    border-radius: 8px;"
-            "}"
-            "#detailScroll > QWidget > QWidget {"
-            "    background: transparent;"
-            "}"
-        )
-
         card = QWidget()
         card.setStyleSheet("background: transparent;")
         card.setMinimumWidth(320)
@@ -446,23 +404,6 @@ class SecurityPage(QWidget):
         env_tag, env_desc = detect_environment_info(finding.file_path, finding.rule_id)
         resolved_path = self._resolve_finding_file_path(finding.file_path)
 
-        btn_style = (
-            "QPushButton {"
-            "    background: #23252b;"
-            "    border: 1px solid #363942;"
-            "    border-radius: 4px;"
-            "    padding: 3px 8px;"
-            "    font-size: 11px;"
-            "    font-weight: 600;"
-            "    color: #d1d5db;"
-            "}"
-            "QPushButton:hover {"
-            "    background: #2c2f38;"
-            "    border-color: #5b9bd5;"
-            "    color: #ffffff;"
-            "}"
-        )
-
         # Top row: Severity badge & Environment pill badge
         top_row = QHBoxLayout()
         top_row.setContentsMargins(0, 0, 0, 0)
@@ -470,11 +411,7 @@ class SecurityPage(QWidget):
         top_row.addWidget(SeverityBadge(finding.severity))
 
         env_badge = QLabel(env_tag)
-        env_badge.setStyleSheet(
-            "background: rgba(167, 139, 250, 0.15); color: #c4b5fd; "
-            "border: 1px solid rgba(167, 139, 250, 0.35); border-radius: 4px; "
-            "padding: 2px 8px; font-size: 11px; font-weight: 600;"
-        )
+        env_badge.setObjectName("securityEnvBadge")
         env_badge.setToolTip(env_desc)
         top_row.addWidget(env_badge)
         top_row.addStretch(1)
@@ -483,28 +420,17 @@ class SecurityPage(QWidget):
         key_name = rule_id_to_key_name(finding.rule_id)
         key_lbl = QLabel(key_name)
         key_lbl.setStyleSheet(
-            "color: #f3f4f6; font-size: 13px; font-weight: 700; "
+            "font-size: 13px; font-weight: 700; "
             "font-family: 'Cascadia Mono', Consolas, monospace;"
         )
         key_lbl.setToolTip(f"Rule ID: {finding.rule_id}")
         layout.addWidget(key_lbl)
 
-        # Section 1: Location & Environment
+        # Location and environment details
         layout.addWidget(self._section_label("LOCATION & ENVIRONMENT"))
 
         meta_box = QFrame()
         meta_box.setObjectName("locBox")
-        meta_box.setStyleSheet(
-            "#locBox {"
-            "    background: #16171a;"
-            "    border: 1px solid #282a30;"
-            "    border-radius: 6px;"
-            "}"
-            "#locBox QLabel {"
-            "    background: transparent;"
-            "    border: none;"
-            "}"
-        )
         meta_layout = QVBoxLayout(meta_box)
         meta_layout.setContentsMargins(12, 10, 12, 10)
         meta_layout.setSpacing(8)
@@ -516,40 +442,31 @@ class SecurityPage(QWidget):
 
         # Environment row
         lbl_env = QLabel("Environment:")
-        lbl_env.setStyleSheet("color: #9ca3af; font-size: 11px;")
+        lbl_env.setProperty("role", "dim")
         val_env = QLabel(env_desc)
-        val_env.setStyleSheet("color: #c4b5fd; font-size: 11px; font-weight: 600;")
+        val_env.setStyleSheet("color: #8b5cf6; font-size: 11px; font-weight: 600;")
         grid.addWidget(lbl_env, 0, 0)
         grid.addWidget(val_env, 0, 1)
 
         # File row
         lbl_file = QLabel("File:")
-        lbl_file.setStyleSheet("color: #9ca3af; font-size: 11px;")
+        lbl_file.setProperty("role", "dim")
         display_name = (
             "strings.xml" if finding.file_path.name == "resources.arsc" else finding.file_path.name
         )
         val_file = QLabel(display_name)
-        val_file.setStyleSheet("color: #f3f4f6; font-size: 12px; font-weight: 700;")
+        val_file.setProperty("role", "sectionTitle")
         grid.addWidget(lbl_file, 1, 0)
         grid.addWidget(val_file, 1, 1)
 
         # Line row
         lbl_line = QLabel("Line:")
-        lbl_line.setStyleSheet("color: #9ca3af; font-size: 11px;")
+        lbl_line.setProperty("role", "dim")
         line_str = (
             f"Line {finding.line_number}" if finding.line_number is not None else "File-level"
         )
         val_line = QLabel(line_str)
-        if finding.line_number is not None:
-            val_line.setStyleSheet(
-                "background: #3b2816; color: #fbbf24; font-size: 11px; font-weight: 700; "
-                "border: 1px solid #78350f; border-radius: 4px; padding: 1px 8px;"
-            )
-        else:
-            val_line.setStyleSheet(
-                "background: #23252a; color: #9ca3af; font-size: 11px; font-weight: 600; "
-                "border-radius: 4px; padding: 1px 8px;"
-            )
+        val_line.setProperty("role", "lineBadgeWarn" if finding.line_number is not None else "lineBadgeNeutral")
         line_row = QHBoxLayout()
         line_row.addWidget(val_line)
         line_row.addStretch(1)
@@ -567,38 +484,25 @@ class SecurityPage(QWidget):
         path_row = QHBoxLayout()
         path_row.setSpacing(6)
         path_edit = QLineEdit(full_path_str)
+        path_edit.setObjectName("findingPathEdit")
         path_edit.setReadOnly(True)
         path_edit.setCursorPosition(0)
         path_edit.setToolTip(full_path_str)
-        path_edit.setStyleSheet(
-            "QLineEdit {"
-            "    background: #111215;"
-            "    border: 1px solid #282a30;"
-            "    border-radius: 4px;"
-            "    color: #93c5fd;"
-            "    font-family: 'Cascadia Mono', Consolas, monospace;"
-            "    font-size: 11px;"
-            "    padding: 4px 8px;"
-            "}"
-            "QLineEdit:focus {"
-            "    border-color: #3b82f6;"
-            "}"
-        )
         path_row.addWidget(path_edit, 1)
 
         copy_path_btn = QPushButton("Copy path")
-        copy_path_btn.setStyleSheet(btn_style)
+        copy_path_btn.setProperty("role", "tableAction")
         copy_path_btn.clicked.connect(lambda: self._on_copy_path(full_path_str, copy_path_btn))
         path_row.addWidget(copy_path_btn)
 
         meta_layout.addLayout(path_row)
         layout.addWidget(meta_box)
 
-        # Section 2: Key / Token value (Full View)
+        # Key/token display
         layout.addWidget(self._section_label("KEY / TOKEN VALUE (FULL VIEW)"))
         self._add_fallback_content_box(layout, finding.redacted)
 
-        # Section 3: Code Context
+        # Code context view
         if resolved_path.is_file() and finding.line_number is not None:
             try:
                 code_header_row = QHBoxLayout()
@@ -610,7 +514,7 @@ class SecurityPage(QWidget):
                 line_code = self._extract_line_content(resolved_path, finding.line_number)
                 if line_code:
                     cp_line_btn = QPushButton("Copy line")
-                    cp_line_btn.setStyleSheet(btn_style)
+                    cp_line_btn.setProperty("role", "tableAction")
                     cp_line_btn.clicked.connect(lambda: self._on_copy_path(line_code, cp_line_btn))
                     code_header_row.addWidget(cp_line_btn)
                 layout.addLayout(code_header_row)
@@ -633,31 +537,19 @@ class SecurityPage(QWidget):
                 layout.addWidget(self._section_label("LEAKED CODE LINE"))
                 line_box = QFrame()
                 line_box.setObjectName("lineBox")
-                line_box.setStyleSheet(
-                    "#lineBox {"
-                    "    background: #16171a;"
-                    "    border: 1px solid #332527;"
-                    "    border-left: 3px solid #e0574a;"
-                    "    border-radius: 4px;"
-                    "}"
-                    "#lineBox QLabel {"
-                    "    background: transparent;"
-                    "    border: none;"
-                    "}"
-                )
                 line_box_layout = QVBoxLayout(line_box)
                 line_box_layout.setContentsMargins(10, 8, 10, 8)
                 line_box_layout.setSpacing(6)
 
                 line_text_lbl = QLabel(f"Line {finding.line_number}:  {line_code}")
-                line_text_lbl.setStyleSheet("color: #f3f4f6; font-size: 11px;")
+                line_text_lbl.setStyleSheet("font-size: 11px;")
                 line_text_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 line_text_lbl.setWordWrap(True)
                 line_box_layout.addWidget(line_text_lbl)
 
                 line_btn_row = QHBoxLayout()
                 copy_line_btn = QPushButton("Copy line")
-                copy_line_btn.setStyleSheet(btn_style)
+                copy_line_btn.setProperty("role", "tableAction")
                 copy_line_btn.clicked.connect(lambda: self._on_copy_path(line_code, copy_line_btn))
                 line_btn_row.addWidget(copy_line_btn)
                 line_btn_row.addStretch(1)
@@ -665,22 +557,10 @@ class SecurityPage(QWidget):
 
                 layout.addWidget(line_box)
 
-        # Section 4: Recommended Action
+        # Recommended action
         layout.addWidget(self._section_label("RECOMMENDED ACTION"))
         rec_box = QFrame()
         rec_box.setObjectName("recBox")
-        rec_box.setStyleSheet(
-            "#recBox {"
-            "    background: rgba(91, 155, 213, 0.08);"
-            "    border: 1px solid rgba(91, 155, 213, 0.25);"
-            "    border-left: 3px solid #5b9bd5;"
-            "    border-radius: 4px;"
-            "}"
-            "#recBox QLabel {"
-            "    background: transparent;"
-            "    border: none;"
-            "}"
-        )
         r_layout = QVBoxLayout(rec_box)
         r_layout.setContentsMargins(10, 8, 10, 8)
         rec_text = _SEVERITY_RECOMMENDATIONS.get(
@@ -688,7 +568,7 @@ class SecurityPage(QWidget):
             "Inspect credential usage. If valid and sensitive, revoke and remove from repository.",
         )
         action_label = QLabel(rec_text)
-        action_label.setStyleSheet("color: #cbd5e1; font-size: 11px;")
+        action_label.setStyleSheet("font-size: 11px;")
         action_label.setWordWrap(True)
         r_layout.addWidget(action_label)
         layout.addWidget(rec_box)
@@ -698,22 +578,9 @@ class SecurityPage(QWidget):
         bottom_row = QHBoxLayout()
         bottom_row.addStretch(1)
         reveal_btn = QPushButton("Show in File Explorer")
+        reveal_btn.setProperty("role", "primary")
         reveal_btn.setIcon(get_icon("folder-open", size=13, color="#ffffff"))
         reveal_btn.setIconSize(QSize(13, 13))
-        reveal_btn.setStyleSheet(
-            "QPushButton {"
-            "    background: #3b82f6;"
-            "    border: 1px solid #2563eb;"
-            "    border-radius: 5px;"
-            "    padding: 7px 16px;"
-            "    font-size: 12px;"
-            "    font-weight: 700;"
-            "    color: #ffffff;"
-            "}"
-            "QPushButton:hover {"
-            "    background: #2563eb;"
-            "}"
-        )
         reveal_btn.clicked.connect(lambda: self._on_open_file_location(finding))
         bottom_row.addWidget(reveal_btn)
         layout.addLayout(bottom_row)
@@ -724,17 +591,6 @@ class SecurityPage(QWidget):
     def _add_fallback_content_box(self, layout: QVBoxLayout, content: str) -> None:
         content_box = QFrame()
         content_box.setObjectName("tokenBox")
-        content_box.setStyleSheet(
-            "#tokenBox {"
-            "    background: #16171a;"
-            "    border: 1px solid #282a30;"
-            "    border-radius: 6px;"
-            "}"
-            "#tokenBox QLabel {"
-            "    background: transparent;"
-            "    border: none;"
-            "}"
-        )
         content_layout = QVBoxLayout(content_box)
         content_layout.setContentsMargins(12, 10, 12, 10)
         content_layout.setSpacing(6)
@@ -744,27 +600,11 @@ class SecurityPage(QWidget):
         matched.setWordWrap(True)
         content_layout.addWidget(matched)
 
-        btn_style = (
-            "QPushButton {"
-            "    background: #23252b;"
-            "    border: 1px solid #363942;"
-            "    border-radius: 4px;"
-            "    padding: 4px 10px;"
-            "    font-size: 11px;"
-            "    font-weight: 600;"
-            "    color: #d1d5db;"
-            "}"
-            "QPushButton:hover {"
-            "    background: #2c2f38;"
-            "    border-color: #5b9bd5;"
-            "    color: #ffffff;"
-            "}"
-        )
         tok_btn_row = QHBoxLayout()
         cp_tok_btn = QPushButton("Copy token")
-        cp_tok_btn.setIcon(get_icon("copy", size=12, color="#d1d5db"))
+        cp_tok_btn.setProperty("role", "tableAction")
+        cp_tok_btn.setIcon(get_icon("copy", size=12))
         cp_tok_btn.setIconSize(QSize(12, 12))
-        cp_tok_btn.setStyleSheet(btn_style)
         cp_tok_btn.clicked.connect(lambda: self._on_copy_path(content, cp_tok_btn))
         tok_btn_row.addWidget(cp_tok_btn)
         tok_btn_row.addStretch(1)
@@ -774,8 +614,9 @@ class SecurityPage(QWidget):
 
     def _section_label(self, text: str) -> QLabel:
         label = QLabel(text)
+        label.setProperty("role", "dim")
         label.setStyleSheet(
-            "color: #6b7280; font-size: 10px; font-weight: 700; "
+            "font-size: 10px; font-weight: 700; "
             "letter-spacing: 1px; margin-top: 4px;"
         )
         return label

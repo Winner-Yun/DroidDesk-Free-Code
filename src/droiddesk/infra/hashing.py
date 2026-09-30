@@ -1,12 +1,4 @@
-"""Content hashing and three-tier duplicate detection. See Section 6.12.
-
-Tier 1: group by exact file size (eliminates most comparisons for free).
-Tier 2: within a size group, hash the first and last 8 KB.
-Tier 3: only for files still colliding, full xxhash of the contents.
-
-HashTask below is the QRunnable form used for batch duplicate-scanning on a
-QThreadPool worker thread (Section 4.2, verbatim).
-"""
+"""Content hashing and multi-tier duplicate file detection."""
 
 from __future__ import annotations
 
@@ -20,9 +12,7 @@ _PARTIAL_READ_BYTES = 8 * 1024
 
 
 def hash_file(path: Path) -> str:
-    """Full-content xxhash. Fast enough to be imperceptible even on a 100 MB APK
-    (Section 8.5) - used as the APK analysis cache key.
-    """
+    """Calculate fast full-content xxhash for an artifact or file."""
     hasher = xxhash.xxh3_64()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
@@ -73,9 +63,7 @@ class TaskSignals(QObject):
 
 
 class HashTask(QRunnable):
-    """CPU-bound duplicate-hash batch, run on a QThreadPool worker thread. See
-    Section 4.2, verbatim.
-    """
+    """Worker task computing duplicate hashes in background thread pool."""
 
     def __init__(self, paths: list[Path], signals: TaskSignals) -> None:
         super().__init__()

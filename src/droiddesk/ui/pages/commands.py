@@ -1,9 +1,4 @@
-"""Commands page - Section 6.9. Safe Command Runner & Defensive Security Audit.
-
-Provides 50 system-supplied commands across security audits, Gradle builds,
-unit/connected tests, ADB device operations, and APK inspection tools.
-Includes real-time keyword search to shorten and filter the command list.
-"""
+"""Command execution and defensive security audit page."""
 
 from __future__ import annotations
 
@@ -65,7 +60,7 @@ _CATEGORY_COLORS: dict[str, str] = {
 }
 
 PRESET_COMMANDS: list[CommandPreset] = [
-    # 1-12: Security & Key Harvesting Defensive Audits
+    # Security & Key Harvesting Defensive Audits
     CommandPreset(
         id="audit_apk_keys",
         name="[Audit] APK API Keys & Secrets",
@@ -150,7 +145,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         description="Executes Gitleaks detection across git history to detect committed secrets.",
         category="security",
     ),
-    # 13-22: Gradle Builds & Assembly
+    # Gradle Builds & Assembly
     CommandPreset(
         id="assemble_debug",
         name="[Build] Assemble Debug APK",
@@ -231,7 +226,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         category="build",
         is_release=False,
     ),
-    # 23-30: Testing, Linting & Verification
+    # Testing, Linting & Verification
     CommandPreset(
         id="gradle_test",
         name="[Test] Run All Unit Tests",
@@ -296,7 +291,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         category="build",
         is_release=False,
     ),
-    # 31-41: ADB & Device Management
+    # ADB & Device Management
     CommandPreset(
         id="adb_devices",
         name="[ADB] List Connected Devices",
@@ -374,7 +369,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         description="Kills ADB daemon server to recover from connection drops.",
         category="adb",
     ),
-    # 42-49: APK Inspection & Signing Analysis
+    # APK Inspection & Signing Analysis
     CommandPreset(
         id="apksigner_verify",
         name="[APK] Verify Signature Schemes",
@@ -431,7 +426,7 @@ PRESET_COMMANDS: list[CommandPreset] = [
         description="Analyzes DEX classes and method counts to inspect 64k multidex limits.",
         category="apk",
     ),
-    # 50: Custom Command
+    # Custom Command
     CommandPreset(
         id="custom",
         name="[Custom] Custom Command...",
@@ -720,11 +715,23 @@ class CommandsPage(QWidget):
         )
         outer.addWidget(header)
 
-        # Command Preset & Execution Bar
-        cmd_card = Card("Command Selection & Search")
-        cmd_layout = cmd_card.body_layout()
+        self._empty_banner = EmptyStateWidget(
+            title="No Active APK Selected",
+            message=(
+                "Build commands generate new APK artifacts. You can run build commands "
+                "now, or upload an existing APK to inspect and audit immediately."
+            ),
+            button_text="Upload APK",
+            compact=True,
+        )
+        self._empty_banner.upload_requested.connect(self.upload_requested.emit)
+        outer.addWidget(self._empty_banner)
 
-        # Row 1: Search / Filter input
+        # Command Preset & Execution Bar
+        self._cmd_card = Card("Command Selection & Search")
+        cmd_layout = self._cmd_card.body_layout()
+
+        # Search filter bar
         filter_row = QHBoxLayout()
         filter_row.setSpacing(10)
 
@@ -744,12 +751,12 @@ class CommandsPage(QWidget):
         filter_row.addWidget(self._search_input, 1)
 
         self._filter_count_label = QLabel(f"({len(PRESET_COMMANDS)} commands)")
-        self._filter_count_label.setStyleSheet("color: #a1a1aa; font-size: 11px;")
+        self._filter_count_label.setProperty("role", "dim")
         filter_row.addWidget(self._filter_count_label)
 
         cmd_layout.addLayout(filter_row)
 
-        # Row 2: Command selector, command input, run and stop buttons
+        # Command selection and action buttons
         row2 = QHBoxLayout()
         row2.setSpacing(10)
 
@@ -801,22 +808,11 @@ class CommandsPage(QWidget):
         self._desc_label.setProperty("role", "muted")
         cmd_layout.addWidget(self._desc_label)
 
-        outer.addWidget(cmd_card)
-
-        self._empty_banner = EmptyStateWidget(
-            title="No Active APK Selected",
-            message=(
-                "Build commands generate new APK artifacts. You can run build commands "
-                "now, or upload an existing APK to inspect and audit immediately."
-            ),
-            button_text="Upload APK",
-            compact=True,
-        )
-        self._empty_banner.upload_requested.connect(self.upload_requested.emit)
-        outer.addWidget(self._empty_banner)
+        outer.addWidget(self._cmd_card)
 
         # Output panel takes full remaining space
-        outer.addWidget(self._build_output_panel(), 1)
+        self._output_panel = self._build_output_panel()
+        outer.addWidget(self._output_panel, 1)
 
         if self._build_service:
             self._build_service.guard_evaluated.connect(self._on_guard_evaluated)
@@ -827,12 +823,69 @@ class CommandsPage(QWidget):
         self._on_preset_changed(0)
         self.set_apk(None)
 
+    def _is_apk_required_for_preset(self, preset: CommandPreset | None) -> bool:
+        """Check if the preset or current command requires an active APK artifact."""
+        if not preset:
+            return "{apk}" in self._command_input.text()
+        return (
+            preset.category == "apk"
+            or "{apk}" in preset.command
+            or preset.id.startswith("audit_apk")
+            or preset.id
+            in (
+                "audit_maps_keys",
+                "audit_signing_keys",
+                "audit_aws_keys",
+                "audit_private_keys",
+                "audit_high_entropy",
+                "adb_install",
+            )
+        )
+
     def set_apk(self, path: Path | None) -> None:
         self._apk_path = path
-        if path is None:
-            self._empty_banner.show()
-        else:
-            self._empty_banner.hide()
+        has_apk = path is not None
+        self._empty_banner.setVisible(not has_apk)
+        self._cmd_card.setVisible(has_apk)
+
+        # Refresh command text if it has {apk}
+        idx = self._preset_combo.currentIndex()
+        if 0 <= idx < len(self._filtered_presets):
+            preset = self._filtered_presets[idx]
+            cmd = preset.command
+            if "{apk}" in cmd and self._apk_path:
+                cmd = cmd.replace("{apk}", f'"{self._apk_path}"')
+            self._command_input.setText(cmd)
+
+    def set_theme(self, mode: str) -> None:
+        """Respond to dynamic dark and light mode changes."""
+        for action in self._search_input.actions():
+            self._search_input.removeAction(action)
+        search_icon_color = "#6b7280" if mode.lower() == "light" else TEXT_MUTED
+        self._search_input.addAction(
+            get_icon("search", size=14, color=search_icon_color),
+            QLineEdit.ActionPosition.LeadingPosition,
+        )
+        if hasattr(self, "_empty_banner") and hasattr(self._empty_banner, "set_theme"):
+            self._empty_banner.set_theme(mode)
+        if hasattr(self, "_stop_button"):
+            self._stop_button.setIcon(get_icon("square", size=13, color=TEXT_MUTED))
+
+        # Re-render preset combo category icons for the active theme
+        self._preset_combo.blockSignals(True)
+        cur_idx = self._preset_combo.currentIndex()
+        self._preset_combo.clear()
+        for p in self._filtered_presets:
+            cat_icon = get_icon(
+                _CATEGORY_ICONS.get(p.category, "terminal"),
+                size=14,
+                color=_CATEGORY_COLORS.get(p.category, TEXT_MUTED),
+            )
+            self._preset_combo.addItem(cat_icon, p.name, p.id)
+        if 0 <= cur_idx < len(self._filtered_presets):
+            self._preset_combo.setCurrentIndex(cur_idx)
+        self._preset_combo.blockSignals(False)
+        self._on_preset_changed(self._preset_combo.currentIndex())
 
     def _on_filter_text_changed(self, text: str) -> None:
         query = text.strip().lower()
@@ -888,7 +941,7 @@ class CommandsPage(QWidget):
 
             if preset.category == "security":
                 self._command_input.setReadOnly(True)
-                self._command_input.setStyleSheet("color: #a1a1aa; background-color: #1c1d22;")
+                self._command_input.setStyleSheet("")
                 self._run_button.setText("Run Security Audit")
             elif preset.category == "build":
                 self._command_input.setReadOnly(False)
@@ -924,17 +977,6 @@ class CommandsPage(QWidget):
         self._console.setPlaceholderText(
             "Live build output and security audit findings appear here..."
         )
-        self._console.setStyleSheet("""
-            QPlainTextEdit {
-                font-family: 'Cascadia Mono', 'Consolas', monospace;
-                font-size: 12px;
-                background-color: #0f1012;
-                color: #e4e4e7;
-                border: 1px solid #27272a;
-                border-radius: 6px;
-                padding: 8px;
-            }
-        """)
         card.body_layout().addWidget(self._console, 1)
         return card
 
@@ -1033,6 +1075,7 @@ class CommandsPage(QWidget):
                     "[!] This command requires an active APK artifact.\n"
                     "    Please upload or select an APK first."
                 )
+                self._empty_banner.show()
                 return
 
         # Substitute {package} placeholder if present

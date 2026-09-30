@@ -48,19 +48,17 @@ class CodeView(QPlainTextEdit):
         self._highlighted_line: int | None = None
         self._line_number_area = LineNumberArea(self)
 
+        self._theme_mode = "dark"
         self.blockCountChanged.connect(self._update_line_number_area_width)
         self.updateRequest.connect(self._update_line_number_area)
 
         self._update_line_number_area_width(0)
 
-        self.setStyleSheet(
-            "QPlainTextEdit {"
-            "    background-color: #141518;"
-            "    border: 1px solid #282a30;"
-            "    border-radius: 6px;"
-            "    color: #e5e7eb;"
-            "}"
-        )
+    def set_theme(self, mode: str) -> None:
+        self._theme_mode = mode
+        self._line_number_area.update()
+        if self._highlighted_line > 0:
+            self._apply_highlight(self._highlighted_line, self._matched_token)
 
     def line_number_area_width(self) -> int:
         digits = max(1, len(str(self.blockCount())))
@@ -89,11 +87,18 @@ class CodeView(QPlainTextEdit):
         )
 
     def line_number_area_paint_event(self, event: QPaintEvent) -> None:
+        is_light = self._theme_mode.lower() == "light"
+        gutter_bg = QColor("#f8fafc") if is_light else QColor("#101114")
+        gutter_border = QColor("#e2e8f0") if is_light else QColor("#23252a")
+        gutter_text = QColor("#94a3b8") if is_light else QColor("#4b5563")
+        highlight_bg = QColor("#fee2e2") if is_light else QColor("#3d1418")
+        highlight_text = QColor("#ef4444") if is_light else QColor("#f87171")
+
         painter = QPainter(self._line_number_area)
-        painter.fillRect(event.rect(), QColor("#101114"))
+        painter.fillRect(event.rect(), gutter_bg)
 
         # Right gutter divider line
-        painter.setPen(QColor("#23252a"))
+        painter.setPen(gutter_border)
         painter.drawLine(
             event.rect().right(),
             event.rect().top(),
@@ -119,16 +124,16 @@ class CodeView(QPlainTextEdit):
                         top,
                         self._line_number_area.width() - 1,
                         block_h,
-                        QColor("#3d1418"),
+                        highlight_bg,
                     )
                     # Accent alert bar on left edge
                     painter.fillRect(0, top, 4, block_h, QColor("#ef4444"))
-                    painter.setPen(QColor("#f87171"))
+                    painter.setPen(highlight_text)
                     font = painter.font()
                     font.setBold(True)
                     painter.setFont(font)
                 else:
-                    painter.setPen(QColor("#4b5563"))
+                    painter.setPen(gutter_text)
                     font = painter.font()
                     font.setBold(False)
                     painter.setFont(font)
@@ -165,25 +170,30 @@ class CodeView(QPlainTextEdit):
             line_number - 1,
         )
 
-        # 1. Full-width selection for the first visual line
+        is_light = self._theme_mode.lower() == "light"
+        line_bg = QColor("#fee2e2") if is_light else QColor("#3d1418")
+        token_bg = QColor("#fecdd3") if is_light else QColor("#881337")
+        token_fg = QColor("#991b1b") if is_light else QColor("#fecdd3")
+
+        # Visual line selection
         line_selection = QTextEdit.ExtraSelection()
-        line_selection.format.setBackground(QColor("#3d1418"))
+        line_selection.format.setBackground(line_bg)
         line_selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
         line_selection.cursor = cursor
         extra_selections.append(line_selection)
 
-        # 2. Block text background covering all wrapped characters in this source line
+        # Block text background covering wrapped characters
         block_cursor = QTextCursor(cursor)
         block_cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
         block_cursor.movePosition(
             QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor
         )
         block_selection = QTextEdit.ExtraSelection()
-        block_selection.format.setBackground(QColor("#3d1418"))
+        block_selection.format.setBackground(line_bg)
         block_selection.cursor = block_cursor
         extra_selections.append(block_selection)
 
-        # 3. Specific token highlight within the line
+        # Token match highlight within the line
         block = cursor.block()
         line_text = block.text()
         if token and token in line_text:
@@ -196,8 +206,8 @@ class CodeView(QPlainTextEdit):
                 len(token),
             )
             token_selection = QTextEdit.ExtraSelection()
-            token_selection.format.setBackground(QColor("#881337"))
-            token_selection.format.setForeground(QColor("#fecdd3"))
+            token_selection.format.setBackground(token_bg)
+            token_selection.format.setForeground(token_fg)
             token_selection.format.setFontWeight(QFont.Weight.Bold)
             token_selection.cursor = token_cursor
             extra_selections.append(token_selection)

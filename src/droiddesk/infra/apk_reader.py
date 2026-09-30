@@ -1,9 +1,4 @@
-"""ApkReader: facade over androguard and pyaxmlparser. See Section 6.2 and the
-Performance note there - pyaxmlparser for the fast identity panel, full androguard
-analysis loaded lazily only when a panel needs it (it disassembles the DEX and can
-take ten seconds or more on a large APK), all results cached by content hash
-(Section 8.5), never by path.
-"""
+"""APK reader providing metadata inspection, manifest parsing, and string extraction."""
 
 from __future__ import annotations
 
@@ -64,6 +59,36 @@ class ApkReader:
             except Exception:
                 debuggable = None
 
+            perms: list[str] = []
+            try:
+                perms = list(apk.get_permissions() or [])
+            except Exception:
+                pass
+
+            activities: list[str] = []
+            try:
+                activities = list(apk.get_activities() or [])
+            except Exception:
+                pass
+
+            services: list[str] = []
+            try:
+                services = list(apk.get_services() or [])
+            except Exception:
+                pass
+
+            receivers: list[str] = []
+            try:
+                receivers = list(apk.get_receivers() or [])
+            except Exception:
+                pass
+
+            providers: list[str] = []
+            try:
+                providers = list(apk.get_providers() or [])
+            except Exception:
+                pass
+
             info = ApkInfo(
                 file_path=apk_path,
                 file_hash=file_hash,
@@ -77,6 +102,11 @@ class ApkReader:
                 size_bytes=apk_path.stat().st_size,
                 compile_sdk=None,
                 debuggable=debuggable,
+                permissions=perms,
+                activities=activities,
+                services=services,
+                receivers=receivers,
+                providers=providers,
             )
 
             self._cache[file_hash] = info
@@ -153,33 +183,37 @@ class ApkReader:
         """
         base_info = self.inspect_fast(apk_path)
 
+        # Attempt official apksigner command first (very fast, no bytecode parsing)
+        sig_info = self._inspect_signature_apksigner(apk_path)
+
+        if sig_info is not None:
+            enriched_info = dataclasses.replace(
+                base_info,
+                certificate_fingerprint_sha256=sig_info.certificate_fingerprint_sha256,
+                certificate_fingerprint_sha1=sig_info.certificate_fingerprint_sha1,
+                certificate_fingerprint_md5=sig_info.certificate_fingerprint_md5,
+                certificate_dn=sig_info.certificate_dn,
+                signature_verified=sig_info.signature_verified,
+                signature_schemes=sig_info.signature_schemes,
+                signature_source=sig_info.signature_source,
+            )
+            self._cache[base_info.file_hash] = enriched_info
+            return enriched_info
+
         try:
             from androguard.core.apk import APK  # type: ignore[import-untyped]
 
             apk = APK(str(apk_path))
+            signature_schemes = []
+            if apk.get_certificates_v1():
+                signature_schemes.append(1)
+            if apk.get_certificates_v2():
+                signature_schemes.append(2)
+            if apk.get_certificates_v3():
+                signature_schemes.append(3)
+            if apk.get_certificates_v31():
+                signature_schemes.append(31)
 
-            # Attempt official apksigner command first
-            sig_info = self._inspect_signature_apksigner(apk_path)
-
-            if sig_info is not None:
-                signature_schemes = sig_info.signature_schemes
-                fingerprint_str = sig_info.certificate_fingerprint_sha256
-                sha1_str = sig_info.certificate_fingerprint_sha1
-                md5_str = sig_info.certificate_fingerprint_md5
-                cert_dn = sig_info.certificate_dn
-                sig_verified = sig_info.signature_verified
-                sig_source = sig_info.signature_source
-            else:
-                # Fallback to androguard certificate parsing
-                signature_schemes = []
-                if apk.get_certificates_v1():
-                    signature_schemes.append(1)
-                if apk.get_certificates_v2():
-                    signature_schemes.append(2)
-                if apk.get_certificates_v3():
-                    signature_schemes.append(3)
-                if apk.get_certificates_v31():
-                    signature_schemes.append(31)
 
                 fingerprints = []
                 sha1_fingerprints = []
@@ -213,11 +247,11 @@ class ApkReader:
 
             enriched_info = dataclasses.replace(
                 base_info,
-                permissions=apk.get_permissions(),
-                activities=apk.get_activities(),
-                services=apk.get_services(),
-                receivers=apk.get_receivers(),
-                providers=apk.get_providers(),
+                permissions=list(apk.get_permissions() or base_info.permissions),
+                activities=list(apk.get_activities() or base_info.activities),
+                services=list(apk.get_services() or base_info.services),
+                receivers=list(apk.get_receivers() or base_info.receivers),
+                providers=list(apk.get_providers() or base_info.providers),
                 certificate_fingerprint_sha256=fingerprint_str,
                 certificate_fingerprint_sha1=sha1_str,
                 certificate_fingerprint_md5=md5_str,
@@ -230,9 +264,68 @@ class ApkReader:
             self._cache[base_info.file_hash] = enriched_info
             return enriched_info
 
-        except Exception as e:
-            msg = f"Failed to perform full analysis on APK {apk_path.name}: {e}"
-            raise ApkParseError(msg) from e
+        except Exception:
+            return base_info
+
+    def get_manifest_xml(self, apk_path: Path) -> str:
+        """Extract and format AndroidManifest.xml from an APK."""
+        import xml.dom.minidom as minidom
+        import xml.etree.ElementTree as ET
+
+        try:
+            from pyaxmlparser import APK as PyAxmlAPK
+
+            apk = PyAxmlAPK(str(apk_path))
+            elem = apk.get_android_manifest_xml()
+            if elem is not None:
+                raw_bytes = ET.tostring(elem, encoding="utf-8")
+                dom = minidom.parseString(raw_bytes)
+                pretty = dom.toprettyxml(indent="  ")
+                lines = [line for line in pretty.splitlines() if line.strip()]
+                return "\n".join(lines)
+        except Exception:
+            pass
+
+        try:
+            from androguard.core.apk import APK as AndroAPK
+
+            apk = AndroAPK(str(apk_path))
+            elem = apk.get_android_manifest_xml()
+            if elem is not None:
+                raw_bytes = ET.tostring(elem, encoding="utf-8")
+                dom = minidom.parseString(raw_bytes)
+                pretty = dom.toprettyxml(indent="  ")
+                lines = [line for line in pretty.splitlines() if line.strip()]
+                return "\n".join(lines)
+        except Exception:
+            pass
+
+        return "<!-- AndroidManifest.xml could not be decoded -->"
+
+    def get_archive_entries(self, apk_path: Path) -> list[dict[str, object]]:
+        """Extract file listing and size statistics from the APK zip archive."""
+        import zipfile
+
+        if not apk_path.is_file():
+            return []
+
+        entries: list[dict[str, object]] = []
+        try:
+            with zipfile.ZipFile(apk_path, "r") as zf:
+                for info in zf.infolist():
+                    if info.is_dir():
+                        continue
+                    entries.append(
+                        {
+                            "name": info.filename,
+                            "file_size": info.file_size,
+                            "compress_size": info.compress_size,
+                        }
+                    )
+        except Exception:
+            pass
+        return entries
+
 
     def extract_named_string_resources(self, apk_path: Path) -> list[tuple[str, str]]:
         """Extract (name, value) string resource pairs from resources.arsc."""
@@ -260,16 +353,11 @@ class ApkReader:
             return []
 
     def extract_string_resources(self, apk_path: Path) -> list[str]:
-        """Strings from resources.arsc - where API keys most often live. Used by
-        the Privacy Scanner (Section 6.6) and Network Insight's static host
-        extraction (Section 6.11).
-        """
+        """Extract compiled string resources from resources.arsc."""
         return list(dict.fromkeys(val for _, val in self.extract_named_string_resources(apk_path)))
 
     def extract_dex_strings(self, apk_path: Path) -> list[str]:
-        """Opt-in deep scan: string constants from the DEX. Slower than resource
-        extraction - see Section 6.6.
-        """
+        """Extract string constants from DEX bytecode."""
         try:
             from androguard.core.apk import APK
             from androguard.core.dex import DEX  # type: ignore[import-untyped]

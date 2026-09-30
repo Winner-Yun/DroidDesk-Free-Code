@@ -206,3 +206,26 @@ class AdbClient:
             args.append(f"--pid={pid}")
         result = self._runner.run(self._adb_path, args)
         return [line for line in result.stdout.splitlines() if line.strip()]
+
+    def input_keyevent(self, serial: str, keycode: int) -> None:
+        self._runner.run(self._adb_path, ["-s", serial, "shell", "input", "keyevent", str(keycode)])
+
+    def input_text(self, serial: str, text: str) -> None:
+        self._runner.run(self._adb_path, ["-s", serial, "shell", "input", "text", text])
+
+    def get_screen_size(self, serial: str) -> tuple[int, int]:
+        """Return (width, height) of the device physical screen."""
+        try:
+            result = self._runner.run(
+                self._adb_path, ["-s", serial, "shell", "wm", "size"], timeout=5.0
+            )
+            import re
+
+            matches = re.findall(r"(\d+)x(\d+)", result.stdout)
+            if matches:
+                w, h = int(matches[-1][0]), int(matches[-1][1])
+                return (min(w, h), max(w, h))
+        except Exception:
+            pass
+        return (1080, 2400)
+

@@ -1,4 +1,4 @@
-﻿"""ScreenshotViewerDialog: Rich preview and management dialog for device screenshots.
+"""ScreenshotViewerDialog: Rich preview and management dialog for device screenshots.
 
 Provides:
 - High-fidelity image preview with smooth scaling maintaining aspect ratio.

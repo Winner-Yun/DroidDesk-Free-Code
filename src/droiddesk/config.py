@@ -18,6 +18,9 @@ _PATH_FIELDS = (
     "gitleaks_path",
     "scrcpy_path",
     "git_path",
+    "emulator_path",
+    "avdmanager_path",
+    "sdkmanager_path",
     "android_sdk_path",
     "java_home_path",
     "reports_output_dir",
@@ -34,6 +37,9 @@ class Settings(BaseModel):
     gitleaks_path: Path | None = None
     scrcpy_path: Path | None = None
     git_path: Path | None = None
+    emulator_path: Path | None = None
+    avdmanager_path: Path | None = None
+    sdkmanager_path: Path | None = None
     android_sdk_path: Path | None = None
     java_home_path: Path | None = None
     reports_output_dir: Path | None = None

@@ -6,14 +6,17 @@ light/dark mode toggling, application developer details, and contributor recogni
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from pathlib import Path
+
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -69,7 +72,10 @@ class SettingsPage(QWidget):
         # 1. Appearance & Theme Card (Light / Dark mode)
         layout.addWidget(self._build_theme_card())
 
-        # 2. Device History Card
+        # 2. Android Environment & Toolchain Card
+        layout.addWidget(self._build_android_env_card())
+
+        # 3. Device History Card
         layout.addWidget(self._build_device_history_card())
 
         # 3. APK History Card
@@ -193,6 +199,172 @@ class SettingsPage(QWidget):
         self._ctx.settings.save()
         apply_theme(mode, widget=self)
         self._update_theme_buttons_style()
+
+    # -------------------------------------------------------------------------
+    # Android SDK & Environment Card
+    # -------------------------------------------------------------------------
+    def _build_android_env_card(self) -> Card:
+        card = Card()
+        body = card.body_layout()
+        body.setContentsMargins(16, 14, 16, 14)
+        body.setSpacing(12)
+
+        header_row = QHBoxLayout()
+        icon_lbl = QLabel()
+        icon_lbl.setPixmap(get_icon("settings", size=18, color="#3b82f6").pixmap(18, 18))
+        header_row.addWidget(icon_lbl)
+
+        title_lbl = QLabel("Android SDK & Environment")
+        title_lbl.setStyleSheet("font-size: 14px; font-weight: 700;")
+        header_row.addWidget(title_lbl)
+
+        self._env_pill = StatusPill("CHECKING", "info")
+        header_row.addWidget(self._env_pill)
+        header_row.addStretch(1)
+        body.addLayout(header_row)
+
+        desc_lbl = QLabel(
+            "Manage your Android SDK installation, view tool availability (ADB, Emulator, AVD Manager), and inspect installed system images."
+        )
+        desc_lbl.setStyleSheet("font-size: 12px; color: #6b7280;")
+        body.addWidget(desc_lbl)
+
+        # SDK Path row
+        path_box = QFrame()
+        path_box.setStyleSheet("background-color: #212226; border-radius: 6px; padding: 10px;")
+        pb_layout = QVBoxLayout(path_box)
+        pb_layout.setContentsMargins(8, 6, 8, 6)
+        pb_layout.setSpacing(6)
+
+        p_lbl = QLabel("Android SDK Root Location:")
+        p_lbl.setStyleSheet("font-size: 12px; font-weight: 600; color: #9ca3af;")
+        pb_layout.addWidget(p_lbl)
+
+        p_row = QHBoxLayout()
+        self._sdk_path_input = QLineEdit()
+        p_row.addWidget(self._sdk_path_input, 1)
+
+        browse_btn = QPushButton("Browse...")
+        browse_btn.clicked.connect(self._browse_sdk_path)
+        p_row.addWidget(browse_btn)
+
+        save_btn = QPushButton("Save & Revalidate")
+        save_btn.setStyleSheet(
+            "QPushButton { background: #2563eb; border: 1px solid #3b82f6; color: #ffffff; "
+            "border-radius: 4px; padding: 6px 14px; font-weight: 600; font-size: 11px; }"
+            "QPushButton:hover { background: #1d4ed8; }"
+        )
+        save_btn.clicked.connect(self._save_sdk_path)
+        p_row.addWidget(save_btn)
+        pb_layout.addLayout(p_row)
+        body.addWidget(path_box)
+
+        # Tools summary grid
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(24)
+        grid.setVerticalSpacing(8)
+
+        # SDK Status
+        grid.addWidget(self._env_field_label("SDK Root:"), 0, 0)
+        self._sdk_status_val = QLabel("-")
+        grid.addWidget(self._sdk_status_val, 0, 1)
+
+        # ADB Status
+        grid.addWidget(self._env_field_label("ADB:"), 1, 0)
+        self._adb_status_val = QLabel("-")
+        grid.addWidget(self._adb_status_val, 1, 1)
+
+        # Emulator Status
+        grid.addWidget(self._env_field_label("Emulator:"), 2, 0)
+        self._emu_status_val = QLabel("-")
+        grid.addWidget(self._emu_status_val, 2, 1)
+
+        # System Images
+        grid.addWidget(self._env_field_label("System Images:"), 3, 0)
+        self._si_status_val = QLabel("-")
+        grid.addWidget(self._si_status_val, 3, 1)
+
+        # Storage / Emulator location
+        grid.addWidget(self._env_field_label("Emulator Storage:"), 4, 0)
+        self._avd_loc_val = QLabel(str(Path.home() / ".android" / "avd"))
+        self._avd_loc_val.setStyleSheet("font-family: monospace; font-size: 11px; color: #9ca3af;")
+        grid.addWidget(self._avd_loc_val, 4, 1)
+
+        body.addLayout(grid)
+        self._refresh_android_env_info()
+        return card
+
+    def _env_field_label(self, text: str) -> QLabel:
+        lbl = QLabel(text)
+        lbl.setStyleSheet("font-size: 12px; font-weight: 600; color: #9ca3af;")
+        lbl.setFixedWidth(130)
+        return lbl
+
+    def _browse_sdk_path(self) -> None:
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            "Select Android SDK Directory",
+            self._sdk_path_input.text().strip() or str(Path.home()),
+        )
+        if folder:
+            self._sdk_path_input.setText(folder)
+
+    def _save_sdk_path(self) -> None:
+        raw = self._sdk_path_input.text().strip()
+        if not raw:
+            return
+        p = Path(raw)
+        if not p.is_dir():
+            QMessageBox.warning(self, "Invalid Path", f"Directory does not exist:\n{raw}")
+            return
+        try:
+            self._ctx.device_service.sdk_manager.set_sdk_path(p)
+            QMessageBox.information(self, "SDK Path Saved", "Android SDK location updated successfully.")
+            self._refresh_android_env_info()
+        except Exception as exc:
+            QMessageBox.warning(self, "Error", f"Could not update SDK path: {exc}")
+
+    def _refresh_android_env_info(self) -> None:
+        status = self._ctx.device_service.check_environment()
+        if status.sdk_root:
+            self._sdk_path_input.setText(str(status.sdk_root))
+            self._sdk_status_val.setText(f"Ready ({status.sdk_root})")
+            self._sdk_status_val.setStyleSheet("color: #10b981; font-weight: 600; font-size: 12px;")
+        else:
+            self._sdk_status_val.setText("Not Found")
+            self._sdk_status_val.setStyleSheet("color: #ef4444; font-weight: 600; font-size: 12px;")
+
+        if status.adb_path:
+            self._adb_status_val.setText(f"Ready ({status.adb_version or status.adb_path.name})")
+            self._adb_status_val.setStyleSheet("color: #10b981; font-weight: 600; font-size: 12px;")
+        else:
+            self._adb_status_val.setText("Missing")
+            self._adb_status_val.setStyleSheet("color: #ef4444; font-weight: 600; font-size: 12px;")
+
+        if status.emulator_path:
+            self._emu_status_val.setText(f"Ready ({status.emulator_version or status.emulator_path.name})")
+            self._emu_status_val.setStyleSheet("color: #10b981; font-weight: 600; font-size: 12px;")
+        else:
+            self._emu_status_val.setText("Missing")
+            self._emu_status_val.setStyleSheet("color: #ef4444; font-weight: 600; font-size: 12px;")
+
+        from droiddesk.android.system_image_manager import SystemImageManager
+        sim = SystemImageManager(self._ctx.tool_locator)
+        imgs = sim.list_installed_images()
+        if imgs:
+            versions = ", ".join(f"API {img.api_level}" for img in imgs)
+            self._si_status_val.setText(f"{len(imgs)} installed ({versions})")
+            self._si_status_val.setStyleSheet("color: #10b981; font-size: 12px;")
+        else:
+            self._si_status_val.setText("None installed (Download via + Create Emulator)")
+            self._si_status_val.setStyleSheet("color: #fbbf24; font-size: 12px;")
+
+        if status.is_ready:
+            self._env_pill.set_status("READY", "pass")
+        elif "MISSING" in status.state.value:
+            self._env_pill.set_status(status.state.value.replace("_", " "), "fail")
+        else:
+            self._env_pill.set_status(status.state.value.replace("_", " "), "warn")
 
     # -------------------------------------------------------------------------
     # Device Connection History Card

@@ -37,7 +37,6 @@ from droiddesk.ui.dialogs.screenshot_dialog import (
     _ImagePreviewWidget,
 )
 from droiddesk.ui.theme import (
-    BORDER,
     TEXT_MUTED,
     get_icon,
 )

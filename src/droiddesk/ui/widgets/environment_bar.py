@@ -66,7 +66,7 @@ class EnvironmentBar(QWidget):
         layout.addWidget(self._apk_selector)
 
         # Remove APK button
-        from droiddesk.ui.theme import get_current_theme, is_light
+        from droiddesk.ui.theme import is_light
 
         remove_icon_color = "#dc2626" if is_light() else "#e0574a"
         self._remove_button = QPushButton("Remove")
@@ -160,7 +160,8 @@ class EnvironmentBar(QWidget):
             color = ENVIRONMENT_RISK_COLORS.get(key, "#8b8e94")
             host_part = f" · {host}" if host else ""
             note_part = f" [{note}]" if note else ""
-            btn_text = f"● {label.upper()} ({key}){host_part}{note_part}"
+            btn_text = f"{label.upper()} ({key}){host_part}{note_part}"
+            self._env_button.setIcon(get_icon("circle", size=8, color=color))
             self._env_button.setText(btn_text)
             self._env_button.setStyleSheet(
                 f"""
@@ -183,7 +184,8 @@ class EnvironmentBar(QWidget):
             key = env_or_key
             label = key.capitalize()
             color = ENVIRONMENT_RISK_COLORS.get(key, "#8b8e94")
-            btn_text = f"● {label.upper()} ({key})"
+            btn_text = f"{label.upper()} ({key})"
+            self._env_button.setIcon(get_icon("circle", size=8, color=color))
             self._env_button.setText(btn_text)
             self._env_button.setStyleSheet(
                 f"""
@@ -203,7 +205,8 @@ class EnvironmentBar(QWidget):
                 """
             )
         else:
-            self._env_button.setText("● No Environment  [Configure]")
+            self._env_button.setIcon(get_icon("circle-dashed", size=10, color="#8b8e94"))
+            self._env_button.setText("No Environment  [Configure]")
             self._env_button.setStyleSheet(
                 """
                 QPushButton#envBadgeButton {

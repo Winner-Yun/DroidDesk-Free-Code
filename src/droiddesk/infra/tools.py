@@ -14,6 +14,9 @@ from droiddesk.core.errors import ToolNotFoundError
 
 _KNOWN_TOOLS = (
     "adb",
+    "emulator",
+    "avdmanager",
+    "sdkmanager",
     "aapt2",
     "apksigner",
     "apkanalyzer",
@@ -23,7 +26,7 @@ _KNOWN_TOOLS = (
     "git",
 )
 
-_JAVA_DEPENDENT_TOOLS = ("apkanalyzer", "bundletool", "apksigner")
+_JAVA_DEPENDENT_TOOLS = ("apkanalyzer", "bundletool", "apksigner", "avdmanager", "sdkmanager")
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +132,12 @@ class ToolLocator:
         version_cmds: list[list[str]] = []
         if tool_name in ("adb", "aapt2", "gitleaks"):
             version_cmds = [[str(path), "version"]]
+        elif tool_name == "emulator":
+            version_cmds = [[str(path), "-version"]]
+        elif tool_name == "sdkmanager":
+            version_cmds = [[str(path), "--version"]]
+        elif tool_name == "avdmanager":
+            version_cmds = [[str(path), "list", "avd"]]
         elif tool_name == "git":
             version_cmds = [[str(path), "--version"]]
         elif tool_name == "scrcpy":
@@ -247,6 +256,20 @@ class ToolLocator:
             match = re.search(r"([0-9]+\.[0-9]+(?:\.[0-9]+)?)", output)
             if match:
                 return match.group(1)
+        elif tool_name == "emulator":
+            match = re.search(r"Android emulator version\s+([0-9.]+)", output, re.IGNORECASE)
+            if match:
+                return match.group(1)
+            return "Detected"
+        elif tool_name == "sdkmanager":
+            match = re.search(r"([0-9]+(?:\.[0-9]+)*)", output)
+            if match:
+                return match.group(1)
+            return "Detected"
+        elif tool_name == "avdmanager":
+            if "Android Virtual Devices" in output or "Available" in output:
+                return "Ready"
+            return "Detected"
         elif tool_name == "apkanalyzer":
             match = re.search(r"version\s+([0-9.]+)", output, re.IGNORECASE)
             if match:
@@ -296,19 +319,35 @@ class ToolLocator:
         return self._search_sdk_root(Path(sdk_root), tool_name)
 
     def _from_default_sdk_location(self, tool_name: str) -> Path | None:
+        sdk_candidates: list[Path] = []
         local_app_data = os.environ.get("LOCALAPPDATA")
-        if not local_app_data:
-            return None
-        return self._search_sdk_root(Path(local_app_data) / "Android" / "Sdk", tool_name)
+        if local_app_data:
+            sdk_candidates.append(Path(local_app_data) / "Android" / "Sdk")
+        sdk_candidates.extend([
+            Path(r"C:\Android\Sdk"),
+            Path(r"C:\Android\sdk"),
+            Path.home() / "AppData" / "Local" / "Android" / "Sdk",
+        ])
+        for cand in sdk_candidates:
+            found = self._search_sdk_root(cand, tool_name)
+            if found:
+                return found
+        return None
 
     def _search_sdk_root(self, sdk_root: Path, tool_name: str) -> Path | None:
         if not sdk_root.is_dir():
             return None
 
-        exe = f"{tool_name}.exe" if tool_name in ("adb",) else f"{tool_name}.bat"
+        exe = f"{tool_name}.exe" if tool_name in ("adb", "emulator") else f"{tool_name}.bat"
         candidates = [
             sdk_root / "platform-tools" / exe,
             sdk_root / "platform-tools" / f"{tool_name}.exe",
+            sdk_root / "emulator" / exe,
+            sdk_root / "emulator" / f"{tool_name}.exe",
+            sdk_root / "tools" / "bin" / f"{tool_name}.bat",
+            sdk_root / "tools" / "bin" / f"{tool_name}.exe",
+            sdk_root / "tools" / f"{tool_name}.bat",
+            sdk_root / "tools" / f"{tool_name}.exe",
         ]
         build_tools = sdk_root / "build-tools"
         if build_tools.is_dir():
@@ -317,7 +356,7 @@ class ToolLocator:
             candidates += [v / f"{tool_name}.bat" for v in versions]
         cmdline_tools = sdk_root / "cmdline-tools"
         if cmdline_tools.is_dir():
-            for sub in cmdline_tools.iterdir():
+            for sub in sorted(cmdline_tools.iterdir(), reverse=True):
                 candidates.append(sub / "bin" / f"{tool_name}.bat")
                 candidates.append(sub / "bin" / f"{tool_name}.exe")
 

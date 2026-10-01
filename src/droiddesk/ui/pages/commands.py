@@ -463,7 +463,7 @@ class AuditWorker(QThread):
 
     def run(self) -> None:
         self.output_line.emit("=" * 72)
-        self.output_line.emit("🔍 DEFENSIVE SECURITY AUDIT: KEY EXTRACTION & HOT DATA LEAK TEST")
+        self.output_line.emit("DEFENSIVE SECURITY AUDIT: KEY EXTRACTION & HOT DATA LEAK TEST")
         self.output_line.emit("=" * 72)
         self.output_line.emit(
             f"Mode: {self._mode.upper()}\n"
@@ -656,7 +656,7 @@ class AuditWorker(QThread):
 
         # Summary
         self.output_line.emit("=" * 72)
-        self.output_line.emit("📊 AUDIT & PENETRATION TEST SUMMARY")
+        self.output_line.emit("AUDIT & PENETRATION TEST SUMMARY")
         self.output_line.emit("=" * 72)
         self.output_line.emit(f"Total files / resources inspected : {total_inspected}")
         self.output_line.emit(f"Total API keys / secrets detected : {total_leaks}")

@@ -1,4 +1,6 @@
-"""Service managing connected Android devices, state polling, and hardware details."""
+"""Service managing connected Android devices, state polling, hardware details,
+and emulator lifecycle.
+"""
 
 from __future__ import annotations
 
@@ -7,9 +9,19 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
+from droiddesk.android.avd_manager import AvdManager
+from droiddesk.android.command_runner import CommandRunner
+from droiddesk.android.emulator_manager import EmulatorManager
+from droiddesk.android.models import AndroidEnvStatus
+from droiddesk.android.sdk_manager import AndroidSdkManager
+from droiddesk.application.apk_manager import ApkManager
+from droiddesk.config import Settings
 from droiddesk.core.errors import DroidDeskError
 from droiddesk.core.models import Device
+from droiddesk.device.discovery import DeviceDiscoveryService
+from droiddesk.device.models import ManagedDevice
 from droiddesk.infra.adb import AdbClient
+from droiddesk.infra.tools import ToolLocator
 
 _POLL_INTERVAL_VISIBLE_MS = 2000
 _POLL_INTERVAL_HIDDEN_MS = 5000
@@ -33,46 +45,115 @@ class _DevicePollThread(QThread):
 
 
 class DeviceService(QObject):
-    devices_changed = Signal(list)  # list[Device]
+    devices_changed = Signal(list)  # list[Device] - For backwards compatibility
+    managed_devices_changed = Signal(list)  # list[ManagedDevice] - Unified list
 
-    def __init__(self, adb_client: AdbClient, repository: object | None = None) -> None:
+    def __init__(
+        self,
+        adb_client: AdbClient,
+        repository: object | None = None,
+        tool_locator: ToolLocator | None = None,
+        settings: Settings | None = None,
+    ) -> None:
         super().__init__()
         self._adb = adb_client
         self._repo = repository
+        self._settings = settings or Settings.load()
+        self._tool_locator = tool_locator or ToolLocator(self._settings)
+        self._runner = CommandRunner(self._tool_locator)
+
+        # Initialize Android Management Subsystems
+        self._sdk_manager = AndroidSdkManager(
+            self._settings, self._tool_locator, runner=self._runner
+        )
+        self._avd_manager = AvdManager(self._tool_locator, runner=self._runner)
+        self._emulator_manager = EmulatorManager(
+            self._tool_locator,
+            self._adb,
+            runner=self._runner,
+            avd_manager=self._avd_manager,
+        )
+        self._discovery_service = DeviceDiscoveryService(
+            self._adb, self._avd_manager, self._emulator_manager, parent=self
+        )
+        self._apk_manager = ApkManager(self._adb, tool_locator=self._tool_locator)
+
         self._devices: list[Device] = []
         self._poll_thread: _DevicePollThread | None = None
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
 
+        # Wire discovery service signals
+        self._discovery_service.devices_changed.connect(self._on_managed_devices_changed)
+
     @property
     def adb_client(self) -> AdbClient:
         return self._adb
 
+    @property
+    def sdk_manager(self) -> AndroidSdkManager:
+        return self._sdk_manager
+
+    @property
+    def avd_manager(self) -> AvdManager:
+        return self._avd_manager
+
+    @property
+    def emulator_manager(self) -> EmulatorManager:
+        return self._emulator_manager
+
+    @property
+    def discovery_service(self) -> DeviceDiscoveryService:
+        return self._discovery_service
+
+    @property
+    def apk_manager(self) -> ApkManager:
+        return self._apk_manager
+
     def start_polling(self, page_visible: bool = True) -> None:
-        self._timer.setInterval(
-            _POLL_INTERVAL_VISIBLE_MS if page_visible else _POLL_INTERVAL_HIDDEN_MS
-        )
+        interval = _POLL_INTERVAL_VISIBLE_MS if page_visible else _POLL_INTERVAL_HIDDEN_MS
+        self._timer.setInterval(interval)
+        self._discovery_service.set_polling_interval(interval)
         if not self._timer.isActive():
             self._timer.start()
-        # Schedule the poll asynchronously so page transitions are instant
+        self._discovery_service.start_polling()
         QTimer.singleShot(0, self._poll)
-
 
     def stop_polling(self) -> None:
         self._timer.stop()
+        self._discovery_service.stop_polling()
 
     def set_page_visible(self, visible: bool) -> None:
-        self._timer.setInterval(_POLL_INTERVAL_VISIBLE_MS if visible else _POLL_INTERVAL_HIDDEN_MS)
+        interval = _POLL_INTERVAL_VISIBLE_MS if visible else _POLL_INTERVAL_HIDDEN_MS
+        self._timer.setInterval(interval)
+        self._discovery_service.set_polling_interval(interval)
 
+    # -------------------------------------------------------------------------
+    # Devices retrieval
+    # -------------------------------------------------------------------------
     def devices(self) -> list[Device]:
+        """Return list of active ADB devices (backwards-compatible with all pages)."""
         return list(self._devices)
+
+    def managed_devices(self) -> list[ManagedDevice]:
+        """Return unified list of physical and virtual devices."""
+        return self._discovery_service.devices()
+
+    def physical_devices(self) -> list[ManagedDevice]:
+        """Return only physical devices."""
+        return self._discovery_service.physical_devices()
+
+    def virtual_devices(self) -> list[ManagedDevice]:
+        """Return only virtual devices (emulators/AVDs)."""
+        return self._discovery_service.virtual_devices()
 
     def refresh(self) -> None:
         self._poll()
+        self._discovery_service.refresh()
 
     def reconnect(self, serial: str) -> None:
         self._adb.reconnect(serial)
-        self._poll()
+        self.refresh()
 
     def pair_wireless(self, host_port: str, pairing_code: str) -> bool:
         return self._adb.pair(host_port, pairing_code)
@@ -115,6 +196,41 @@ class DeviceService(QObject):
     ) -> bool:
         return self._adb.install(serial, apk_path, replace=replace, test_ok=test_ok)
 
+    # -------------------------------------------------------------------------
+    # Virtual Device / Emulator Operations
+    # -------------------------------------------------------------------------
+    def start_emulator(self, avd_name: str) -> None:
+        """Start an emulator asynchronously."""
+        self._emulator_manager.start_emulator(avd_name)
+
+    def stop_emulator(self, avd_name: str) -> None:
+        """Stop an emulator asynchronously."""
+        self._emulator_manager.stop_emulator(avd_name)
+
+    def restart_emulator(self, avd_name: str) -> None:
+        """Restart an emulator asynchronously."""
+        self._emulator_manager.restart_emulator(avd_name)
+
+    def delete_emulator(self, avd_name: str) -> tuple[bool, str]:
+        """Delete an emulator AVD and refresh discovery."""
+        success, msg = self._avd_manager.delete_avd(avd_name)
+        if success:
+            self.refresh()
+        return success, msg
+
+    def force_release_emulator_locks(self, avd_name: str) -> tuple[bool, str]:
+        """Force-release session locks and clean up stuck processes for an AVD."""
+        res, msg = self._emulator_manager.force_release_locks(avd_name)
+        self.refresh()
+        return res, msg
+
+    def check_environment(self) -> AndroidEnvStatus:
+        """Check status of Android SDK and CLI tools."""
+        return self._sdk_manager.check_environment()
+
+    # -------------------------------------------------------------------------
+    # Internal Polling and Signal Handlers
+    # -------------------------------------------------------------------------
     def _poll(self) -> None:
         if self._poll_thread is not None and self._poll_thread.isRunning():
             return
@@ -130,3 +246,6 @@ class DeviceService(QObject):
         if fresh != self._devices:
             self._devices = fresh
             self.devices_changed.emit(list(self._devices))
+
+    def _on_managed_devices_changed(self, fresh_managed: list[ManagedDevice]) -> None:
+        self.managed_devices_changed.emit(list(fresh_managed))

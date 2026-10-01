@@ -658,7 +658,8 @@ class ScreenMirrorPage(QWidget):
         self._record_timer.start()
         self._record_btn.setChecked(True)
         self._record_btn.setEnabled(True)
-        self._record_btn.setText("● Stop Recording (00:00)")
+        self._record_btn.setIcon(get_icon("square", size=13, color="#ffffff"))
+        self._record_btn.setText("Stop Recording (00:00)")
         self._record_btn.setStyleSheet(
             f"background-color: {ACCENT_RED}; color: #ffffff; font-weight: 700; border: none;"
         )
@@ -672,6 +673,7 @@ class ScreenMirrorPage(QWidget):
         self._record_timer.stop()
         self._record_btn.setChecked(False)
         self._record_btn.setEnabled(True)
+        self._record_btn.setIcon(get_icon("video", size=13, color="#ffffff"))
         self._record_btn.setText("Record Screen")
         self._record_btn.setStyleSheet("")
         self._rec_status_pill.setText("Standby")
@@ -683,7 +685,7 @@ class ScreenMirrorPage(QWidget):
         mins = self._record_seconds // 60
         secs = self._record_seconds % 60
         time_str = f"{mins:02d}:{secs:02d}"
-        self._record_btn.setText(f"● Stop Recording ({time_str})")
+        self._record_btn.setText(f"Stop Recording ({time_str})")
         self._rec_duration_lbl.setText(f"Recording: {time_str}")
 
     def _on_recording_saved(self, serial: str, video_path: Path) -> None:

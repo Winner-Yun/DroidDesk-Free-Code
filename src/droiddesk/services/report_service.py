@@ -1,4 +1,7 @@
-"""Report generation service rendering scan and test run reports into HTML, PDF, JSON, and Markdown formats."""
+"""Report generation service.
+
+Renders scan and test run reports into HTML, PDF, JSON, and Markdown formats.
+"""
 
 from __future__ import annotations
 

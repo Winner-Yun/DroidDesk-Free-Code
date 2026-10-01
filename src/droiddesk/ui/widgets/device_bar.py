@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 
 from droiddesk.core.models import Device
 from droiddesk.services.device_service import DeviceService
-from droiddesk.ui.theme import TEXT_MUTED, get_icon
+from droiddesk.ui.theme import get_icon
 from droiddesk.ui.widgets.device_selector import DeviceSelector
 
 
@@ -203,7 +203,8 @@ class ApkUploadDialog(QDialog):
                 self._table.insertRow(row)
 
                 # Name
-                name_item = QTableWidgetItem(f"⛁  {p.name}")
+                name_item = QTableWidgetItem(p.name)
+                name_item.setIcon(get_icon("hard-drive", size=13))
                 name_item.setToolTip(str(p))
                 self._table.setItem(row, 0, name_item)
 
@@ -346,7 +347,14 @@ class ApkUploadDialog(QDialog):
         if row >= 0:
             item = self._table.item(row, 2)
             if item:
-                item.setText("✓ Installed" if ok else "✗ Failed")
+                item.setText("Installed" if ok else "Failed")
+                item.setIcon(
+                    get_icon(
+                        "check-circle-2" if ok else "x-circle",
+                        size=12,
+                        color="#10b981" if ok else "#ef4444",
+                    )
+                )
                 item.setToolTip(message)
                 item.setForeground(Qt.GlobalColor.green if ok else Qt.GlobalColor.red)
 

@@ -470,7 +470,7 @@ class AnalyzerPage(QWidget):
         # Verification pill
         is_verified = self._apk_info.signature_verified
         status_pill = QLabel(
-            "✓ Verified Signature" if is_verified else "⚠ Unverified / Debug Key"
+            "Verified Signature" if is_verified else "Unverified / Debug Key"
         )
         status_color = (
             ("#16a34a" if light else "#22c55e")
@@ -696,7 +696,7 @@ class AnalyzerPage(QWidget):
                 iw_layout.setContentsMargins(10, 8, 10, 8)
                 iw_layout.setSpacing(10)
 
-                pill = QLabel("⚠ HIGH RISK" if is_danger else "NORMAL")
+                pill = QLabel("HIGH RISK" if is_danger else "NORMAL")
                 pill_color = (
                     ("#dc2626" if light else "#ef4444")
                     if is_danger

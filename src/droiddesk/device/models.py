@@ -49,16 +49,36 @@ class ManagedDevice:
         """Return True if device is active and responsive to ADB commands."""
         if self.is_physical:
             return self.status.lower() in ("ready", "device", "connected")
-        return self.status.lower() == "running"
+        return bool(self.serial) and self.status.lower() in (
+            "running",
+            "booting",
+            "ready",
+            "device",
+        )
 
     @property
     def can_screen_mirror(self) -> bool:
-        return self.is_online and self.serial is not None
+        return bool(self.serial) and self.status.lower() in (
+            "running",
+            "booting",
+            "ready",
+            "device",
+        )
 
     @property
     def can_install_apk(self) -> bool:
-        return self.is_online and self.serial is not None
+        return bool(self.serial) and self.status.lower() in (
+            "running",
+            "booting",
+            "ready",
+            "device",
+        )
 
     @property
     def can_view_logs(self) -> bool:
-        return self.is_online and self.serial is not None
+        return bool(self.serial) and self.status.lower() in (
+            "running",
+            "booting",
+            "ready",
+            "device",
+        )

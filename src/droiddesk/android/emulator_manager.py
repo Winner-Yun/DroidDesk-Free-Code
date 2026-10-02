@@ -524,18 +524,19 @@ class EmulatorManager(QObject):
 
         # Update our state dictionary
         for avd_name, serial in running_serials.items():
-            current_state = self.get_state(avd_name)
             self._active_serials[avd_name] = serial
-            if current_state not in (EmulatorState.STARTING, EmulatorState.BOOTING):
-                # Verify boot completion
-                try:
-                    boot_completed = self._adb.getprop(serial, "sys.boot_completed").strip()
-                    if boot_completed == "1":
-                        self._states[avd_name] = EmulatorState.RUNNING
-                    else:
-                        self._states[avd_name] = EmulatorState.BOOTING
-                except Exception:
-                    self._states[avd_name] = EmulatorState.RUNNING
+            current_state = self.get_state(avd_name)
+            # Verify boot completion
+            try:
+                boot_completed = self._adb.getprop(serial, "sys.boot_completed").strip()
+                if boot_completed == "1":
+                    if current_state != EmulatorState.RUNNING:
+                        self.set_state(avd_name, EmulatorState.RUNNING, "Android is running.")
+                elif current_state not in (EmulatorState.STARTING, EmulatorState.BOOTING):
+                    self.set_state(avd_name, EmulatorState.BOOTING, "Android is booting...")
+            except Exception:
+                if current_state != EmulatorState.RUNNING:
+                    self.set_state(avd_name, EmulatorState.RUNNING, "Android is running.")
 
         # For any AVD that was RUNNING or BOOTING but is no longer in running_serials
         for avd_name, state in list(self._states.items()):

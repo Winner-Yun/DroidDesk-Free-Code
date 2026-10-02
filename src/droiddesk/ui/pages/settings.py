@@ -160,6 +160,9 @@ class SettingsPage(QWidget):
                 "   background-color: #1d4ed8; border: 2px solid #3b82f6; border-radius: 6px; "
                 "   color: #ffffff; font-weight: 700; padding: 8px 20px; font-size: 12px;"
                 "}"
+                "QPushButton:hover {"
+                "   background-color: #1e40af;"
+                "}"
             )
             self._light_btn.setIcon(get_icon("sun", size=15, color="#8b8e94"))
             self._light_btn.setStyleSheet(
@@ -178,6 +181,9 @@ class SettingsPage(QWidget):
                 "QPushButton {"
                 "   background-color: #2563eb; border: 2px solid #3b82f6; border-radius: 6px; "
                 "   color: #ffffff; font-weight: 700; padding: 8px 20px; font-size: 12px;"
+                "}"
+                "QPushButton:hover {"
+                "   background-color: #1d4ed8;"
                 "}"
             )
             self._dark_btn.setIcon(get_icon("moon", size=15, color="#6b7280"))

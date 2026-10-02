@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import override
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QObject, QSize, Qt, QThread, Signal
 from PySide6.QtGui import QHideEvent, QShowEvent
 from PySide6.QtWidgets import (
     QFrame,
@@ -27,6 +27,7 @@ from droiddesk.android.models import AndroidEnvStatus
 from droiddesk.android.system_image_manager import SystemImageManager
 from droiddesk.context import AppContext
 from droiddesk.device.models import ManagedDevice
+from droiddesk.services.device_service import DeviceService
 from droiddesk.ui.dialogs.android_environment_dialog import AndroidEnvironmentDialog
 from droiddesk.ui.dialogs.apk_action_dialog import ApkActionDialog
 from droiddesk.ui.dialogs.create_emulator_wizard import CreateEmulatorWizard
@@ -35,6 +36,21 @@ from droiddesk.ui.dialogs.screenshot_dialog import ScreenshotViewerDialog
 from droiddesk.ui.theme import TEXT_MUTED, get_icon
 from droiddesk.ui.widgets.card import Card, PageHeader
 from droiddesk.ui.widgets.status_pill import StatusDot, TagPill
+
+
+class _EnvCheckWorker(QThread):
+    status_ready = Signal(object)
+
+    def __init__(self, dev_service: DeviceService, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self._dev_service = dev_service
+
+    def run(self) -> None:
+        try:
+            status = self._dev_service.check_environment(force=True)
+            self.status_ready.emit(status)
+        except Exception:
+            pass
 
 
 class DevicesPage(QWidget):
@@ -47,6 +63,7 @@ class DevicesPage(QWidget):
         self._dev_service = ctx.device_service
         self._selected_device_id: str | None = None
         self._last_rendered_signature: tuple[object, ...] | None = None
+        self._env_worker: _EnvCheckWorker | None = None
         self.setProperty("role", "page")
 
         self._sim_manager = SystemImageManager(
@@ -152,7 +169,7 @@ class DevicesPage(QWidget):
             self._on_emulator_start_failed
         )
 
-        self._check_environment_status()
+        self._check_environment_status(force=False, async_check=True)
         self._repopulate(self._dev_service.managed_devices())
 
     # -------------------------------------------------------------------------
@@ -189,8 +206,25 @@ class DevicesPage(QWidget):
         banner.setVisible(False)
         return banner
 
-    def _check_environment_status(self) -> None:
-        status: AndroidEnvStatus = self._dev_service.check_environment()
+    def _check_environment_status(self, force: bool = False, async_check: bool = False) -> None:
+        if async_check:
+            cached = self._dev_service.get_cached_environment()
+            if cached is not None:
+                self._apply_env_status(cached)
+            self._start_async_env_check()
+            return
+
+        status: AndroidEnvStatus = self._dev_service.check_environment(force=force)
+        self._apply_env_status(status)
+
+    def _start_async_env_check(self) -> None:
+        if self._env_worker is not None and self._env_worker.isRunning():
+            return
+        self._env_worker = _EnvCheckWorker(self._dev_service, self)
+        self._env_worker.status_ready.connect(self._apply_env_status)
+        self._env_worker.start()
+
+    def _apply_env_status(self, status: AndroidEnvStatus) -> None:
         if status.is_ready:
             self._env_btn.setIcon(get_icon("check-circle-2", size=13, color="#34d399"))
             self._env_btn.setText("Android SDK Ready")
@@ -213,7 +247,7 @@ class DevicesPage(QWidget):
             parent=self,
         )
         dlg.exec()
-        self._check_environment_status()
+        self._check_environment_status(force=True, async_check=True)
         self._dev_service.refresh()
 
     def _on_create_emulator_clicked(self) -> None:
@@ -920,7 +954,7 @@ class DevicesPage(QWidget):
 
     def _on_refresh_clicked(self) -> None:
         self._dev_service.refresh()
-        self._check_environment_status()
+        self._check_environment_status(force=True, async_check=True)
 
     def _on_take_screenshot(self, dev: ManagedDevice) -> None:
         if not dev.serial or not dev.is_online:
@@ -952,7 +986,7 @@ class DevicesPage(QWidget):
     def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
         self._dev_service.start_polling(page_visible=True)
-        self._check_environment_status()
+        self._check_environment_status(force=False)
 
     @override
     def hideEvent(self, event: QHideEvent) -> None:

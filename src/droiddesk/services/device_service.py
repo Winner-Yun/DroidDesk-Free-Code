@@ -224,9 +224,13 @@ class DeviceService(QObject):
         self.refresh()
         return res, msg
 
-    def check_environment(self) -> AndroidEnvStatus:
+    def check_environment(self, force: bool = False) -> AndroidEnvStatus:
         """Check status of Android SDK and CLI tools."""
-        return self._sdk_manager.check_environment()
+        return self._sdk_manager.check_environment(force=force)
+
+    def get_cached_environment(self) -> AndroidEnvStatus | None:
+        """Return cached Android environment status immediately without blocking."""
+        return self._sdk_manager._cached_status
 
     # -------------------------------------------------------------------------
     # Internal Polling and Signal Handlers

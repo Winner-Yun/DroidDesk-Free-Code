@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import shutil
@@ -43,6 +44,7 @@ class ToolLocator:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._cache: dict[str, Path | None] = {}
+        self._verified_cache: dict[str, ToolInfo] = {}
 
     def resolve(self, tool_name: str) -> Path:
         """Return the resolved path for `tool_name`, raising ToolNotFoundError if
@@ -67,6 +69,7 @@ class ToolLocator:
     def invalidate_cache(self) -> None:
         """Clear resolved path cache so settings changes apply immediately."""
         self._cache.clear()
+        self._verified_cache.clear()
 
     def is_available(self, tool_name: str) -> bool:
         try:
@@ -90,10 +93,13 @@ class ToolLocator:
 
     def verify_tool(self, tool_name: str) -> ToolInfo:
         """Actively verify tool resolution, execution, and version string."""
+        if tool_name in self._verified_cache:
+            return self._verified_cache[tool_name]
+
         try:
             path = self.resolve(tool_name)
         except ToolNotFoundError:
-            return ToolInfo(
+            info = ToolInfo(
                 name=tool_name,
                 path=None,
                 version=None,
@@ -101,9 +107,33 @@ class ToolLocator:
                 is_valid=False,
                 error_message=f"'{tool_name}' not found in SDK or PATH",
             )
+            self._verified_cache[tool_name] = info
+            return info
 
         is_bundled = self.is_bundled(tool_name)
         java_dependent = tool_name in _JAVA_DEPENDENT_TOOLS
+
+        # Fast path for tools with source.properties package metadata
+        if tool_name in ("sdkmanager", "avdmanager", "adb", "emulator"):
+            for candidate_dir in (path.parent, path.parent.parent):
+                props_file = candidate_dir / "source.properties"
+                if props_file.is_file():
+                    with contextlib.suppress(Exception):
+                        for line in props_file.read_text(
+                            encoding="utf-8", errors="replace"
+                        ).splitlines():
+                            if line.startswith("Pkg.Revision="):
+                                v = line.split("=", 1)[1].strip()
+                                info = ToolInfo(
+                                    name=tool_name,
+                                    path=path,
+                                    version=v,
+                                    is_bundled=is_bundled,
+                                    is_valid=True,
+                                    error_message=None,
+                                )
+                                self._verified_cache[tool_name] = info
+                                return info
 
         # Verify Java availability for Java-dependent tools
         if java_dependent:
@@ -190,7 +220,7 @@ class ToolLocator:
                 error_msg = str(exc)
 
         if version_str is not None:
-            return ToolInfo(
+            info = ToolInfo(
                 name=tool_name,
                 path=path,
                 version=version_str,
@@ -198,9 +228,11 @@ class ToolLocator:
                 is_valid=True,
                 error_message=None,
             )
+            self._verified_cache[tool_name] = info
+            return info
 
         if java_dependent and path.is_file():
-            return ToolInfo(
+            info = ToolInfo(
                 name=tool_name,
                 path=path,
                 version="Available (Java ready)",
@@ -208,8 +240,10 @@ class ToolLocator:
                 is_valid=True,
                 error_message=None,
             )
+            self._verified_cache[tool_name] = info
+            return info
 
-        return ToolInfo(
+        info = ToolInfo(
             name=tool_name,
             path=path,
             version=None,
@@ -217,6 +251,8 @@ class ToolLocator:
             is_valid=False,
             error_message=error_msg or "Failed to verify tool version",
         )
+        self._verified_cache[tool_name] = info
+        return info
 
     def verify_all(self) -> dict[str, ToolInfo]:
         """Verify all known tools actively."""

@@ -156,10 +156,17 @@ class DevicesPage(QWidget):
         scroll.setWidget(scroll_widget)
         self._content_row.addWidget(scroll, 1)
 
-        # Right Device Details Drawer
+        # Right Device Details Drawer (Scrollable)
+        self._detail_scroll = QScrollArea()
+        self._detail_scroll.setObjectName("detailScroll")
+        self._detail_scroll.setFixedWidth(330)
+        self._detail_scroll.setWidgetResizable(True)
+        self._detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._detail_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
         self._detail_panel = self._empty_detail()
-        self._detail_panel.setFixedWidth(320)
-        self._content_row.addWidget(self._detail_panel)
+        self._detail_scroll.setWidget(self._detail_panel)
+        self._content_row.addWidget(self._detail_scroll)
 
         outer.addLayout(self._content_row, 1)
 
@@ -229,12 +236,18 @@ class DevicesPage(QWidget):
         if status.is_ready:
             self._env_btn.setIcon(get_icon("check-circle-2", size=13, color="#34d399"))
             self._env_btn.setText("Android SDK Ready")
-            self._env_btn.setStyleSheet("color: #34d399; font-weight: 600;")
+            self._env_btn.setStyleSheet(
+                "QPushButton { color: #34d399; font-weight: 600; }"
+                "QPushButton:hover { background-color: #2a2c31; }"
+            )
             self._env_banner.setVisible(False)
         else:
             self._env_btn.setIcon(get_icon("alert-triangle", size=13, color="#fbbf24"))
             self._env_btn.setText(status.state.value.replace("_", " "))
-            self._env_btn.setStyleSheet("color: #fbbf24; font-weight: 600;")
+            self._env_btn.setStyleSheet(
+                "QPushButton { color: #fbbf24; font-weight: 600; }"
+                "QPushButton:hover { background-color: #2a2c31; }"
+            )
             self._banner_msg.setText(
                 status.error_message
                 or "Android SDK tools require configuration to enable full features."
@@ -279,6 +292,7 @@ class DevicesPage(QWidget):
         # Clear previous widgets
         self._clear_layout(self._physical_layout)
         self._clear_layout(self._virtual_layout)
+        self._rendered_cards: list[tuple[Card, str]] = []
 
         phys_devices = [d for d in devices if d.is_physical]
         virt_devices = [d for d in devices if d.is_virtual]
@@ -392,6 +406,21 @@ class DevicesPage(QWidget):
     # -------------------------------------------------------------------------
     def _build_physical_device_card(self, dev: ManagedDevice) -> Card:
         card = Card()
+        card.setProperty("role", "deviceCard")
+        is_sel = dev.id == self._selected_device_id
+        card.setProperty("selected", "true" if is_sel else "false")
+        card.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._rendered_cards.append((card, dev.id))
+
+        def on_card_press(event: object, d: ManagedDevice = dev) -> None:
+            from PySide6.QtGui import QMouseEvent
+
+            if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
+                self._select_device(d)
+            Card.mousePressEvent(card, event)
+
+        card.mousePressEvent = on_card_press
+
         layout = card.body_layout()
         layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(10)
@@ -499,6 +528,21 @@ class DevicesPage(QWidget):
     # -------------------------------------------------------------------------
     def _build_virtual_device_card(self, dev: ManagedDevice) -> Card:
         card = Card()
+        card.setProperty("role", "deviceCard")
+        is_sel = dev.id == self._selected_device_id
+        card.setProperty("selected", "true" if is_sel else "false")
+        card.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._rendered_cards.append((card, dev.id))
+
+        def on_card_press(event: object, d: ManagedDevice = dev) -> None:
+            from PySide6.QtGui import QMouseEvent
+
+            if isinstance(event, QMouseEvent) and event.button() == Qt.MouseButton.LeftButton:
+                self._select_device(d)
+            Card.mousePressEvent(card, event)
+
+        card.mousePressEvent = on_card_press
+
         layout = card.body_layout()
         layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(10)
@@ -595,11 +639,33 @@ class DevicesPage(QWidget):
             del_btn.clicked.connect(lambda _=None, d=dev: self._on_delete_emulator(d))
             act_row.addWidget(del_btn)
 
-        elif status_low in ("starting", "booting"):
-            boot_lbl = QPushButton(f"{dev.status}...")
-            boot_lbl.setIcon(get_icon("loader-2", size=12, color="#f59e0b"))
-            boot_lbl.setEnabled(False)
-            act_row.addWidget(boot_lbl)
+        elif dev.serial or status_low == "running":
+            if dev.can_screen_mirror:
+                screen_btn = QPushButton("Screen")
+                screen_btn.setIcon(get_icon("cast", size=12, color="#9ca3af"))
+                screen_btn.clicked.connect(
+                    lambda _=None, s=dev.serial: self.open_screen_requested.emit(s)
+                )
+                act_row.addWidget(screen_btn)
+
+            if dev.can_install_apk:
+                apk_btn = QPushButton("APK")
+                apk_btn.setIcon(get_icon("box", size=12, color="#9ca3af"))
+                apk_btn.clicked.connect(lambda _=None, d=dev: self._open_apk_dialog(d))
+                act_row.addWidget(apk_btn)
+
+            if dev.can_view_logs:
+                logs_btn = QPushButton("Logs")
+                logs_btn.setIcon(get_icon("scroll-text", size=12, color="#9ca3af"))
+                logs_btn.clicked.connect(lambda _=None, d=dev: self._open_logs_dialog(d))
+                act_row.addWidget(logs_btn)
+
+            restart_btn = QPushButton("Restart")
+            restart_btn.setIcon(get_icon("rotate-cw", size=12, color="#9ca3af"))
+            restart_btn.clicked.connect(
+                lambda _=None, n=avd_name: self._dev_service.restart_emulator(n)
+            )
+            act_row.addWidget(restart_btn)
 
             stop_btn = QPushButton("Stop")
             stop_btn.setIcon(get_icon("square", size=12, color="#ef4444"))
@@ -612,31 +678,11 @@ class DevicesPage(QWidget):
             del_btn.clicked.connect(lambda _=None, d=dev: self._on_delete_emulator(d))
             act_row.addWidget(del_btn)
 
-        elif status_low == "running":
-            if dev.can_screen_mirror:
-                screen_btn = QPushButton("Screen")
-                screen_btn.setIcon(get_icon("cast", size=12, color="#9ca3af"))
-                screen_btn.clicked.connect(
-                    lambda _=None, s=dev.serial: self.open_screen_requested.emit(s)
-                )
-                act_row.addWidget(screen_btn)
-
-            apk_btn = QPushButton("APK")
-            apk_btn.setIcon(get_icon("box", size=12, color="#9ca3af"))
-            apk_btn.clicked.connect(lambda _=None, d=dev: self._open_apk_dialog(d))
-            act_row.addWidget(apk_btn)
-
-            logs_btn = QPushButton("Logs")
-            logs_btn.setIcon(get_icon("scroll-text", size=12, color="#9ca3af"))
-            logs_btn.clicked.connect(lambda _=None, d=dev: self._open_logs_dialog(d))
-            act_row.addWidget(logs_btn)
-
-            restart_btn = QPushButton("Restart")
-            restart_btn.setIcon(get_icon("rotate-cw", size=12, color="#9ca3af"))
-            restart_btn.clicked.connect(
-                lambda _=None, n=avd_name: self._dev_service.restart_emulator(n)
-            )
-            act_row.addWidget(restart_btn)
+        elif status_low in ("starting", "booting"):
+            boot_lbl = QPushButton(f"{dev.status}...")
+            boot_lbl.setIcon(get_icon("loader-2", size=12, color="#f59e0b"))
+            boot_lbl.setEnabled(False)
+            act_row.addWidget(boot_lbl)
 
             stop_btn = QPushButton("Stop")
             stop_btn.setIcon(get_icon("square", size=12, color="#ef4444"))
@@ -771,8 +817,20 @@ class DevicesPage(QWidget):
         )
         dlg.exec()
 
+    def _update_card_selection(self) -> None:
+        for card, dev_id in getattr(self, "_rendered_cards", []):
+            try:
+                card.setProperty(
+                    "selected", "true" if dev_id == self._selected_device_id else "false"
+                )
+                card.style().unpolish(card)
+                card.style().polish(card)
+            except RuntimeError:
+                pass
+
     def _select_device(self, dev: ManagedDevice) -> None:
         self._selected_device_id = dev.id
+        self._update_card_selection()
         self._swap_detail(self._build_detail(dev))
         if dev.serial and hasattr(self._dev_service, "set_active_serial"):
             self._dev_service.set_active_serial(dev.serial)
@@ -785,25 +843,30 @@ class DevicesPage(QWidget):
     def select_device_by_serial(self, serial: str) -> None:
         for dev in self._dev_service.managed_devices():
             if dev.serial == serial or dev.name == serial:
-                self._selected_device_id = dev.id
-                self._swap_detail(self._build_detail(dev))
+                self._select_device(dev)
                 return
 
     # -------------------------------------------------------------------------
     # Device Details Sidebar
     # -------------------------------------------------------------------------
     def _empty_detail(self) -> QWidget:
-        card = Card()
-        layout = card.body_layout()
+        container = QWidget()
+        container.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(16, 16, 16, 16)
         lbl = QLabel("No device selected")
         lbl.setProperty("role", "muted")
         layout.addWidget(lbl)
         layout.addStretch(1)
-        return card
+        return container
+
+    def _build_empty_detail(self) -> QWidget:
+        return self._empty_detail()
 
     def _build_detail(self, dev: ManagedDevice) -> QWidget:
-        card = Card()
-        layout = card.body_layout()
+        container = QWidget()
+        container.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
 
@@ -845,10 +908,8 @@ class DevicesPage(QWidget):
         for label, val in props:
             layout.addLayout(self._property_row(label, val))
 
-        layout.addStretch(1)
-
         # Quick Actions in Sidebar
-        if dev.is_online and dev.serial:
+        if dev.serial:
             layout.addWidget(self._section_label("ACTIONS"))
 
             screen_btn = QPushButton("Share Screen")
@@ -907,7 +968,8 @@ class DevicesPage(QWidget):
             side_del_btn.clicked.connect(lambda _=None, d=dev: self._on_delete_emulator(d))
             layout.addWidget(side_del_btn)
 
-        return card
+        layout.addStretch(1)
+        return container
 
     def _section_label(self, text: str) -> QLabel:
         lbl = QLabel(text)
@@ -929,11 +991,8 @@ class DevicesPage(QWidget):
         return row
 
     def _swap_detail(self, new_detail: QWidget) -> None:
-        new_detail.setFixedWidth(320)
-        self._content_row.replaceWidget(self._detail_panel, new_detail)
-        self._detail_panel.setParent(None)
-        self._detail_panel.deleteLater()
         self._detail_panel = new_detail
+        self._detail_scroll.setWidget(new_detail)
 
     # -------------------------------------------------------------------------
     # Wi-Fi and Refresh Handlers

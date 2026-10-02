@@ -8,9 +8,12 @@ Usage:
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import psutil
 
 ROOT = Path(__file__).parent.parent
 ENTRY_POINT = ROOT / "src" / "droiddesk" / "__main__.py"
@@ -56,13 +59,36 @@ PYINSTALLER_ARGS = [
 ]
 
 
+def _cleanup_locking_processes(dist_dir: Path) -> None:
+    """Terminate any background processes (such as adb.exe daemon or previous runs)
+    """
+    try:
+        target_str = str(dist_dir).lower()
+        for p in psutil.process_iter(["pid", "name"]):
+            try:
+                exe = (p.exe() or "").lower()
+                cwd = (p.cwd() or "").lower()
+                if target_str in exe or target_str in cwd:
+                    p.kill()
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                pass
+
+        if dist_dir.exists():
+            shutil.rmtree(dist_dir, ignore_errors=True)
+    except Exception:
+        pass
+
+
 def main() -> int:
     if not ICON_PATH.is_file():
         sys.stderr.write(f"Error: Missing application icon at {ICON_PATH}\n")
         return 1
 
-    target_exe = ROOT / "dist" / "droiddesk" / "droiddesk.exe"
-    print(f"Building DroidDesk executable via PyInstaller into {ROOT / 'dist' / 'droiddesk'}...")
+    dist_droiddesk = ROOT / "dist" / "droiddesk"
+    _cleanup_locking_processes(dist_droiddesk)
+
+    target_exe = dist_droiddesk / "droiddesk.exe"
+    print(f"Building DroidDesk executable via PyInstaller into {dist_droiddesk}...")
     result = subprocess.run(PYINSTALLER_ARGS, cwd=ROOT)
     if result.returncode == 0 and target_exe.is_file():
         print(f"\n[SUCCESS] Executable built successfully: {target_exe}")

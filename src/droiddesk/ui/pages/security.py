@@ -686,3 +686,6 @@ class SecurityPage(QWidget):
 
         for sev, count_label in self._summary_chips.items():
             count_label.setText(str(counts.get(sev, 0)))
+
+    def set_device(self, device: object) -> None:
+        self._active_device = device

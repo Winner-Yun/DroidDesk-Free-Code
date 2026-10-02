@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 from droiddesk.android.models import AndroidEnvStatus
 from droiddesk.android.system_image_manager import SystemImageManager
 from droiddesk.context import AppContext
+from droiddesk.core.models import Device
 from droiddesk.device.models import ManagedDevice
 from droiddesk.services.device_service import DeviceService
 from droiddesk.ui.dialogs.android_environment_dialog import AndroidEnvironmentDialog
@@ -333,6 +334,12 @@ class DevicesPage(QWidget):
 
         # Restore selection
         selected = self._dev_service.discovery_service.get_device(self._selected_device_id or "")
+        active_dev = getattr(self._dev_service, "active_device", lambda: None)()
+        if not selected and active_dev and active_dev.serial:
+            selected = next((d for d in devices if d.serial == active_dev.serial), None)
+            if selected:
+                self._selected_device_id = selected.id
+
         if selected:
             self._swap_detail(self._build_detail(selected))
         elif devices:
@@ -767,6 +774,20 @@ class DevicesPage(QWidget):
     def _select_device(self, dev: ManagedDevice) -> None:
         self._selected_device_id = dev.id
         self._swap_detail(self._build_detail(dev))
+        if dev.serial and hasattr(self._dev_service, "set_active_serial"):
+            self._dev_service.set_active_serial(dev.serial)
+
+    def set_device(self, device: Device | None) -> None:
+        if not device or not device.serial:
+            return
+        self.select_device_by_serial(device.serial)
+
+    def select_device_by_serial(self, serial: str) -> None:
+        for dev in self._dev_service.managed_devices():
+            if dev.serial == serial or dev.name == serial:
+                self._selected_device_id = dev.id
+                self._swap_detail(self._build_detail(dev))
+                return
 
     # -------------------------------------------------------------------------
     # Device Details Sidebar

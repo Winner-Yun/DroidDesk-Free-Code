@@ -47,6 +47,7 @@ class _DevicePollThread(QThread):
 class DeviceService(QObject):
     devices_changed = Signal(list)  # list[Device] - For backwards compatibility
     managed_devices_changed = Signal(list)  # list[ManagedDevice] - Unified list
+    active_device_changed = Signal(object)  # Device | None - Global target device
 
     def __init__(
         self,
@@ -79,6 +80,7 @@ class DeviceService(QObject):
         self._apk_manager = ApkManager(self._adb, tool_locator=self._tool_locator)
 
         self._devices: list[Device] = []
+        self._active_device: Device | None = None
         self._poll_thread: _DevicePollThread | None = None
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._poll)
@@ -146,6 +148,29 @@ class DeviceService(QObject):
     def virtual_devices(self) -> list[ManagedDevice]:
         """Return only virtual devices (emulators/AVDs)."""
         return self._discovery_service.virtual_devices()
+
+    def active_device(self) -> Device | None:
+        """Return currently active target device."""
+        return self._active_device
+
+    def set_active_device(self, device: Device | None) -> None:
+        """Set the active target device and notify listeners if changed."""
+        new_serial = device.serial if device else None
+        curr_serial = self._active_device.serial if self._active_device else None
+        if new_serial != curr_serial:
+            self._active_device = device
+            self.active_device_changed.emit(device)
+
+    def set_active_serial(self, serial: str | None) -> None:
+        """Set the active target device by serial."""
+        if not serial:
+            self.set_active_device(None)
+            return
+        matched = next((d for d in self._devices if d.serial == serial), None)
+        if matched:
+            self.set_active_device(matched)
+        else:
+            self.set_active_device(Device(serial=serial, state="device"))
 
     def refresh(self) -> None:
         self._poll()
@@ -247,9 +272,25 @@ class DeviceService(QObject):
             for device in fresh:
                 with contextlib.suppress(Exception):
                     self._repo.record_device(device)
-        if fresh != self._devices:
+        devices_changed = fresh != self._devices
+        if devices_changed:
             self._devices = fresh
             self.devices_changed.emit(list(self._devices))
+
+        # Maintain or initialize active target device
+        if self._devices:
+            curr_serial = self._active_device.serial if self._active_device else None
+            matched = next((d for d in self._devices if d.serial == curr_serial), None)
+            is_missing = curr_serial is None or not any(
+                d.serial == curr_serial for d in self._devices
+            )
+            if matched:
+                self._active_device = matched
+            elif is_missing:
+                self.set_active_device(self._devices[0])
+        else:
+            if self._active_device is not None:
+                self.set_active_device(None)
 
     def _on_managed_devices_changed(self, fresh_managed: list[ManagedDevice]) -> None:
         self.managed_devices_changed.emit(list(fresh_managed))

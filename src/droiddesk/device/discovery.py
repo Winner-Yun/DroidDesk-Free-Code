@@ -111,7 +111,16 @@ class _DiscoveryThread(QThread):
 
             if serial:
                 if emu_state in (EmulatorState.STARTING, EmulatorState.BOOTING):
-                    status_str = emu_state.value.capitalize()
+                    boot_completed = ""
+                    with contextlib.suppress(Exception):
+                        boot_completed = self._adb.getprop(serial, "sys.boot_completed").strip()
+                    if boot_completed == "1":
+                        self._emu_mgr.set_state(
+                            avd.name, EmulatorState.RUNNING, "Android is running."
+                        )
+                        status_str = "Running"
+                    else:
+                        status_str = emu_state.value.capitalize()
                 else:
                     status_str = "Running"
             else:

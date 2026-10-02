@@ -1,6 +1,6 @@
 
-  DROIDDESK - Local Android Development Companion
-  Version 1.0.0 (Windows 64-bit)
+DROIDDESK - Local Android Development Companion
+Version 1.0.1 (Windows 64-bit)
 
 
 Thank you for choosing DroidDesk!

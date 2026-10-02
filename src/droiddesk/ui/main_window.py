@@ -28,7 +28,11 @@ from droiddesk.ui.pages.screen import ScreenMirrorPage
 from droiddesk.ui.pages.screenshots import ScreenshotsPage
 from droiddesk.ui.pages.security import SecurityPage
 from droiddesk.ui.pages.settings import SettingsPage
-from droiddesk.ui.theme import get_app_logo_icon, get_stylesheet
+from droiddesk.ui.theme import (
+    get_app_logo_icon,
+    get_stylesheet,
+    install_button_cursor_filter,
+)
 from droiddesk.ui.widgets.device_bar import DeviceBar
 from droiddesk.ui.widgets.environment_bar import EnvironmentBar
 from droiddesk.ui.widgets.nav_sidebar import BrandBlock, NavSidebar
@@ -61,6 +65,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("DroidDesk")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(1440, 900)
+        install_button_cursor_filter()
         self.setStyleSheet(get_stylesheet(self._settings.theme_mode))
 
         root = QWidget()

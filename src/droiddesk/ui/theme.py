@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import override
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, QObject, Qt
 from PySide6.QtGui import QIcon, QPixmap
 from tkinter_icons import LucideIcon  # type: ignore[import-untyped]
 
@@ -384,10 +385,16 @@ QLabel[role="navBadge"] {{
 }}
 
 /* -- Cards / panels ---------------------------------------------------*/
-QFrame[role="card"] {{
+QFrame[role="card"], QFrame[role="deviceCard"] {{
     background: {bg_panel};
     border: 1px solid {border};
     border-radius: 8px;
+}}
+QFrame[role="deviceCard"]:hover {{
+    background: {bg_hover};
+}}
+QFrame[role="deviceCard"][selected="true"] {{
+    border: 1px solid {ACCENT_BLUE};
 }}
 QFrame[role="statCard"] {{
     background: {bg_panel};
@@ -482,7 +489,7 @@ QFrame#bottomSheet {{
 }}
 
 /* -- Buttons ----------------------------------------------------------*/
-QPushButton {{
+QPushButton, QToolButton, QCommandLinkButton {{
     background: {bg_panel_alt};
     border: 1px solid {border_light};
     border-radius: 5px;
@@ -490,13 +497,22 @@ QPushButton {{
     font-size: 12px;
     color: {text};
 }}
-QPushButton:hover {{
+QPushButton:hover, QToolButton:hover, QCommandLinkButton:hover {{
     background: {bg_hover};
+    border-color: {border};
 }}
-QPushButton:pressed {{
+QPushButton:pressed, QToolButton:pressed, QCommandLinkButton:pressed {{
     background: {bg_selected};
 }}
-QPushButton:disabled {{
+QPushButton:checked, QToolButton:checked {{
+    background: {bg_selected};
+    color: {text};
+    border-color: {ACCENT_BLUE};
+}}
+QPushButton:checked:hover, QToolButton:checked:hover {{
+    background: {bg_hover};
+}}
+QPushButton:disabled, QToolButton:disabled, QCommandLinkButton:disabled {{
     color: {text_dim};
     border-color: {border_light};
 }}
@@ -536,9 +552,11 @@ QPushButton[role="link"] {{
     border: none;
     color: {text_muted};
     text-align: left;
-    padding: 2px;
+    padding: 3px 8px;
+    border-radius: 4px;
 }}
 QPushButton[role="link"]:hover {{
+    background: {bg_hover};
     color: {text};
 }}
 QPushButton[role="secondary"] {{
@@ -730,6 +748,8 @@ QTabBar::tab:selected {{
 }}
 QTabBar::tab:hover {{
     color: {text};
+    background: {bg_hover};
+    border-radius: 4px 4px 0 0;
 }}
 
 /* -- Progress bar ------------------------------------------------------*/
@@ -749,6 +769,46 @@ QProgressBar::chunk {{
 /* -- Scroll area / plain text ------------------------------------------*/
 QScrollArea, QScrollArea > QWidget, QScrollArea > QWidget > QWidget {{
     border: none;
+    background: transparent;
+}}
+QScrollBar:vertical {{
+    background: transparent;
+    width: 8px;
+    margin: 2px 2px 2px 0px;
+}}
+QScrollBar::handle:vertical {{
+    background: {border_light};
+    min-height: 24px;
+    border-radius: 4px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {text_dim};
+}}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    height: 0px;
+    background: transparent;
+}}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+    background: transparent;
+}}
+QScrollBar:horizontal {{
+    background: transparent;
+    height: 8px;
+    margin: 0px 2px 2px 2px;
+}}
+QScrollBar::handle:horizontal {{
+    background: {border_light};
+    min-width: 24px;
+    border-radius: 4px;
+}}
+QScrollBar::handle:horizontal:hover {{
+    background: {text_dim};
+}}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+    width: 0px;
+    background: transparent;
+}}
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
     background: transparent;
 }}
 QPlainTextEdit {{
@@ -790,7 +850,9 @@ QLabel[role="toolChipWarn"] {{
 
 
 def apply_theme(mode: str = "dark", widget: object | None = None) -> None:
-    """Apply the stylesheet for dark or light mode to the active QApplication and all top-level windows."""
+    """Apply the stylesheet for dark or light mode to the active QApplication and all
+    top-level windows.
+    """
     global _CURRENT_THEME
     _CURRENT_THEME = mode.lower()
     from PySide6.QtWidgets import QApplication, QWidget
@@ -802,6 +864,7 @@ def apply_theme(mode: str = "dark", widget: object | None = None) -> None:
     app = QApplication.instance()
     applied_windows: set[object] = set()
     if app:
+        install_button_cursor_filter(app)
         app.setStyleSheet(css)
         for top in app.topLevelWidgets():
             applied_windows.add(top)
@@ -817,6 +880,49 @@ def apply_theme(mode: str = "dark", widget: object | None = None) -> None:
             else:
                 win.setStyleSheet(css)
 
+
+
+class ClickableCursorFilter(QObject):
+    """Global event filter ensuring all clickable controls (buttons, tool buttons,
+    tab bars, etc.) display a pointing hand cursor when enabled, and revert to
+    standard arrow cursor when disabled.
+    """
+
+    @override
+    def eventFilter(self, obj: object, event: QEvent) -> bool:
+        t = event.type()
+        if t in (
+            QEvent.Type.Enter,
+            QEvent.Type.Show,
+            QEvent.Type.EnabledChange,
+            QEvent.Type.Polish,
+            QEvent.Type.HoverEnter,
+        ):
+            from PySide6.QtWidgets import QAbstractButton, QTabBar
+
+            if isinstance(obj, (QAbstractButton, QTabBar)):
+                if obj.isEnabled():
+                    if obj.cursor().shape() != Qt.CursorShape.PointingHandCursor:
+                        obj.setCursor(Qt.CursorShape.PointingHandCursor)
+                else:
+                    if obj.cursor().shape() == Qt.CursorShape.PointingHandCursor:
+                        obj.setCursor(Qt.CursorShape.ArrowCursor)
+        return super().eventFilter(obj, event)
+
+
+_BUTTON_CURSOR_FILTER: ClickableCursorFilter | None = None
+
+
+def install_button_cursor_filter(app: object | None = None) -> None:
+    """Install the global clickable cursor event filter on the active QApplication."""
+    global _BUTTON_CURSOR_FILTER
+    from PySide6.QtWidgets import QApplication
+
+    if app is None:
+        app = QApplication.instance()
+    if isinstance(app, QApplication) and _BUTTON_CURSOR_FILTER is None:
+        _BUTTON_CURSOR_FILTER = ClickableCursorFilter(app)
+        app.installEventFilter(_BUTTON_CURSOR_FILTER)
 
 
 STYLESHEET = get_stylesheet("dark")

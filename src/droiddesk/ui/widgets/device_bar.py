@@ -386,6 +386,8 @@ class ApkUploadDialog(QDialog):
 class DeviceBar(QWidget):
     """Appbar device controls: target device selector."""
 
+    device_selected = Signal(object)  # Device | None
+
     def __init__(self, device_service: DeviceService) -> None:
         super().__init__()
         self.setObjectName("deviceBar")
@@ -402,8 +404,29 @@ class DeviceBar(QWidget):
         layout.addWidget(self._device_label)
         layout.addWidget(self._device_selector)
 
-        device_service.devices_changed.connect(self._device_selector.set_devices)
+        # Wire selector changes to DeviceService and emit
+        self._device_selector.device_selected.connect(self._on_selector_device_selected)
+        self._device_service.active_device_changed.connect(self._on_service_active_device_changed)
+
+        device_service.devices_changed.connect(self._on_devices_changed)
         self._device_selector.set_devices(device_service.devices())
+        active = device_service.active_device()
+        if active:
+            self._device_selector.select_device(active)
+
+    def _on_selector_device_selected(self, device: Device | None) -> None:
+        self._device_service.set_active_device(device)
+        self.device_selected.emit(device)
+
+    def _on_service_active_device_changed(self, device: Device | None) -> None:
+        if self._device_selector.selected_device() != device:
+            self._device_selector.select_device(device)
+
+    def _on_devices_changed(self, devices: list[Device]) -> None:
+        self._device_selector.set_devices(devices)
+        active = self._device_service.active_device()
+        if active:
+            self._device_selector.select_device(active)
 
     def selected_device(self) -> Device | None:
         return self._device_selector.selected_device()

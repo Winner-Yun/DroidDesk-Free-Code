@@ -26,6 +26,7 @@ class AndroidSdkManager:
         self._settings = settings
         self._tool_locator = tool_locator
         self._runner = runner or CommandRunner(tool_locator)
+        self._cached_status: AndroidEnvStatus | None = None
 
     @property
     def settings(self) -> Settings:
@@ -66,9 +67,16 @@ class AndroidSdkManager:
 
         return None
 
-    def check_environment(self) -> AndroidEnvStatus:
+    def invalidate_cache(self) -> None:
+        self._cached_status = None
+
+    def check_environment(self, force: bool = False) -> AndroidEnvStatus:
         """Thoroughly check all Android tools and return comprehensive AndroidEnvStatus."""
-        self._tool_locator.invalidate_cache()
+        if not force and self._cached_status is not None:
+            return self._cached_status
+
+        if force:
+            self._tool_locator.invalidate_cache()
         sdk_root = self.detect_sdk_root()
 
         adb_path = self._resolve_safe("adb")
@@ -144,6 +152,7 @@ class AndroidSdkManager:
             details=details,
             error_message=error_msg,
         )
+        self._cached_status = status
         logger.info(f"Android environment evaluated: state={state.value}, sdk_root={sdk_root}")
         return status
 
@@ -155,7 +164,7 @@ class AndroidSdkManager:
         self._settings.android_sdk_path = path
         self._settings.save()
         self._tool_locator.invalidate_cache()
-        return self.check_environment()
+        return self.check_environment(force=True)
 
     def _resolve_safe(self, tool_name: str) -> Path | None:
         try:

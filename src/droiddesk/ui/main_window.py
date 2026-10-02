@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from droiddesk.context import AppContext
+from droiddesk.core.models import Device
 from droiddesk.ui.pages.analyzer import AnalyzerPage
 from droiddesk.ui.pages.apk_tester import ApkTesterPage
 from droiddesk.ui.pages.commands import CommandsPage
@@ -90,7 +91,10 @@ class MainWindow(QMainWindow):
         top_row.addWidget(self._environment_bar, 1)
 
         # Device selector
+        self._syncing_device = False
         self._device_bar = DeviceBar(self._device_service)
+        self._device_bar.device_selected.connect(self._on_active_device_changed)
+        self._device_service.active_device_changed.connect(self._on_active_device_changed)
 
         top_row.addSpacing(20)
         top_row.addWidget(self._device_bar)
@@ -121,6 +125,11 @@ class MainWindow(QMainWindow):
         # Synchronize initially selected APK with pages
         initial_apk = self._environment_bar.selected_apk()
         self._on_active_apk_changed(initial_apk)
+
+        # Synchronize initially selected device with pages
+        initial_device = self._device_bar.selected_device() or self._device_service.active_device()
+        if initial_device:
+            self._on_active_device_changed(initial_device)
 
     def set_theme(self, mode: str) -> None:
         self.setStyleSheet(get_stylesheet(mode))
@@ -199,6 +208,7 @@ class MainWindow(QMainWindow):
             self._stack.setCurrentIndex(self._page_index[key])
 
     def _on_open_screen_requested(self, serial: str) -> None:
+        self._device_service.set_active_serial(serial)
         self._sidebar.set_current("screen")
         self._on_page_selected("screen")
         screen_idx = self._page_index.get("screen")
@@ -208,6 +218,7 @@ class MainWindow(QMainWindow):
                 screen_widget.select_device(serial)
 
     def _on_open_logcat_requested(self, serial: str) -> None:
+        self._device_service.set_active_serial(serial)
         self._sidebar.set_current("logcat")
         self._on_page_selected("logcat")
         logcat_idx = self._page_index.get("logcat")
@@ -215,6 +226,26 @@ class MainWindow(QMainWindow):
             logcat_widget = self._stack.widget(logcat_idx)
             if isinstance(logcat_widget, LogcatPage):
                 logcat_widget.select_device(serial)
+
+    def _on_active_device_changed(self, device: Device | None) -> None:
+        if self._syncing_device:
+            return
+        self._syncing_device = True
+        try:
+            # Sync appbar selector if not already matching
+            if self._device_bar.selected_device() != device:
+                self._device_bar.device_selector().select_device(device)
+
+            # Notify all pages supporting set_device or select_device
+            for i in range(self._stack.count()):
+                page = self._stack.widget(i)
+                if page is not None:
+                    if hasattr(page, "set_device"):
+                        page.set_device(device)
+                    elif hasattr(page, "select_device") and device and device.serial:
+                        page.select_device(device.serial)
+        finally:
+            self._syncing_device = False
 
     def _on_switch_environment(self) -> None:
         if not self._ctx.env_service:

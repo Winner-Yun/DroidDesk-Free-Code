@@ -76,7 +76,7 @@ To generate a single `DroidDesk-Setup-0.1.0.exe` installer with a setup wizard, 
    ```
    *(Or open `packaging/installer.iss` in the Inno Setup GUI and click **Build > Compile**).*
 3. The installer is generated at:
-   ```
+   ```j
    dist\installer\DroidDesk-Setup-0.1.0.exe
    ```
 4. Send `DroidDesk-Setup-0.1.0.exe` to users.

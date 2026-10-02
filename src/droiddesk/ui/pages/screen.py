@@ -812,7 +812,11 @@ class ScreenMirrorPage(QWidget):
         elif prev_serial and any(d.serial == prev_serial for d in self._devices):
             self.select_device(prev_serial)
         else:
-            self.select_device(self._devices[0].serial)
+            active = getattr(self._ctx.device_service, "active_device", lambda: None)()
+            if active and any(d.serial == active.serial for d in self._devices):
+                self.select_device(active.serial)
+            else:
+                self.select_device(self._devices[0].serial)
 
         self._device_combo.blockSignals(False)
 
@@ -828,15 +832,25 @@ class ScreenMirrorPage(QWidget):
                     self._screen_service.stop_mirroring()
                 self._selected_serial = serial
                 self._update_viewport_state()
+                if hasattr(self._ctx.device_service, "set_active_serial"):
+                    self._ctx.device_service.set_active_serial(serial)
+
+    def set_device(self, device: Device | None) -> None:
+        if device and device.serial:
+            self.select_device(device.serial)
 
     def select_device(self, serial: str) -> None:
         """Programmatically select a device serial in the combo box."""
         for i in range(self._device_combo.count()):
             if self._device_combo.itemData(i) == serial:
-                self._device_combo.setCurrentIndex(i)
-                self._selected_serial = serial
+                if self._device_combo.currentIndex() != i:
+                    self._device_combo.setCurrentIndex(i)
+                else:
+                    self._selected_serial = serial
+                    self._update_viewport_state()
                 return
         self._selected_serial = serial
+        self._update_viewport_state()
 
     def _get_selected_device(self) -> Device | None:
         if not self._selected_serial:

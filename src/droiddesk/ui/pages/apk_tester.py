@@ -178,7 +178,10 @@ class ApkTesterPage(QWidget):
             except Exception:
                 pass
         self._device_selector.set_devices(devs or [])
-        self._device_selector.device_selected.connect(self._update_button_states)
+        active = getattr(self._ctx.device_service, "active_device", lambda: None)()
+        if active:
+            self._device_selector.select_device(active)
+        self._device_selector.device_selected.connect(self._on_device_selected)
 
         self._cancel_button = QPushButton("Cancel")
         self._cancel_button.setIcon(get_icon("square", size=13, color=TEXT_MUTED))
@@ -217,9 +220,22 @@ class ApkTesterPage(QWidget):
         self._run_button.setEnabled(has_device and not is_running)
         self._cancel_button.setEnabled(is_running)
 
+    def _on_device_selected(self, device: Device | None) -> None:
+        self._update_button_states()
+        if device and hasattr(self._ctx.device_service, "set_active_device"):
+            self._ctx.device_service.set_active_device(device)
+
     def _on_devices_changed(self, devices: list[Device]) -> None:
         self._device_selector.set_devices(devices)
+        active = getattr(self._ctx.device_service, "active_device", lambda: None)()
+        if active:
+            self._device_selector.select_device(active)
         self._update_button_states()
+
+    def set_device(self, device: Device | None) -> None:
+        if hasattr(self, "_device_selector"):
+            self._device_selector.select_device(device)
+            self._update_button_states()
 
     def _build_artifact_panel(self) -> QWidget:
         card = Card("Artifact under test")

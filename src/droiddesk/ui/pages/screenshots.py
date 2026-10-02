@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from droiddesk.context import AppContext
+from droiddesk.core.models import Device
 from droiddesk.ui.dialogs.screenshot_dialog import (
     ScreenshotViewerDialog,
     _ImagePreviewWidget,
@@ -53,6 +54,7 @@ class ScreenshotsPage(QWidget):
         self._folder = Path.home() / "Pictures" / "DroidDesk"
         self._screenshots: list[Path] = []
         self._selected_path: Path | None = None
+        self._active_device: Device | None = None
 
         self.setProperty("role", "page")
         outer = QVBoxLayout(self)
@@ -405,6 +407,9 @@ class ScreenshotsPage(QWidget):
 
         self._refresh_gallery()
 
+    def set_device(self, device: Device | None) -> None:
+        self._active_device = device
+
     def _on_take_screenshot_clicked(self) -> None:
         devices = [d for d in self._ctx.device_service.devices() if d.state == "device"]
         if not devices:
@@ -416,7 +421,13 @@ class ScreenshotsPage(QWidget):
             )
             return
 
-        device = devices[0]
+        target_device = None
+        if self._active_device and any(d.serial == self._active_device.serial for d in devices):
+            target_device = next(d for d in devices if d.serial == self._active_device.serial)
+        else:
+            target_device = devices[0]
+
+        device = target_device
         self._capture_btn.setEnabled(False)
         self._capture_btn.setText("Capturing...")
         QGuiApplication.processEvents()

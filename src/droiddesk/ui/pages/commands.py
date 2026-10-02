@@ -1136,3 +1136,6 @@ class CommandsPage(QWidget):
             self._console.appendPlainText(f"\n[EXECUTION ERROR] {e}")
             self._run_button.setEnabled(True)
             self._stop_button.setEnabled(False)
+
+    def set_device(self, device: object) -> None:
+        self._active_device = device

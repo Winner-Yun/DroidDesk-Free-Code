@@ -436,3 +436,6 @@ class RecordingsPage(QWidget):
             return
 
         self._refresh_gallery()
+
+    def set_device(self, device: object) -> None:
+        self._active_device = device

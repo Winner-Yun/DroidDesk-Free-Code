@@ -575,3 +575,6 @@ class OrganizerPage(QWidget):
         except Exception as exc:
             logger.error("Undo failed: %s", exc)
             QMessageBox.critical(self, "Undo Failed", f"Could not undo batch: {exc}")
+
+    def set_device(self, device: object) -> None:
+        self._active_device = device

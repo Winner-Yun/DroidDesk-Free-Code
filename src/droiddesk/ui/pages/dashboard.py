@@ -222,6 +222,7 @@ class DashboardPage(QWidget):
         elif hasattr(self._ctx.device_service, "_devices"):
             devices = getattr(self._ctx.device_service, "_devices", [])
         self._installer_dev_selector.set_devices(devices)
+        self._installer_dev_selector.device_selected.connect(self._on_installer_dev_selected)
         card.body_layout().addWidget(self._installer_dev_selector)
 
         # Action button and progress
@@ -506,6 +507,10 @@ class DashboardPage(QWidget):
             plural = "devices" if count != 1 else "device"
             self._stat_devices.set_caption(f"Connected {plural}")
 
+    def _on_installer_dev_selected(self, device: Device | None) -> None:
+        if device and hasattr(self._ctx.device_service, "set_active_device"):
+            self._ctx.device_service.set_active_device(device)
+
     def _on_devices_changed(self, devices: list[Device]) -> None:
         if hasattr(self._ctx.repository, "record_device"):
             for d in devices:
@@ -513,9 +518,17 @@ class DashboardPage(QWidget):
                     self._ctx.repository.record_device(d)
         if hasattr(self, "_installer_dev_selector"):
             self._installer_dev_selector.set_devices(devices)
+            active = getattr(self._ctx.device_service, "active_device", lambda: None)()
+            if active:
+                self._installer_dev_selector.select_device(active)
         self._update_devices_stat(devices)
         if hasattr(self, "_history_table"):
             self._refresh_emulator_history()
+
+    def set_device(self, device: Device | None) -> None:
+        self._selected_device = device
+        if hasattr(self, "_installer_dev_selector"):
+            self._installer_dev_selector.select_device(device)
 
     def set_apk(self, path: Path | None) -> None:
         self._apk_path = path

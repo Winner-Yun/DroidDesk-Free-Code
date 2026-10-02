@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from droiddesk.context import AppContext
+from droiddesk.core.models import Device
 from droiddesk.infra.process import AdbStream
 from droiddesk.ui.models.logcat_model import LogcatModel
 from droiddesk.ui.theme import TEXT_MUTED, get_icon
@@ -132,7 +133,7 @@ class LogcatPage(QWidget):
         self._stream_button.toggled.connect(self._on_stream_toggled)
 
         self._update_device_combo()
-        self._device_combo.currentIndexChanged.connect(self._update_button_states)
+        self._device_combo.currentIndexChanged.connect(self._on_device_combo_changed)
         self._ctx.device_service.devices_changed.connect(self._update_device_combo)
 
         header.add_action(self._device_combo)
@@ -157,6 +158,13 @@ class LogcatPage(QWidget):
 
         self._update_button_states()
 
+    def _on_device_combo_changed(self, index: int) -> None:
+        self._update_button_states()
+        if index >= 0:
+            serial = self._device_combo.itemData(index)
+            if serial and hasattr(self._ctx.device_service, "set_active_serial"):
+                self._ctx.device_service.set_active_serial(serial)
+
     def _update_device_combo(self) -> None:
         current_data = self._device_combo.currentData()
         self._device_combo.clear()
@@ -164,7 +172,7 @@ class LogcatPage(QWidget):
 
         is_streaming = self._stream is not None
         if not devices:
-            self._device_combo.addItem("No emulator connected")
+            self._device_combo.addItem("No device connected")
             self._device_combo.setEnabled(False)
         else:
             for d in devices:
@@ -176,6 +184,12 @@ class LogcatPage(QWidget):
                 idx = self._device_combo.findData(current_data)
                 if idx >= 0:
                     self._device_combo.setCurrentIndex(idx)
+            else:
+                active = getattr(self._ctx.device_service, "active_device", lambda: None)()
+                if active:
+                    idx = self._device_combo.findData(active.serial)
+                    if idx >= 0:
+                        self._device_combo.setCurrentIndex(idx)
         self._update_button_states()
 
     def _update_button_states(self) -> None:
@@ -400,8 +414,12 @@ class LogcatPage(QWidget):
                 f"Could not export logcat view:\n{e}",
             )
 
+    def set_device(self, device: Device | None) -> None:
+        if device and device.serial:
+            self.select_device(device.serial)
+
     def select_device(self, serial: str) -> None:
         idx = self._device_combo.findData(serial)
-        if idx >= 0:
+        if idx >= 0 and self._device_combo.currentIndex() != idx:
             self._device_combo.setCurrentIndex(idx)
         self._update_button_states()

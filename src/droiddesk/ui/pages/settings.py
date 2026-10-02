@@ -747,3 +747,6 @@ class SettingsPage(QWidget):
 
         s_layout.addLayout(text_col, 1)
         return sheet
+
+    def set_device(self, device: object) -> None:
+        self._active_device = device

@@ -947,3 +947,6 @@ class AnalyzerPage(QWidget):
         line.setFixedHeight(1)
         line.setProperty("role", "divider")
         return line
+
+    def set_device(self, device: object) -> None:
+        self._active_device = device
